@@ -1,0 +1,103 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- Outer glow ring -->
+  <circle cx="32" cy="32" r="30" stroke="#FFD700" stroke-width="0.6" fill="none" opacity="0.3"/>
+
+  <!-- Outer decorated ring - thick gold -->
+  <circle cx="32" cy="32" r="28" stroke="url(#goldGrad)" stroke-width="3" fill="none"/>
+
+  <!-- Outer ring inner edge -->
+  <circle cx="32" cy="32" r="25.5" stroke="#B8860B" stroke-width="0.8" fill="none" opacity="0.7"/>
+
+  <!-- Middle ring -->
+  <circle cx="32" cy="32" r="18" stroke="url(#goldGrad)" stroke-width="2" fill="none"/>
+  <circle cx="32" cy="32" r="16.2" stroke="#B8860B" stroke-width="0.6" fill="none" opacity="0.5"/>
+
+  <!-- Inner hub ring -->
+  <circle cx="32" cy="32" r="8" stroke="url(#goldGrad)" stroke-width="2" fill="url(#hubFill)"/>
+  <circle cx="32" cy="32" r="6.2" stroke="#FFD700" stroke-width="0.8" fill="none" opacity="0.6"/>
+
+  <!-- Center jewel -->
+  <circle cx="32" cy="32" r="3.5" fill="url(#jewelGrad)"/>
+  <circle cx="30.8" cy="30.8" r="1" fill="white" fill-opacity="0.7"/>
+
+  <!-- 16 main spokes -->
+  <g stroke="url(#spokeGrad)" stroke-width="1.6" stroke-linecap="round">
+    <line x1="32" y1="24" x2="32" y2="8"/>
+    <line x1="37.66" y1="25.34" x2="48.97" y2="14.03"/>
+    <line x1="40" y1="32" x2="56" y2="32"/>
+    <line x1="37.66" y1="38.66" x2="48.97" y2="49.97"/>
+    <line x1="32" y1="40" x2="32" y2="56"/>
+    <line x1="26.34" y1="38.66" x2="15.03" y2="49.97"/>
+    <line x1="24" y1="32" x2="8" y2="32"/>
+    <line x1="26.34" y1="25.34" x2="15.03" y2="14.03"/>
+    <!-- 8 intermediate spokes -->
+    <line x1="34.83" y1="24.48" x2="41.45" y2="9.24"/>
+    <line x1="39.52" y1="29.17" x2="54.76" y2="22.55"/>
+    <line x1="39.52" y1="34.83" x2="54.76" y2="41.45"/>
+    <line x1="34.83" y1="39.52" x2="41.45" y2="54.76"/>
+    <line x1="29.17" y1="39.52" x2="22.55" y2="54.76"/>
+    <line x1="24.48" y1="34.83" x2="9.24" y2="41.45"/>
+    <line x1="24.48" y1="29.17" x2="9.24" y2="22.55"/>
+    <line x1="29.17" y1="24.48" x2="22.55" y2="9.24"/>
+  </g>
+
+  <!-- 16 sharp blade tips (serrated outer edge) -->
+  <g fill="url(#goldGrad)">
+    <!-- Cardinal blades -->
+    <polygon points="32,3  29.5,8  32,6.5  34.5,8"/>
+    <polygon points="61,32  56,29.5  57.5,32  56,34.5"/>
+    <polygon points="32,61  34.5,56  32,57.5  29.5,56"/>
+    <polygon points="3,32   8,34.5   6.5,32   8,29.5"/>
+    <!-- Diagonal blades -->
+    <polygon points="50.91,13.09  46.5,16.5  48.5,17.5  49.5,15.5"/>
+    <polygon points="50.91,50.91  49.5,48.5  48.5,46.5  46.5,47.5"/>
+    <polygon points="13.09,50.91  17.5,47.5  16.5,46.5  15.5,48.5"/>
+    <polygon points="13.09,13.09  15.5,15.5  16.5,46.5  17.5,16.5"/>
+    <!-- Intermediate blades -->
+    <polygon points="43.5,7   40.5,11.5  42.5,11.5  43.5,9.5"/>
+    <polygon points="57,43.5  52.5,41.5  52.5,43.5  54.5,43.5"/>
+    <polygon points="43.5,57  43.5,54.5  41.5,54.5  42.5,52.5"/>
+    <polygon points="7,43.5   9.5,43.5   11.5,43.5  11.5,41.5"/>
+    <polygon points="7,20.5   11.5,22.5  11.5,20.5  9.5,20.5"/>
+    <polygon points="20.5,7   20.5,9.5   22.5,11.5  22.5,9.5"/>
+    <polygon points="57,20.5  54.5,20.5  52.5,22.5  54.5,22.5"/>
+    <polygon points="43.5,57  41.5,52.5  43.5,52.5  43.5,54.5"/>
+  </g>
+
+  <!-- Decorative dots between spokes on middle ring -->
+  <g fill="#FFD700" opacity="0.9">
+    <circle cx="32" cy="14" r="1.2"/>
+    <circle cx="45.31" cy="18.69" r="1.2"/>
+    <circle cx="50" cy="32" r="1.2"/>
+    <circle cx="45.31" cy="45.31" r="1.2"/>
+    <circle cx="32" cy="50" r="1.2"/>
+    <circle cx="18.69" cy="45.31" r="1.2"/>
+    <circle cx="14" cy="32" r="1.2"/>
+    <circle cx="18.69" cy="18.69" r="1.2"/>
+  </g>
+
+  <!-- Gradients -->
+  <defs>
+    <radialGradient id="goldGrad" cx="50%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#FFF176"/>
+      <stop offset="40%" stop-color="#FFD700"/>
+      <stop offset="100%" stop-color="#B8860B"/>
+    </radialGradient>
+    <radialGradient id="spokeGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFF9C4"/>
+      <stop offset="100%" stop-color="#F9A825"/>
+    </radialGradient>
+    <radialGradient id="hubFill" cx="40%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#FFF59D"/>
+      <stop offset="60%" stop-color="#F9A825"/>
+      <stop offset="100%" stop-color="#7B4F00"/>
+    </radialGradient>
+    <radialGradient id="jewelGrad" cx="40%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="40%" stop-color="#FFE082"/>
+      <stop offset="100%" stop-color="#F57F17"/>
+    </radialGradient>
+  </defs>
+
+</svg>
