@@ -1,7 +1,11 @@
 import { NavLink } from 'react-router-dom'
 import { SENSORS, statusLabel } from '../sensors'
-
-export default function Navbar({ systemStatus, tick }) {
+export default function Navbar({
+  systemStatus,
+  tick,
+  isLightMode,
+  onToggleTheme
+}) {
   return (
     <header className="navbar">
       <div className="navbar-left">
@@ -11,7 +15,6 @@ export default function Navbar({ systemStatus, tick }) {
         </NavLink>
         <span className="logo-sub">Anomaly Detection &amp; Decision Support</span>
       </div>
-
       {/* Page navigation */}
       <nav className="nav-links">
         <NavLink to="/" end className={({ isActive }) => `nav-link ${isActive ? 'nav-active' : ''}`}>
@@ -34,6 +37,9 @@ export default function Navbar({ systemStatus, tick }) {
           <span>System: {statusLabel(systemStatus)}</span>
         </div>
         <span className="tick-counter">Tick #{tick}</span>
+        <button className="theme-toggle" onClick={onToggleTheme}>
+          {isLightMode ? "🌕 Dark Mode" : "☀️ Light Mode"}
+        </button>
       </div>
     </header>
   )
