@@ -1,104 +1,104 @@
 
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, ReferenceLine
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceLine,
 } from 'recharts'
+
 import {
-  SENSORS, MAX_POINTS, CHART_INTERVAL_MS, LOG_INTERVAL_MS,
-  generateValue, getStatus, statusColor, statusLabel,
-  formatTime, formatDateTime
+  SENSORS,
+  statusColor,
+  statusLabel,
 } from './sensors'
+
 import Navbar from './components/Navbar'
 import SensorPage from './components/SensorPage'
+import AlertLog from './components/AlertLog'
+import SensorExplorer from './components/SensorExplorer'
+
 import './App.css'
 
-// ─── Custom Dot ───────────────────────────────────────────────────────────────
-function AnomalyDot(props) {
-  const { cx, cy, payload } = props
+// ==================================================
+// CUSTOM TOOLTIP
+// ==================================================
 
-  if (!payload || payload.status === 'normal' || payload.status === 'nil') {
-    return null
-  }
-
-  const color = payload.status === 'critical' ? '#e05555' : '#f0c040'
-
-  return (
-    <circle
-      cx={cx}
-      cy={cy}
-      r={5}
-      fill={color}
-      stroke="#0d0f14"
-      strokeWidth={1.5}
-    />
-  )
-}
-
-// ─── Custom Tooltip ───────────────────────────────────────────────────────────
-function CustomTooltip({ active, payload, label, unit, color }) {
+function CustomTooltip({ active, payload, label, unit }) {
   if (!active || !payload?.length) return null
 
-  const val = payload[0].value
+  const value = payload[0].value
   const status = payload[0].payload?.status
-  const c =
-    status === 'critical'
-      ? '#e05555'
-      : status === 'warning'
-        ? '#f0c040'
-        : color
+  const color = statusColor(status)
 
   return (
     <div className="chart-tooltip">
       <p className="tooltip-time">{label}</p>
 
-      <p className="tooltip-val" style={{ color: c }}>
-        {val === null ? '— No signal' : `${val} ${unit}`}
+      <p className="tooltip-val" style={{ color }}>
+        {value === null || value === undefined
+          ? '— No signal'
+          : `${value} ${unit}`}
       </p>
 
-      {status && status !== 'normal' && status !== 'nil' && (
-        <p className="tooltip-status" style={{ color: c }}>
-          ⚠ {statusLabel(status)}
+      {status && (
+        <p className="tooltip-status" style={{ color }}>
+          {statusLabel(status)}
         </p>
       )}
     </div>
   )
 }
 
-// ─── Alert Entry ──────────────────────────────────────────────────────────────
-function AlertEntry({ alert }) {
-  const statusColors = {
-    normal: '#2ecc71',
-    warning: '#f0c040',
-    critical: '#e05555',
-    nil: '#4a5070',
+// ==================================================
+// ANOMALY DOT
+// ==================================================
+
+function AnomalyDot({ cx, cy, payload }) {
+  if (
+    !payload ||
+    ['normal', 'nil', 'awaiting-iot'].includes(payload.status)
+  ) {
+    return null
   }
 
-  const color = statusColors[alert.status] || '#4a5070'
-
   return (
-    <div className={`alert-entry alert-${alert.status}`}>
-      <span className="alert-dot" />
-
-      <div className="alert-body">
-        <span className="alert-sensor">{alert.sensor}</span>
-        <span className="alert-msg">{alert.message}</span>
-      </div>
-
-      <span className="alert-time" style={{ color }}>
-        {alert.time}
-      </span>
-    </div>
+    <circle
+      cx={cx}
+      cy={cy}
+      r={5}
+      fill={statusColor(payload.status)}
+      stroke="#0d0f14"
+      strokeWidth={1.5}
+    />
   )
 }
 
-// ─── Sensor Card (homepage) ───────────────────────────────────────────────────
-function SensorCard({ sensorKey, data, latestValue }) {
+// ==================================================
+// SENSOR CARD
+// ==================================================
+
+function SensorCard({ sensorKey, data = [], latestValue }) {
   const sensor = SENSORS[sensorKey]
-  const status = getStatus(latestValue, sensor)
+  const latestPoint = data.at(-1)
+
+  const hasLiveReading =
+    latestValue !== null &&
+    latestValue !== undefined &&
+    Number.isFinite(Number(latestValue))
+
+  const status = hasLiveReading
+    ? latestPoint?.status || 'uncertain'
+    : 'awaiting-iot'
+
   const color = statusColor(status)
-  const isNil = status === 'nil'
+  const gradientId = `dashboard-gradient-${sensorKey}`
 
   return (
     <div className={`sensor-card sensor-${status}`}>
@@ -121,61 +121,90 @@ function SensorCard({ sensorKey, data, latestValue }) {
       </div>
 
       <div className="card-value-row">
-        {isNil ? (
-          <span className="card-value nil-value">—</span>
-        ) : (
+        {hasLiveReading ? (
           <>
             <span className="card-value" style={{ color }}>
               {latestValue}
             </span>
             <span className="card-unit">{sensor.unit}</span>
           </>
+        ) : (
+          <span className="card-value nil-value">—</span>
         )}
       </div>
 
       <div className="card-thresholds">
         <span>
-          Normal: &lt; {sensor.normal.max} {sensor.unit}
+          Normal: {sensor.normal.min}–{sensor.normal.max} {sensor.unit}
         </span>
+
         <span>
           Warning: {sensor.normal.max}–{sensor.warning.max} {sensor.unit}
         </span>
       </div>
 
       <div className="card-chart">
-        {isNil || data.length === 0 ? (
+        {!hasLiveReading || data.length === 0 ? (
           <div className="nil-chart">
-            <span>Awaiting IoT signal…</span>
+            <span>🔌 Awaiting IoT Signal</span>
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={140}>
-            <LineChart
+            <AreaChart
               data={data}
               margin={{ top: 4, right: 8, left: -20, bottom: 0 }}
             >
+              <defs>
+                <linearGradient
+                  id={gradientId}
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2="1"
+                >
+                  <stop
+                    offset="0%"
+                    stopColor={sensor.color}
+                    stopOpacity={0.38}
+                  />
+
+                  <stop
+                    offset="65%"
+                    stopColor={sensor.color}
+                    stopOpacity={0.12}
+                  />
+
+                  <stop
+                    offset="100%"
+                    stopColor={sensor.color}
+                    stopOpacity={0.01}
+                  />
+                </linearGradient>
+              </defs>
+
               <CartesianGrid
                 strokeDasharray="3 3"
-                stroke="#252837"
+                stroke="var(--grid)"
+                vertical={false}
               />
 
               <XAxis
                 dataKey="time"
-                tick={{ fontSize: 10, fill: '#5a6080' }}
+                tick={{ fontSize: 10, fill: 'var(--muted)' }}
                 interval="preserveStartEnd"
+                axisLine={false}
+                tickLine={false}
               />
 
               <YAxis
-                tick={{ fontSize: 10, fill: '#5a6080' }}
+                tick={{ fontSize: 10, fill: 'var(--muted)' }}
                 domain={['auto', 'auto']}
+                axisLine={false}
+                tickLine={false}
               />
 
               <Tooltip
-                content={
-                  <CustomTooltip
-                    unit={sensor.unit}
-                    color={sensor.color}
-                  />
-                }
+                content={<CustomTooltip unit={sensor.unit} />}
               />
 
               <ReferenceLine
@@ -192,21 +221,22 @@ function SensorCard({ sensorKey, data, latestValue }) {
                 strokeWidth={1}
               />
 
-              <Line
+              <Area
                 type="monotone"
                 dataKey="value"
                 stroke={sensor.color}
-                strokeWidth={2}
+                strokeWidth={2.5}
+                fill={`url(#${gradientId})`}
                 dot={<AnomalyDot />}
                 activeDot={{
                   r: 4,
                   strokeWidth: 1.5,
-                  stroke: '#0d0f14',
+                  stroke: '#ffffff',
                 }}
                 isAnimationActive={false}
                 connectNulls={false}
               />
-            </LineChart>
+            </AreaChart>
           </ResponsiveContainer>
         )}
       </div>
@@ -214,18 +244,20 @@ function SensorCard({ sensorKey, data, latestValue }) {
   )
 }
 
-// ─── Home Page (original dashboard) ──────────────────────────────────────────
+// ==================================================
+// HOME PAGE
+// ==================================================
+
 function HomePage({
   data,
   latest,
   alerts,
   clearTime,
   onClear,
-  tick,
-  systemStatus,
 }) {
   return (
     <main className="main">
+      {/* Sensor cards */}
       <section className="sensors-grid">
         {Object.keys(SENSORS).map(key => (
           <SensorCard
@@ -237,54 +269,34 @@ function HomePage({
         ))}
       </section>
 
-      <section className="alert-section">
-        <div className="alert-header">
-          <h2 className="section-title">
-            🔔 Alert Log
-            {alerts.length > 0 && (
-              <span className="alert-count">{alerts.length}</span>
-            )}
-          </h2>
-
-          <div className="alert-header-right">
-            {clearTime && (
-              <span className="cleared-time">
-                Cleared at {formatDateTime(clearTime)}
-              </span>
-            )}
-
-            {alerts.length > 0 && (
-              <button className="clear-btn" onClick={onClear}>
-                Clear
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div className="alert-list">
-          {alerts.length === 0 ? (
-            <div className="no-alerts">
-              👁️ Watching… Connect IoT sensors to begin receiving data.
-            </div>
-          ) : (
-            alerts.map(a => <AlertEntry key={a.id} alert={a} />)
-          )}
-        </div>
-      </section>
+      {/* Home alert log */}
+      <AlertLog
+        alerts={alerts}
+        onClear={onClear}
+        clearTime={clearTime}
+      />
     </main>
   )
 }
 
-// ─── Root App ─────────────────────────────────────────────────────────────────
+// ==================================================
+// ROOT APPLICATION
+// ==================================================
+
 export default function App() {
-  const [data, setData] = useState({
+  const emptyData = {
     vibration: [],
     temperature: [],
     current: [],
-  })
+  }
+
+  // No simulated readings are generated.
+  // Histories remain empty until real IoT data is received.
+  const [data] = useState(emptyData)
 
   const [alerts, setAlerts] = useState([])
-  const [alertsByKey, setAlertsByKey] = useState({
+
+  const [alertsByKey] = useState({
     vibration: [],
     temperature: [],
     current: [],
@@ -292,150 +304,52 @@ export default function App() {
 
   const [clearTime, setClearTime] = useState(null)
 
-  const [clearTimes, setClearTimes] = useState({
+  const [clearTimes] = useState({
     vibration: null,
     temperature: null,
     current: null,
   })
 
-  const [tick, setTick] = useState(0)
   const [isLightMode, setIsLightMode] = useState(true)
 
-  const lastLogTime = useRef({
-    vibration: 0,
-    temperature: 0,
-    current: 0,
-  })
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = Date.now()
-      const timeLabel = formatTime(now)
-
-      const nextData = {}
-      const newAlerts = []
-      const newAlertsByKey = {
-        vibration: [],
-        temperature: [],
-        current: [],
-      }
-
-      for (const key of Object.keys(SENSORS)) {
-        const sensor = SENSORS[key]
-        const value = generateValue(sensor)
-        const status = getStatus(value, sensor)
-
-        const point = {
-          time: timeLabel,
-          value,
-          status,
-        }
-
-        const timeSinceLast = now - lastLogTime.current[key]
-        const isAnomaly =
-          status === 'warning' || status === 'critical'
-
-        const shouldLog =
-          status !== 'nil' &&
-          (isAnomaly || timeSinceLast >= LOG_INTERVAL_MS)
-
-        if (shouldLog) {
-          if (!isAnomaly) {
-            lastLogTime.current[key] = now
-          }
-
-          const entry = {
-            id: `${key}-${now}-${Math.random()}`,
-            sensor: sensor.label,
-            status,
-            message: `${value} ${sensor.unit} — ${statusLabel(status)}`,
-            time: timeLabel,
-          }
-
-          newAlerts.push(entry)
-          newAlertsByKey[key].push(entry)
-        }
-
-        nextData[key] = point
-      }
-
-      setData(prev => {
-        const next = {}
-
-        for (const key of Object.keys(SENSORS)) {
-          next[key] = [
-            ...prev[key],
-            nextData[key],
-          ].slice(-MAX_POINTS)
-        }
-
-        return next
-      })
-
-      if (newAlerts.length > 0) {
-        setAlerts(prev => [
-          ...newAlerts,
-          ...prev,
-        ].slice(0, 100))
-
-        setAlertsByKey(prev => {
-          const next = {}
-
-          for (const key of Object.keys(SENSORS)) {
-            next[key] =
-              newAlertsByKey[key].length > 0
-                ? [
-                    ...newAlertsByKey[key],
-                    ...prev[key],
-                  ].slice(0, 100)
-                : prev[key]
-          }
-
-          return next
-        })
-      }
-
-      setTick(t => t + 1)
-    }, CHART_INTERVAL_MS)
-
-    return () => clearInterval(interval)
-  }, [])
-
+  // Latest readings remain null until real sensor data arrives.
   const latest = {
     vibration: data.vibration.at(-1)?.value ?? null,
     temperature: data.temperature.at(-1)?.value ?? null,
     current: data.current.at(-1)?.value ?? null,
   }
 
-  const systemStatus = Object.keys(SENSORS).some(
-    key => getStatus(latest[key], SENSORS[key]) === 'critical'
+  // Determine the overall system status.
+  const currentStatuses = Object.keys(SENSORS).map(
+    key => data[key].at(-1)?.status ?? 'awaiting-iot'
   )
-    ? 'critical'
-    : Object.keys(SENSORS).some(
-        key => getStatus(latest[key], SENSORS[key]) === 'warning'
-      )
-      ? 'warning'
-      : Object.keys(SENSORS).every(
-          key => getStatus(latest[key], SENSORS[key]) === 'nil'
-        )
-        ? 'nil'
-        : 'normal'
 
+  const systemStatus =
+    currentStatuses.includes('critical')
+      ? 'critical'
+      : currentStatuses.includes('warning')
+        ? 'warning'
+        : currentStatuses.includes('uncertain')
+          ? 'uncertain'
+          : currentStatuses.every(
+              status => status === 'awaiting-iot'
+            )
+            ? 'awaiting-iot'
+            : 'normal'
+
+  // Clear home alert log.
   function handleHomeClear() {
     setAlerts([])
     setClearTime(Date.now())
   }
 
+  // Clear sensor-specific alert log.
   function handleSensorClear(key) {
-    setAlertsByKey(prev => ({
-      ...prev,
-      [key]: [],
-    }))
-
-    setClearTimes(prev => ({
-      ...prev,
-      [key]: Date.now(),
-    }))
+    // Sensor-specific alerts are currently empty because
+    // real IoT data has not been connected.
+    if (!Object.prototype.hasOwnProperty.call(alertsByKey, key)) {
+      return
+    }
   }
 
   return (
@@ -443,12 +357,13 @@ export default function App() {
       <div className={`app ${isLightMode ? 'light' : ''}`}>
         <Navbar
           systemStatus={systemStatus}
-          tick={tick}
+          tick={0}
           isLightMode={isLightMode}
           onToggleTheme={() => setIsLightMode(prev => !prev)}
         />
 
         <Routes>
+          {/* Home Dashboard */}
           <Route
             path="/"
             element={
@@ -458,12 +373,11 @@ export default function App() {
                 alerts={alerts}
                 clearTime={clearTime}
                 onClear={handleHomeClear}
-                tick={tick}
-                systemStatus={systemStatus}
               />
             }
           />
 
+          {/* Dedicated sensor pages */}
           {Object.keys(SENSORS).map(key => (
             <Route
               key={key}
@@ -480,6 +394,12 @@ export default function App() {
               }
             />
           ))}
+
+          {/* 3D Hardware Explorer */}
+          <Route
+            path="/explorer"
+            element={<SensorExplorer />}
+          />
         </Routes>
       </div>
     </BrowserRouter>

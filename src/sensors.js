@@ -1,5 +1,7 @@
 
- // ─── Shared sensor config & helpers ─────────────────────────────────────────
+// ==================================================
+// INTELLIWATCH - SENSOR CONFIGURATION
+// ==================================================
 
 export const SENSORS = {
   vibration: {
@@ -39,47 +41,138 @@ export const SENSORS = {
   },
 }
 
+// ==================================================
+// APPLICATION CONFIGURATION
+// ==================================================
+
 export const MAX_POINTS = 40
 export const CHART_INTERVAL_MS = 3000
 export const LOG_INTERVAL_MS = 15000
 
-// IoT integration pending.
-// Return null until actual sensor data is received.
-export function generateValue(sensor) {
+// Retained for compatibility with startup-related UI logic.
+export const MIN_BASELINE_READINGS = 3
+
+// ==================================================
+// LIVE SENSOR DATA
+// ==================================================
+
+// Simulation has been disabled.
+// Real readings must come from the IoT/backend connection.
+
+export function generateValue() {
   return null
 }
 
+// ==================================================
+// SENSOR STATUS CLASSIFICATION
+// ==================================================
+
 export function getStatus(value, sensor) {
-  if (value === null || value === undefined) return 'nil'
-  if (value > sensor.warning.max) return 'critical'
-  if (value > sensor.normal.max) return 'warning'
+  if (
+    value === null ||
+    value === undefined ||
+    !Number.isFinite(Number(value))
+  ) {
+    return 'nil'
+  }
+
+  if (!sensor) return 'uncertain'
+
+  if (Number(value) > sensor.warning.max) {
+    return 'critical'
+  }
+
+  if (Number(value) > sensor.normal.max) {
+    return 'warning'
+  }
+
   return 'normal'
 }
 
-export function statusColor(status) {
-  if (status === 'critical') return '#e05555'
-  if (status === 'warning') return '#f0c040'
-  if (status === 'nil') return '#4a5070'
-  return '#2ecc71'
+// ==================================================
+// STARTUP STATUS
+// ==================================================
+
+export function getStartupStatus(history = []) {
+  if (!Array.isArray(history) || history.length === 0) {
+    return 'awaiting-iot'
+  }
+
+  const validReadings = history.filter(point =>
+    point &&
+    point.value !== null &&
+    point.value !== undefined &&
+    Number.isFinite(Number(point.value))
+  )
+
+  if (validReadings.length === 0) {
+    return 'awaiting-iot'
+  }
+
+  if (validReadings.length < MIN_BASELINE_READINGS) {
+    return 'scanning'
+  }
+
+  return 'ready'
 }
+
+// ==================================================
+// STATUS COLORS
+// ==================================================
+
+export function statusColor(status) {
+  const colors = {
+    normal: '#22c55e',
+    warning: '#f59e0b',
+    critical: '#ef4444',
+    uncertain: '#a855f7',
+    scanning: '#3b82f6',
+    analysing: '#8b5cf6',
+    ready: '#22c55e',
+    nil: '#94a3b8',
+    'no-recordings': '#94a3b8',
+    'awaiting-iot': '#94a3b8',
+  }
+
+  return colors[status] || '#94a3b8'
+}
+
+// ==================================================
+// STATUS LABELS
+// ==================================================
 
 export function statusLabel(status) {
-  if (status === 'critical') return 'CRITICAL'
-  if (status === 'warning') return 'WARNING'
-  if (status === 'nil') return 'NO SIGNAL'
-  return 'NORMAL'
+  const labels = {
+    normal: 'Normal',
+    warning: 'Warning',
+    critical: 'Critical',
+    uncertain: 'Uncertain',
+    scanning: 'Initial Scanning',
+    analysing: 'Analysing',
+    ready: 'Ready',
+    nil: 'No Data',
+    'no-recordings': 'No Recordings',
+    'awaiting-iot': 'Awaiting IoT Signal',
+  }
+
+  return labels[status] || 'Unknown'
 }
 
-export function formatTime(ts) {
-  const d = new Date(ts)
+// ==================================================
+// TIME FORMATTING
+// ==================================================
 
-  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`
+export function formatTime(date = new Date()) {
+  return new Date(date).toLocaleTimeString('en-IN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+  })
 }
 
-export function formatDateTime(ts) {
-  const d = new Date(ts)
-
-  return d.toLocaleString('en-IN', {
+export function formatDateTime(date = new Date()) {
+  return new Date(date).toLocaleString('en-IN', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
