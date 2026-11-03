@@ -1,0 +1,50 @@
+.explorer-history {
+  width: 220px;
+  height: 100%;
+  background: #1e293b;
+  border-left: 1px solid #334155;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: -4px 0 16px rgba(0,0,0,0.4);
+}
+.explorer-history__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #cbd5e1;
+  border-bottom: 1px solid #334155;
+  flex-shrink: 0;
+}
+.explorer-history__list {
+  list-style: none;
+  margin: 0; padding: 0;
+  overflow-y: auto;
+  flex: 1;
+  overscroll-behavior: contain;
+}
+.explorer-history__item {
+  padding: 8px 12px;
+  border-bottom: 1px solid #1e293b;
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+.explorer-history__item--classification { background: rgba(79,142,247,0.04); }
+.explorer-history__meta { display: flex; gap: 6px; align-items: center; margin-bottom: 2px; }
+.explorer-history__type { font-size: 0.9rem; }
+.explorer-history__time { color: #64748b; font-size: 0.72rem; }
+.explorer-history__label { color: #f1f5f9; font-weight: 500; margin-bottom: 4px; }
+.explorer-history__replay {
+  font-size: 0.72rem;
+  color: #4f8ef7;
+  background: none; border: none; cursor: pointer; padding: 0;
+}
+.explorer-history__replay:hover { text-decoration: underline; }
+/* Fullscreen-mode expansion */
+:fullscreen .explorer-history,
+:-webkit-full-screen .explorer-history {
+  width: 260px;
+}

@@ -1,0 +1,43 @@
+{
+  "name": "IntelliWatch",
+  "short_name": "IntelliWatch",
+  "description": "Real-Time Industrial Condition Monitoring and Anomaly Detection",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d0f14",
+  "theme_color": "#0d0f14",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "url": "/",
+      "description": "Open the main monitoring dashboard"
+    },
+    {
+      "name": "Vibration",
+      "url": "/vibration",
+      "description": "Vibration sensor detail"
+    },
+    {
+      "name": "Temperature",
+      "url": "/temperature",
+      "description": "Temperature sensor detail"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "screenshots": []
+}

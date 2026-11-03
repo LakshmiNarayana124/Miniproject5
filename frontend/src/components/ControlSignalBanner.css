@@ -1,0 +1,25 @@
+.control-banner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 6px 16px;
+  background: #1e293b;
+  border-bottom: 2px solid #334155;
+  font-size: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.control-banner--alert {
+  background: #450a0a;
+  animation: banner-pulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes banner-pulse {
+  from { opacity: 0.9; }
+  to   { opacity: 1.0; }
+}
+
+.control-banner__status { color: #cbd5e1; }
+.control-banner__status strong { color: #f1f5f9; }
+.control-banner__intent { font-weight: 700; }
+.control-banner__alert  { color: #fca5a5; font-weight: 600; margin-left: auto; }

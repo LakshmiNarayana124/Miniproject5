@@ -1,0 +1,454 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Fix Navbar.jsx and App.css navigation visibility and responsive collapse": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635881088
+      },
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635938912
+      },
+      {
+        "executionId": "03dcb47d-656e-40af-98a2-6c1d6508da24",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793637007346
+      }
+    ],
+    "2.1 Add the 9 new tables and indexes to `database.initialize_database()`": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635881315
+      },
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635953399
+      },
+      {
+        "executionId": "03dcb47d-656e-40af-98a2-6c1d6508da24",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793637024666
+      }
+    ],
+    "2.2 Add helper functions for the new tables": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635881576
+      },
+      {
+        "executionId": "03dcb47d-656e-40af-98a2-6c1d6508da24",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793637773737
+      },
+      {
+        "executionId": "03dcb47d-656e-40af-98a2-6c1d6508da24",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793639924912
+      }
+    ],
+    "2.3 Implement explorer history retention/eviction and 365-day retention cleanup": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635881757
+      }
+    ],
+    "3.1 Implement model_registry.py (in-memory + on-disk catalog)": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635881928
+      },
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635967175
+      },
+      {
+        "executionId": "03dcb47d-656e-40af-98a2-6c1d6508da24",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793639890652
+      }
+    ],
+    "4.1 Implement MonitoringParameter dataclass and serialization round-trip": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635882178
+      },
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635981734
+      },
+      {
+        "executionId": "03dcb47d-656e-40af-98a2-6c1d6508da24",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793637037579
+      }
+    ],
+    "4.3 Implement vibration feature extraction (RMS, peak, variance, kurtosis, crest factor per axis)": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635882415
+      },
+      {
+        "executionId": "03dcb47d-656e-40af-98a2-6c1d6508da24",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793637788367
+      },
+      {
+        "executionId": "03dcb47d-656e-40af-98a2-6c1d6508da24",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793639929924
+      }
+    ],
+    "4.5 Implement FFT band-energy extraction (at least four defined bands)": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635882541
+      }
+    ],
+    "4.7 Implement temperature feature extraction (mean, min, max, rise rate)": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635882697
+      }
+    ],
+    "4.9 Implement current feature extraction (rms, mean, variation per phase)": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635882876
+      }
+    ],
+    "4.11 Implement missing-value window resilience": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635883068
+      }
+    ],
+    "5.1 Implement load_unified_training_set (KAIST loader)": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635883232
+      },
+      {
+        "executionId": "03dcb47d-656e-40af-98a2-6c1d6508da24",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793637802500
+      },
+      {
+        "executionId": "03dcb47d-656e-40af-98a2-6c1d6508da24",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793639989833
+      }
+    ],
+    "5.3 Implement tabular model training (LightGBM, XGBoost selectable)": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635883361
+      }
+    ],
+    "5.4 Implement unsupervised model training (Isolation Forest, autoencoder selectable)": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635883482
+      }
+    ],
+    "5.5 Implement sequence model training (LSTM/GRU over consecutive windows)": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635883724
+      }
+    ],
+    "5.6 Implement ensemble model (soft-voting/stacking)": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635883877
+      }
+    ],
+    "5.8 Implement validation and training report (accuracy/precision/recall/F1/false-alarm)": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635884007
+      }
+    ],
+    "5.10 Implement model persistence (manifest.json), mini-batching, memory fallback, and accuracy gating wiring": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635884130
+      }
+    ],
+    "6.1 Implement inference.py (determine_status, cold-start fallback, DetectionTrace)": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635884252
+      }
+    ],
+    "7.1 Implement EquipmentController (status→intent mapping, dispatch, SHUTDOWN priority, CRITICAL→NORMAL restoration)": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635884467
+      },
+      {
+        "executionId": "03dcb47d-656e-40af-98a2-6c1d6508da24",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793638118910
+      }
+    ],
+    "7.5 Implement SHUTDOWN delivery retry, CRITICAL latching, and fail-safe alert": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635884631
+      }
+    ],
+    "7.8 Implement authorization gate, control-signal audit, and acknowledgement persistence": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635884747
+      }
+    ],
+    "8.1 Implement EdgeDevice protocol and MQTT/HTTP adapters": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635884867
+      },
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635998465
+      },
+      {
+        "executionId": "03dcb47d-656e-40af-98a2-6c1d6508da24",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793639907417
+      }
+    ],
+    "8.2 Implement handshake (accept/reject) and data forwarding (verbatim)": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635885016
+      },
+      {
+        "executionId": "03dcb47d-656e-40af-98a2-6c1d6508da24",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793638134783
+      }
+    ],
+    "8.5 Implement disconnect marking, reconnect resumption, and heartbeat/timeout": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635885150
+      }
+    ],
+    "8.9 Implement control-signal queue on disconnect, device auth gate, and malformed-message isolation": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635885281
+      }
+    ],
+    "9.1 Implement ISO 10816/20816 vibration severity zones and ISO 17359 workflow": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635885411
+      },
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793636010792
+      },
+      {
+        "executionId": "03dcb47d-656e-40af-98a2-6c1d6508da24",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793637068811
+      },
+      {
+        "executionId": "03dcb47d-656e-40af-98a2-6c1d6508da24",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793637731794
+      }
+    ],
+    "9.3 Implement threshold source documentation and equipment-specific flag": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635885538
+      },
+      {
+        "executionId": "03dcb47d-656e-40af-98a2-6c1d6508da24",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793638152552
+      }
+    ],
+    "10.1 Implement LearningSystem.submit_label": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635885733
+      },
+      {
+        "executionId": "03dcb47d-656e-40af-98a2-6c1d6508da24",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793638157244
+      }
+    ],
+    "10.3 Implement recalibration, promotion gate, and accuracy trend": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635885897
+      }
+    ],
+    "11.1 Implement obs_service.py (model/system status responses)": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635886029
+      },
+      {
+        "executionId": "03dcb47d-656e-40af-98a2-6c1d6508da24",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793638162160
+      }
+    ],
+    "11.2 Implement model-degradation alerting and event-log completeness": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635886182
+      }
+    ],
+    "12.1 Add control/status endpoints and WebSocket/SSE status stream": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635886316
+      }
+    ],
+    "12.2 Add model/learning endpoints": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635886445
+      }
+    ],
+    "12.3 Add 3D Explorer endpoints": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635886579
+      }
+    ],
+    "12.4 Add IoT endpoints": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635886748
+      }
+    ],
+    "12.5 Add audit endpoints": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635886897
+      }
+    ],
+    "13.1 Implement explorer ML model training and classify (backend)": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635887041
+      }
+    ],
+    "13.4 Integrate ML into SensorExplorer.jsx (classify call, display, highlight)": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635887190
+      }
+    ],
+    "13.5 Implement ExplorerHistory component and persistence hooks": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635887410
+      }
+    ],
+    "14.1 Implement ControlSignalBanner component": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635887580
+      }
+    ],
+    "14.2 Extend MLStatusPanel.jsx (version, recalibration timestamp, accuracy trend)": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635887754
+      }
+    ],
+    "15.1 Modify intelliwatch_brain.py to use inference.determine_status with cold-start fallback": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635887922
+      }
+    ],
+    "15.2 Wire EquipmentController, IoT layer, and LearningSystem into server startup": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635888051
+      }
+    ],
+    "16. Final checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "b6bb5c78-6da2-4105-bdc1-bcc3f49aa4c3",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793635888174
+      }
+    ],
+    "1. Fix frontend navigation (blocking user-reported issue)": [
+      {
+        "executionId": "03dcb47d-656e-40af-98a2-6c1d6508da24",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793637007538
+      }
+    ],
+    "3. Model registry": [
+      {
+        "executionId": "03dcb47d-656e-40af-98a2-6c1d6508da24",
+        "chatSessionId": "sess_592608d8-2fcc-48de-b62b-7855ce02a704",
+        "timestamp": 1793639891017
+      }
+    ]
+  }
+}

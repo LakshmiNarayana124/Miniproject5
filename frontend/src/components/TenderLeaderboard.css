@@ -1,0 +1,258 @@
+/* ── Tender Leaderboard Section ──────────────────────────────────────────── */
+.tender-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 22px 24px;
+  transition: background 0.3s;
+  overflow: hidden;
+}
+
+/* ── Header ───────────────────────────────────────────────────────────────── */
+.tender-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.tender-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tender-icon { font-size: 26px; }
+
+.tender-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-h);
+  line-height: 1.1;
+}
+
+.tender-sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+
+.tender-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 4px 11px;
+  border-radius: 20px;
+  background: #22c55e12;
+  color: #22c55e;
+  border: 1px solid #22c55e30;
+  text-transform: uppercase;
+  white-space: nowrap;
+  align-self: flex-start;
+}
+
+/* ── Standards key strip ──────────────────────────────────────────────────── */
+.tender-standards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-bottom: 16px;
+  padding: 9px 12px;
+  background: var(--bg-card2);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.tender-std-item {
+  font-size: 10.5px;
+  color: var(--muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* ── Table ────────────────────────────────────────────────────────────────── */
+.tender-table-wrap {
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+/*  # | Org | Sector | Score | Uptime | MTBF | Response | Trend  */
+.tender-row {
+  display: grid;
+  grid-template-columns: 36px 1fr 110px 120px 72px 80px 68px 56px;
+  align-items: center;
+  padding: 10px 14px;
+  gap: 6px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+  min-width: 680px;
+}
+
+.tender-row:last-child { border-bottom: none; }
+
+/* Header row */
+.tender-header-row {
+  background: var(--bg-card2);
+  padding: 8px 14px;
+}
+
+.tender-header-row .tender-col {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+/* Data rows */
+.tender-data-row:hover { background: var(--bg-card2); }
+
+/* Top 3 row tints */
+.tender-top-1 { background: linear-gradient(90deg, #ffd70009, transparent); }
+.tender-top-2 { background: linear-gradient(90deg, #c0c0c009, transparent); }
+.tender-top-3 { background: linear-gradient(90deg, #cd7f3209, transparent); }
+
+.tender-top-1:hover { background: linear-gradient(90deg, #ffd70016, var(--bg-card2)); }
+.tender-top-2:hover { background: linear-gradient(90deg, #c0c0c016, var(--bg-card2)); }
+.tender-top-3:hover { background: linear-gradient(90deg, #cd7f3216, var(--bg-card2)); }
+
+/* ── Column base ──────────────────────────────────────────────────────────── */
+.tender-col { font-size: 13px; color: var(--text); }
+
+.tender-col-rank {
+  font-size: 17px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.tender-col-org {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.org-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-h);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.org-abbr {
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.sector-chip {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 20px;
+  background: #aa3bff12;
+  color: #a78bfa;
+  border: 1px solid #aa3bff22;
+  white-space: nowrap;
+}
+
+/* ── Score ────────────────────────────────────────────────────────────────── */
+.tender-col-score {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.score-number {
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.score-bar-wrap {
+  height: 4px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.score-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.8s ease;
+}
+
+/* ── Numeric cols ─────────────────────────────────────────────────────────── */
+.tender-col-uptime,
+.tender-col-mtbf,
+.tender-col-response {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+}
+
+/* ── Trend pill ───────────────────────────────────────────────────────────── */
+.tender-col-trend { text-align: center; }
+
+.trend-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 800;
+  width: 30px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid;
+  cursor: default;
+}
+
+/* ── Note ─────────────────────────────────────────────────────────────────── */
+.tender-note {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 14px;
+  line-height: 1.6;
+}
+
+/* ── Light mode ───────────────────────────────────────────────────────────── */
+.light .tender-section {
+  box-shadow: 0 2px 8px rgba(31, 45, 65, 0.08);
+}
+
+.light .tender-top-1 { background: linear-gradient(90deg, #ffd70013, transparent); }
+.light .tender-top-2 { background: linear-gradient(90deg, #c0c0c013, transparent); }
+.light .tender-top-3 { background: linear-gradient(90deg, #cd7f3213, transparent); }
+
+/* ── Mobile ───────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .tender-section { padding: 14px 12px; }
+  .tender-standards { display: none; }
+}
+
+/* ── Live badge ───────────────────────────────────────────────────────────── */
+.tender-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.tender-live-dot {
+  width: 7px;
+  height: 7px;
+  background: #22c55e;
+  border-radius: 50%;
+  animation: tenderPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes tenderPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.75); }
+}

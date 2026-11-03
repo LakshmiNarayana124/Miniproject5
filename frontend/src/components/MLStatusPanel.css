@@ -1,0 +1,183 @@
+/* ── ML Panel ─────────────────────────────────────────────────────────────── */
+.ml-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 22px 26px;
+  transition: background 0.3s;
+}
+
+.ml-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  gap: 12px;
+}
+
+.ml-panel-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-h);
+  margin: 0;
+}
+
+.ml-panel-sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+/* Live pulse dot */
+.ml-live-dot {
+  width: 9px;
+  height: 9px;
+  background: #22c55e;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 4px;
+  animation: mlPulse 2s ease-in-out infinite;
+}
+
+@keyframes mlPulse {
+  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 #22c55e40; }
+  50%       { opacity: 0.7; transform: scale(0.9); box-shadow: 0 0 0 5px #22c55e10; }
+}
+
+.ml-cold {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+  padding: 20px 0;
+}
+
+/* ── Cards grid ───────────────────────────────────────────────────────────── */
+.ml-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+}
+
+.ml-card {
+  background: var(--bg-card2);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: background 0.2s;
+}
+
+.ml-card-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ml-card-icon { font-size: 18px; flex-shrink: 0; }
+
+.ml-card-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-h);
+  flex: 1;
+}
+
+/* ── Confidence ring ──────────────────────────────────────────────────────── */
+.conf-ring {
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+/* ── Metrics ──────────────────────────────────────────────────────────────── */
+.ml-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 10px;
+}
+
+.ml-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ml-metric-full {
+  grid-column: 1 / -1;
+}
+
+.ml-metric-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.ml-metric-val {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-h);
+  font-variant-numeric: tabular-nums;
+}
+
+.ml-metric-band {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text);
+  font-family: monospace;
+}
+
+/* ── Anomaly score bar ────────────────────────────────────────────────────── */
+.ml-score-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 6px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: visible;
+  position: relative;
+  margin-top: 3px;
+  flex: 1;
+}
+
+.ml-score-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  min-width: 2px;
+}
+
+.ml-score-label {
+  font-size: 11px;
+  font-weight: 800;
+  min-width: 22px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Light mode ───────────────────────────────────────────────────────────── */
+.light .ml-panel { box-shadow: 0 2px 8px rgba(31, 45, 65, 0.07); }
+
+/* ── Mobile ───────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .ml-panel { padding: 16px; }
+  .ml-cards-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Backend model info strip (Req 8.6, 14.1) ── */
+.ml-backend-info {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 6px 16px;
+  background: rgba(79,142,247,0.06);
+  border-radius: 8px;
+  margin-bottom: 10px;
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+.ml-backend-info strong { color: #cbd5e1; }
