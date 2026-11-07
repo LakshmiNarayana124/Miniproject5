@@ -29,3 +29,8 @@ Thumbs.db
 KAIST/vibration.zip
 KAIST/current,temp.zip
 KAIST/inspection/0Nm_Normal.tdms
+
+# Local TLS certificates and private keys
+certs/
+*.key
+*.pem

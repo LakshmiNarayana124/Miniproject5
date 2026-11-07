@@ -287,3 +287,197 @@
   .login-role-tag-hint { display:none; }
   .modal-box         { padding:20px 18px 24px; }
 }
+
+/* ── Sub-role bar (Operator / Engineer — below the mode tabs) ────────────── */
+.subrole-bar {
+  display: flex; justify-content: space-between;
+  gap: 8px; margin-bottom: 16px;
+}
+
+.subrole-btn {
+  flex: 1; padding: 9px 8px;
+  background: transparent; border: 1.5px solid #252837; border-radius: 10px;
+  font-family: inherit; font-size: 12px; font-weight: 700; color: #4a5070;
+  cursor: pointer; transition: all .18s; letter-spacing: .2px;
+}
+.subrole-btn:hover { border-color: #ffffff25; color: #a0a8c0; background: #ffffff06; }
+
+.subrole-btn--op  { color: #38bdf8; border-color: #0369a155; background: #0369a10e; }
+.subrole-btn--eng { color: #34d399; border-color: #06522255; background: #0652220e; }
+.subrole-btn--active { transform: translateY(-1px); }
+.subrole-btn--op.subrole-btn--active  { box-shadow: 0 0 0 2px #0369a128; }
+.subrole-btn--eng.subrole-btn--active { box-shadow: 0 0 0 2px #06522228; }
+
+/* ── Offline demo hint ───────────────────────────────────────────────────── */
+.login-demo-hint {
+  margin: 14px 0 0; padding: 8px 12px;
+  background: #0d0f14; border: 1px dashed #252837; border-radius: 8px;
+  font-size: 11px; color: #4a5070; text-align: center; line-height: 1.5;
+}
+.login-demo-hint strong { color: #a0a8c0; }
+
+/* ── Bottom links row (inside card — forgot + admin register only) ───────── */
+.login-bottom-links {
+  display: flex; align-items: center; justify-content: center;
+  flex-wrap: wrap; gap: 4px 6px; margin-top: 14px;
+}
+
+/* ── login-stack: vertical column that holds the card + "New here?" strip ── */
+.login-stack {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  width: 100%; max-width: 500px;
+}
+
+/* ── "New here?" strip — sits below the card, never overlaps ────────────── */
+.new-here-strip {
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px; flex-wrap: wrap;
+  width: 100%;
+  padding: 10px 14px;
+  background: #13161e;
+  border: 1px solid #252837;
+  border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(0,0,0,.35);
+}
+
+.new-here-label {
+  font-size: 11px; color: #4a5070; font-weight: 600;
+  letter-spacing: .3px; white-space: nowrap;
+}
+
+.new-here-btn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 7px 14px; border-radius: 8px;
+  font-size: 12px; font-weight: 700; font-family: inherit;
+  cursor: pointer; border: 1.5px solid transparent;
+  transition: all .18s; letter-spacing: .2px;
+}
+
+.new-here-btn--op {
+  color: #38bdf8; background: #0369a114; border-color: #0369a155;
+}
+.new-here-btn--op:hover {
+  background: #0369a122; border-color: #38bdf8;
+  box-shadow: 0 0 0 2px #0369a118;
+}
+
+.new-here-btn--eng {
+  color: #34d399; background: #06522214; border-color: #06522255;
+}
+.new-here-btn--eng:hover {
+  background: #06522228; border-color: #34d399;
+  box-shadow: 0 0 0 2px #06522218;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CREATE ACCOUNT VIEW
+   Full-screen role-selection layout (GitHub/Slack-style)
+═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Outer wrapper — same background as login-root ──────────────────────── */
+.create-account-wrap {
+  position: relative; z-index: 1;
+  width: 100%; max-width: 860px;
+  margin: 0 auto;
+  padding: 28px 20px 40px;
+  animation: cardIn .45s cubic-bezier(.22,1,.36,1);
+}
+
+/* ── Header row ─────────────────────────────────────────────────────────── */
+.create-account-header {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 28px;
+  justify-content: center;
+}
+
+/* ── Two-column role card grid ──────────────────────────────────────────── */
+.role-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* ── Individual role card ───────────────────────────────────────────────── */
+.role-card {
+  background: #13161e;
+  border: 1.5px solid var(--role-border, #252837);
+  border-radius: 18px;
+  padding: 24px 22px 22px;
+  display: flex; flex-direction: column; gap: 16px;
+  box-shadow: 0 0 0 1px var(--role-glow, transparent), 0 8px 32px rgba(0,0,0,.45);
+  transition: transform .2s, box-shadow .2s;
+}
+.role-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 0 0 1px var(--role-border, #252837),
+              0 12px 40px rgba(0,0,0,.55),
+              0 0 28px var(--role-glow, transparent);
+}
+
+/* Card top section */
+.role-card-top { display: flex; flex-direction: column; gap: 8px; }
+
+.role-card-icon {
+  font-size: 36px; line-height: 1;
+  filter: drop-shadow(0 0 10px var(--role-accent, #fff));
+}
+
+.role-card-title {
+  font-size: 16px; font-weight: 800;
+  color: var(--role-accent, #e8eaf2);
+  margin: 0; line-height: 1.2;
+}
+
+.role-card-desc {
+  font-size: 12px; color: #a0a8c0;
+  line-height: 1.6; margin: 0;
+}
+
+/* Feature list */
+.role-card-features {
+  list-style: none; padding: 0; margin: 0;
+  display: flex; flex-direction: column; gap: 8px;
+  flex: 1;
+}
+
+.role-card-feature {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; color: #a0a8c0;
+}
+.role-card-feature-icon {
+  font-size: 14px; flex-shrink: 0; width: 20px; text-align: center;
+}
+.role-card-feature-text { line-height: 1.4; }
+
+/* CTA button at bottom of card */
+.role-card-btn {
+  width: 100%; padding: 11px;
+  color: #fff; border: none; border-radius: 10px;
+  font-size: 13px; font-weight: 700; font-family: inherit;
+  cursor: pointer; letter-spacing: .3px;
+  transition: opacity .2s, transform .15s;
+  margin-top: auto;
+}
+.role-card-btn:hover  { opacity: .88; transform: translateY(-1px); }
+.role-card-btn:active { transform: translateY(0); }
+
+/* ── Footer ─────────────────────────────────────────────────────────────── */
+.create-account-footer {
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px; margin-top: 24px;
+}
+
+.create-account-back {
+  font-size: 12px !important;
+  color: #a0a8c0 !important;
+}
+.create-account-back:hover { color: #e8eaf2 !important; }
+
+/* ── Mobile ─────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .create-account-wrap { padding: 20px 12px 32px; }
+  .role-cards-grid     { grid-template-columns: 1fr; }
+  .new-here-strip      { flex-direction: column; gap: 6px; }
+  .new-here-btn        { width: 100%; justify-content: center; }
+}

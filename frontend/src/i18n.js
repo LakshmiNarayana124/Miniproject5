@@ -526,6 +526,25 @@ const TRANSLATIONS = {
   um_cant_self:           { en: 'Cannot change your own status', hi: 'अपनी स्थिति नहीं बदल सकते', kn: 'ನಿಮ್ಮ ಸ್ಥಿತಿ ಬದಲಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ', ta: 'உங்கள் நிலையை மாற்ற முடியாது', te: 'మీ స్థితిని మార్చలేరు' },
   um_delete:              { en: 'Delete account permanently', hi: 'खाता स्थायी रूप से हटाएं', kn: 'ಖಾತೆ ಶಾಶ್ವತವಾಗಿ ಅಳಿಸಿ', ta: 'கணக்கை நிரந்தரமாக நீக்கு', te: 'ఖాతాను శాశ్వతంగా తొలగించు' },
   um_delete_btn:          { en: '🗑 Delete', hi: '🗑 हटाएं', kn: '🗑 ಅಳಿಸಿ', ta: '🗑 நீக்கு', te: '🗑 తొలగించు' },
+
+  // ─── Role-segmented Create Account panels ──────────────────────────────────
+  create_acct_heading:    { en: 'Create Account',                   hi: 'खाता बनाएं',                  kn: 'ಖಾತೆ ರಚಿಸಿ',                ta: 'கணக்கு உருவாக்கு',             te: 'ఖాతా సృష్టించు'              },
+  create_acct_sub:        { en: 'Choose your role to get started', hi: 'शुरू करने के लिए अपनी भूमिका चुनें', kn: 'ಪ್ರಾರಂಭಿಸಲು ನಿಮ್ಮ ಪಾತ್ರ ಆರಿಸಿ', ta: 'தொடங்க உங்கள் பங்கை தேர்வு செய்', te: 'ప్రారంభించడానికి మీ పాత్ర ఎంచుకోండి' },
+  already_have_account:   { en: 'Already have an account?',        hi: 'पहले से खाता है?',             kn: 'ಈಗಾಗಲೇ ಖಾತೆ ಇದೆಯೇ?',        ta: 'ஏற்கனவே கணக்கு உள்ளதா?',      te: 'ఇప్పటికే ఖాతా ఉందా?'         },
+  back_to_sign_in:        { en: 'Sign in instead',                 hi: 'साइन इन करें',                kn: 'ಸೈನ್ ಇನ್ ಮಾಡಿ',              ta: 'உள்நுழைக',                      te: 'సైన్ ఇన్ చేయండి'             },
+  op_reg_title:           { en: '📊 Operator Account',             hi: '📊 ऑपरेटर खाता',              kn: '📊 ಆಪರೇಟರ್ ಖಾತೆ',            ta: '📊 இயக்குனர் கணக்கு',           te: '📊 ఆపరేటర్ ఖాతా'             },
+  op_reg_desc:            { en: 'Monitor dashboards, review sensor data, and submit labels for anomaly verification.', hi: 'डैशबोर्ड देखें, सेंसर डेटा की समीक्षा करें और anomaly सत्यापन के लिए लेबल सबमिट करें।', kn: 'Dashboards ಮೇಲ್ವಿಚಾರಣೆ, sensor ಡೇಟಾ ಪರಿಶೀಲನೆ ಮತ್ತು anomaly labels ಸಲ್ಲಿಸಿ.', ta: 'டாஷ்போர்டுகளை கண்காணி, சென்சார் தரவை மதிப்பாய்வு செய், முரண்பாட்டு சரிபார்ப்பிற்கு லேபல்கள் சமர்ப்பி.', te: 'డాష్‌బోర్డ్‌లు పర్యవేక్షించండి, సెన్సర్ డేటా సమీక్షించండి, అనామలీ ధృవీకరణకు లేబుల్‌లు సమర్పించండి.' },
+  eng_reg_title:          { en: '🔧 Engineer Account',             hi: '🔧 इंजीनियर खाता',            kn: '🔧 ಇಂಜಿನಿಯರ್ ಖಾತೆ',          ta: '🔧 பொறியாளர் கணக்கு',           te: '🔧 ఇంజినీర్ ఖాతా'             },
+  eng_reg_desc:           { en: 'Access equipment controls, dispatch maintenance commands, and manage sensor calibration.', hi: 'उपकरण नियंत्रण, रखरखाव आदेश और सेंसर कैलिब्रेशन प्रबंधित करें।', kn: 'ಉಪಕರಣ ನಿಯಂತ್ರಣ, ನಿರ್ವಹಣಾ ಆದೇಶಗಳು ಮತ್ತು sensor calibration ನಿರ್ವಹಿಸಿ.', ta: 'உபகரண கட்டுப்பாடுகளை அணுகு, பராமரிப்பு கட்டளைகளை அனுப்பு, சென்சார் அளவீட்டு நிர்வகி.', te: 'పరికర నియంత్రణలు యాక్సెస్ చేయండి, నిర్వహణ ఆదేశాలు పంపండి, సెన్సర్ క్రమాంకనం నిర్వహించండి.' },
+  btn_create_op:          { en: '→ Create Operator Account',       hi: '→ ऑपरेटर खाता बनाएं',        kn: '→ ಆಪರೇಟರ್ ಖಾತೆ ರಚಿಸಿ',       ta: '→ இயக்குனர் கணக்கு உருவாக்கு', te: '→ ఆపరేటర్ ఖాతా సృష్టించు'   },
+  btn_create_eng:         { en: '→ Create Engineer Account',       hi: '→ इंजीनियर खाता बनाएं',      kn: '→ ಇಂಜಿನಿಯರ್ ಖಾತೆ ರಚಿಸಿ',     ta: '→ பொறியாளர் கணக்கு உருவாக்கு', te: '→ ఇంజినీర్ ఖాతా సృష్టించు'  },
+  modal_op_title:         { en: '📊 Create Operator Account',      hi: '📊 ऑपरेटर खाता बनाएं',        kn: '📊 ಆಪರೇಟರ್ ಖಾತೆ ರಚಿಸಿ',       ta: '📊 இயக்குனர் கணக்கு உருவாக்கு', te: '📊 ఆపరేటర్ ఖాతా సృష్టించు'  },
+  modal_eng_title:        { en: '🔧 Create Engineer Account',      hi: '🔧 इंजीनियर खाता बनाएं',      kn: '🔧 ಇಂಜಿನಿಯರ್ ಖಾತೆ ರಚಿಸಿ',     ta: '🔧 பொறியாளர் கணக்கு உருவாக்கு', te: '🔧 ఇంజినీర్ ఖాతా సృష్టించు'  },
+  acct_created_op:        { en: 'Operator account created! You can now sign in.', hi: 'ऑपरेटर खाता बनाया! अब साइन इन करें।', kn: 'ಆಪರೇಟರ್ ಖಾತೆ ರಚಿಸಲಾಗಿದೆ! ಈಗ ಸೈನ್ ಇನ್ ಮಾಡಿ.', ta: 'இயக்குனர் கணக்கு உருவாக்கப்பட்டது!', te: 'ఆపరేటర్ ఖాతా సృష్టించబడింది!' },
+  acct_created_eng:       { en: 'Engineer account created! You can now sign in.', hi: 'इंजीनियर खाता बनाया! अब साइन इन करें।', kn: 'ಇಂಜಿನಿಯರ್ ಖಾತೆ ರಚಿಸಲಾಗಿದೆ! ಈಗ ಸೈನ್ ಇನ್ ಮಾಡಿ.', ta: 'பொறியாளர் கணக்கு உருவாக்கப்பட்டது!', te: 'ఇంజినీర్ ఖాతా సృష్టించబడింది!' },
+  reg_invite_notice:      { en: 'You need an invite code from your administrator to create an account.', hi: 'खाता बनाने के लिए आपको अपने admin से invite code चाहिए।', kn: 'ಖಾತೆ ರಚಿಸಲು ನಿಮ್ಮ admin ನಿಂದ invite code ಅಗತ್ಯ.', ta: 'கணக்கு உருவாக்க உங்கள் நிர்வாகியிடமிருந்து அழைப்பு குறியீடு தேவை.', te: 'ఖాతా సృష్టించడానికి మీ నిర్వాహకుడి నుండి ఆహ్వాన కోడ్ అవసరం.' },
+  lbl_full_name:          { en: 'Full Name',   hi: 'पूरा नाम',    kn: 'ಪೂರ್ಣ ಹೆಸರು',  ta: 'முழு பெயர்',   te: 'పూర్తి పేరు'   },
+  ph_full_name:           { en: 'Your full name', hi: 'आपका पूरा नाम', kn: 'ನಿಮ್ಮ ಪೂರ್ಣ ಹೆಸರು', ta: 'உங்கள் முழு பெயர்', te: 'మీ పూర్తి పేరు' },
 }
 
 // ── Runtime lang state ──────────────────────────────────────────────────────

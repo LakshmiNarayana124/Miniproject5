@@ -1,22 +1,42 @@
 
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+// HTTPS certificate paths
+const CERT_DIR = path.resolve(__dirname, '..', 'certs')
+const certFile = path.join(CERT_DIR, 'intelliwatch-lan.crt')
+const keyFile = path.join(CERT_DIR, 'intelliwatch-lan.key')
+
+const hasCerts = fs.existsSync(certFile) && fs.existsSync(keyFile)
 
 export default defineConfig({
   plugins: [react()],
 
   server: {
-    // HTTPS in development: run `npm run dev:https` (see package.json).
-    // Vite will self-sign a certificate automatically when https:true is set.
-    // For production HTTPS use a reverse proxy (Nginx/Caddy) – see README.
-    https: false,   // flip to true or pass --https flag for dev HTTPS
+    https: hasCerts
+      ? {
+          cert: fs.readFileSync(certFile),
+          key: fs.readFileSync(keyFile)
+        }
+      : false,
 
-    // Allow access from any device on the local network (phone, tablet, etc.)
     host: true,
     port: 5173,
   },
 
   preview: {
+    https: hasCerts
+      ? {
+          cert: fs.readFileSync(certFile),
+          key: fs.readFileSync(keyFile)
+        }
+      : false,
+
     host: true,
     port: 4173,
   },
