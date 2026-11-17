@@ -1,0 +1,262 @@
+INTELLIWATCH — FULL RESTART, DEMO & AUTHENTICATED TEST RUNBOOK
+Project: C:\Users\Dell\Downloads\IntelliWatch_PC_Ready
+Environment: Windows PowerShell
+Startup order: BACKEND → FRONTEND → CADDY → BROWSER
+Use THREE separate PowerShell windows. Keep all three server windows open.
+
+============================================================
+0. BEFORE STARTING
+============================================================
+
+1. Start the PC and sign in to Windows.
+2. Ensure the project folder still exists:
+   C:\Users\Dell\Downloads\IntelliWatch_PC_Ready
+3. Open PowerShell window 1, window 2 and window 3.
+4. Do not type the PowerShell prompt characters (PS ...> or >>).
+   Type only the commands shown below.
+5. Do not close a server window while testing.
+
+Optional: check whether the required ports are already occupied.
+Run in any PowerShell window:
+
+Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
+  Where-Object { $_.LocalPort -in 8000,5173,8443 } |
+  Format-Table LocalAddress,LocalPort,OwningProcess
+
+If this displays an existing IntelliWatch process, stop that process
+cleanly in its own terminal with Ctrl+C before starting another copy.
+Do not kill an unknown process just because it uses one of these ports.
+
+============================================================
+1. WINDOW 1 — START BACKEND
+============================================================
+
+Run:
+
+cd "C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend"
+python -m uvicorn server:app --host 0.0.0.0 --port 8000
+
+WAIT for the startup confirmation, normally including:
+  Application startup complete.
+  Uvicorn running on http://0.0.0.0:8000
+
+IMPORTANT:
+- Keep this window open.
+- Do not start the frontend before the backend has completed startup.
+- The backend listens on all network interfaces at port 8000.
+- Do not add SSL flags here; the current tested launch uses Caddy for
+  the HTTPS entry point.
+
+============================================================
+2. WINDOW 2 — START FRONTEND
+============================================================
+
+Open PowerShell window 2 and run:
+
+cd "C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\frontend"
+npm run dev
+
+WAIT for Vite's ready message. The expected local development address is:
+  http://localhost:5173
+
+IMPORTANT:
+- Keep this window open.
+- If npm reports that dependencies are missing, STOP and report the
+  exact error; do not delete package files or reinstall blindly.
+- Do not change Vite configuration during a normal restart.
+
+============================================================
+3. WINDOW 3 — START CADDY / HTTPS
+============================================================
+
+Open PowerShell window 3 and run:
+
+cd "C:\Users\Dell\Downloads\IntelliWatch_PC_Ready"
+caddy run --config Caddyfile
+
+WAIT for Caddy to report that it has loaded the configuration and is
+running. Keep this window open.
+
+HTTPS entry point:
+  https://localhost:8443
+
+Caddy provides the HTTPS entry point and routes requests according to
+the existing Caddyfile. Do not edit the Caddyfile during a normal test.
+
+============================================================
+4. HOST / LOCAL PC TEST
+============================================================
+
+On the same PC, open a browser and visit:
+
+  https://localhost:8443
+
+If the HTTPS page does not load, test the direct Vite page:
+
+  http://localhost:5173
+
+Use Ctrl+Shift+R for a hard refresh if an old frontend page is cached.
+
+Basic port checks (run in a NEW PowerShell window):
+
+Test-NetConnection localhost -Port 8000
+Test-NetConnection localhost -Port 5173
+Test-NetConnection localhost -Port 8443
+
+Expected: TcpTestSucceeded : True for each running service.
+
+Backend API documentation, if enabled:
+  http://localhost:8000/docs
+
+A GET request to /auth/login is not a valid login test. The endpoint
+expects POST; use the frontend login form for the normal login test.
+
+============================================================
+5. LAN / NETWORK TEST FROM ANOTHER DEVICE
+============================================================
+
+A. On the IntelliWatch PC, find its current LAN IPv4 address:
+
+ipconfig
+
+Find the active Wi-Fi or Ethernet adapter and note its IPv4 Address.
+Do not use 127.0.0.1 or localhost on the second device.
+
+B. On the second device:
+- Connect it to the same local network as the IntelliWatch PC.
+- Open its browser.
+- Enter the following address, replacing PC_LAN_IP with the IPv4
+  address found in step A:
+
+  https://PC_LAN_IP:8443
+
+Example format only:
+  https://192.168.x.x:8443
+
+C. If the LAN page does not open:
+- Confirm all three server windows are still running.
+- Confirm both devices are on the same network.
+- Recheck the PC's current IPv4 address with ipconfig.
+- Run this on the IntelliWatch PC:
+
+  Test-NetConnection localhost -Port 8443
+
+- Then test the LAN address from the second device again.
+- Check Windows Firewall only if the service is running locally but
+  the second device cannot connect. Do not disable the firewall.
+- A changed router DHCP address can change the PC_LAN_IP after restart.
+
+IMPORTANT:
+- Use the LAN IPv4 address only from another device.
+- The localhost URL is for the IntelliWatch PC itself.
+- Do not expose ports 8000 or 5173 directly to the public internet.
+- The LAN test is for the trusted local network only.
+
+============================================================
+6. LOGIN TESTS — DEMO AND AUTHENTICATED
+============================================================
+
+A. DEMO LOGIN
+1. Open the application page.
+2. Use the demo fallback credentials shown by the UI:
+     Username: demo
+     Password: demo
+3. Sign in only if the Demo fallback is displayed/enabled.
+4. Confirm the demo session reaches the application and the expected
+   dashboard/components load.
+5. Record any role or feature that does not appear as expected.
+
+B. AUTHENTICATED LOGIN
+1. Sign out of the demo session first.
+2. Use an existing registered account and its actual password.
+3. Test the intended role account(s), such as Operator, Engineer and
+   Administrator, only where valid accounts already exist.
+4. Confirm successful login, correct role-specific access, and logout.
+5. Do not assume demo/demo is a real registered account.
+6. Do not invent credentials, reset passwords, or create accounts as
+   part of this restart test.
+
+C. LOGIN API NOTE
+The endpoint /auth/login expects POST. A browser or curl GET request
+can return HTTP 405 Method Not Allowed; that alone does not indicate
+that the backend is down. Use the application login form for the
+standard end-to-end test.
+
+============================================================
+7. BASIC END-TO-END CHECKLIST
+============================================================
+
+Perform in this order:
+
+[ ] Backend startup completes without errors.
+[ ] Frontend Vite startup completes without errors.
+[ ] Caddy starts using the existing Caddyfile.
+[ ] https://localhost:8443 opens on the host PC.
+[ ] http://localhost:5173 opens directly on the host PC.
+[ ] Backend port 8000 responds locally.
+[ ] HTTPS port 8443 responds locally.
+[ ] Demo login works, if the UI offers the demo fallback.
+[ ] A real registered account can log in.
+[ ] Logout works.
+[ ] Sensor/dashboard data appears and updates as expected.
+[ ] Alert/history/chat/other existing components open as expected.
+[ ] LAN HTTPS page opens from a second device on the same network.
+[ ] Login and logout are tested from the LAN device as well.
+[ ] No unexpected errors appear in the three PowerShell windows.
+
+Record the time, device, URL, account role tested, and any error.
+Do not treat a page loading as proof that every feature is working.
+
+============================================================
+8. CLEAN SHUTDOWN — IMPORTANT ORDER
+============================================================
+
+When testing is complete, stop services in REVERSE startup order.
+
+1. In WINDOW 3 (Caddy), press:
+     Ctrl+C
+   Wait for Caddy to stop.
+
+2. In WINDOW 2 (Frontend/Vite), press:
+     Ctrl+C
+   Wait for Vite to stop.
+
+3. In WINDOW 1 (Backend/Uvicorn), press:
+     Ctrl+C
+   Wait for Uvicorn to stop.
+
+4. Close the three PowerShell windows only after each service has
+   stopped. Then close the browser.
+
+5. Optional: confirm the ports are free:
+
+Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
+  Where-Object { $_.LocalPort -in 8000,5173,8443 } |
+  Format-Table LocalAddress,LocalPort,OwningProcess
+
+If no rows are returned, none of those ports is currently listening.
+If a row remains, identify the owning process before taking action.
+Do not force-stop an unknown process.
+
+============================================================
+9. IMPORTANT REMINDERS
+============================================================
+
+- Startup order: Backend → Frontend → Caddy → Browser.
+- Shutdown order: Caddy → Frontend → Backend.
+- Keep the three service windows open during the test.
+- Host URL: https://localhost:8443
+- Direct host frontend check: http://localhost:5173
+- LAN URL: https://PC_LAN_IP:8443
+- Backend port: 8000; Frontend port: 5173; HTTPS/Caddy port: 8443.
+- Use the PC's current LAN IPv4 address after every network/router
+  change or restart; do not assume it remains the same.
+- Use actual registered credentials for authenticated testing.
+- Use demo/demo only for the UI's explicitly offered demo fallback.
+- Never publish passwords, JWT tokens, private keys, or certificates.
+- Do not delete the database, certificates, configuration, or project
+  files during a routine restart or test.
+- If a command fails, copy the complete error output and stop at that
+  step. Do not continue as though the service started successfully.
+
+END OF RUNBOOK
