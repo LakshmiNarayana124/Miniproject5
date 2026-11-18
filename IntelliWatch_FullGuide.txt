@@ -1,0 +1,629 @@
+╔══════════════════════════════════════════════════════════════════════╗
+║        IntelliWatch — Complete Project Run Guide                     ║
+║        Full command sequence for localhost + network execution       ║
+║        Project: IntelliWatch_PC_Ready                                ║
+║        GitHub: github.com/LakshmiNarayana124/Miniproject5            ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+████████████████████████████████████████████████████████████████████
+█  SECTION 0 — PREREQUISITES                                       █
+████████████████████████████████████████████████████████████████████
+
+  Required on your machine:
+    • Python 3.12+        →  python --version
+    • Node.js 18+         →  node --version
+    • Git                 →  git --version
+    • pip (comes with Python)
+    • npm (comes with Node.js)
+
+  Project location:
+    C:\Users\Dell\Downloads\IntelliWatch_PC_Ready
+
+
+████████████████████████████████████████████████████████████████████
+█  SECTION 1 — FIRST TIME SETUP (run once)                        █
+████████████████████████████████████████████████████████████████████
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ STEP 1.1 — Install backend Python dependencies              │
+  └─────────────────────────────────────────────────────────────┘
+
+    cd C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend
+    pip install -r requirements.txt
+
+    (This installs: fastapi, uvicorn, pyjwt, argon2, scikit-learn,
+     pandas, numpy, xgboost, firebase-admin, paho-mqtt, httpx, etc.)
+
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ STEP 1.2 — Install frontend Node dependencies                │
+  └─────────────────────────────────────────────────────────────┘
+
+    cd C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\frontend
+    npm install
+
+    (This installs: react, vite, recharts, three.js, firebase, etc.)
+
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ STEP 1.3 — Set backend environment variables                 │
+  └─────────────────────────────────────────────────────────────┘
+
+    File: C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\.env
+
+    Required:
+      INTELLIWATCH_SECRET_KEY=<64-char-hex-string>
+      (Already set in your Windows environment — check with:)
+        echo %INTELLIWATCH_SECRET_KEY%
+
+    For Firebase Google Sign-In:
+      FIREBASE_PROJECT_ID=intelliwatch-66ad0
+      (Already in .env file)
+
+    For Firebase Phone OTP (optional, needs Blaze plan):
+      FIREBASE_SERVICE_ACCOUNT_JSON=<path-to-serviceAccountKey.json>
+      (Download from Firebase Console → Project Settings → Service Accounts)
+
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ STEP 1.4 — Install WiFi certificate (fixes "Not Secure")   │
+  └─────────────────────────────────────────────────────────────┘
+
+    Run once in PowerShell:
+
+      certutil -user -addstore Root "C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\certs\intelliwatch-wifi.crt"
+
+    Then restart your browser. The cert covers:
+      - localhost
+      - 127.0.0.1
+      - 192.168.1.8 (your current Wi-Fi IP)
+
+    If your IP changes later, regenerate cert (see Section 7).
+
+
+████████████████████████████████████████████████████████████████████
+█  SECTION 2 — RUN ON LOCALHOST (this PC)                        █
+████████████████████████████████████████████████████████████████████
+
+  Open TWO terminals (PowerShell or CMD).
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ STEP 2.1 — Start Backend (Terminal 1)                       │
+  └─────────────────────────────────────────────────────────────┘
+
+    cd C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend
+    python -m uvicorn server:app --host 0.0.0.0 --port 8000
+
+    Wait for:
+      "Uvicorn running on http://0.0.0.0:8000"
+
+    Backend is now live:
+      API:        http://localhost:8000
+      Docs:       http://localhost:8000/docs
+      Health:     http://localhost:8000/auth/registration-status
+
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ STEP 2.2 — Start Frontend (Terminal 2)                      │
+  └─────────────────────────────────────────────────────────────┘
+
+    cd C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\frontend
+    npm run dev
+
+    Wait for:
+      "VITE v8.3.5 ready"
+      "Local: https://localhost:5173/"
+
+    Frontend is now live:
+      URL:  https://localhost:5173
+
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ STEP 2.3 — Open in browser                                  │
+  └─────────────────────────────────────────────────────────────┘
+
+    Go to:  https://localhost:5173
+
+    You will see the IntelliWatch login page.
+
+    Login options:
+      1. Username + Password  (standard)
+      2. Google Sign-In        (Firebase, free Spark plan)
+      3. Phone OTP             (Firebase, needs Blaze plan)
+      4. Offline Demo          (no login needed)
+
+    After login → dashboard appears automatically.
+
+
+████████████████████████████████████████████████████████████████████
+█  SECTION 3 — RUN ON NETWORK (other devices on same Wi-Fi)     █
+████████████████████████████████████████████████████████████████████
+
+  Prerequisite: both servers must be running (Section 2).
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ STEP 3.1 — Find your current IP                             │
+  └─────────────────────────────────────────────────────────────┘
+
+    Open PowerShell and run:
+
+      ipconfig | findstr "IPv4"
+
+    Example output:
+      IPv4 Address. . . . . . . . . . . : 192.168.1.8
+
+    Your network URL is:  https://192.168.1.8:5173
+
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ STEP 3.2 — Open on another device (phone/tablet/other PC)   │
+  └─────────────────────────────────────────────────────────────┘
+
+    In the device's browser, go to:
+
+      https://192.168.1.8:5173
+
+    (Replace 192.168.1.8 with your actual IP from step 3.1)
+
+    If you see "Not Secure" warning:
+      → Click "Advanced"
+      → Click "Proceed to 192.168.1.8"
+      → This is safe — it's your own self-signed certificate
+
+    To permanently remove the warning (on this PC only):
+      certutil -user -addstore Root "C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\certs\intelliwatch-wifi.crt"
+      Then restart browser.
+
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ STEP 3.3 — Add to Firebase authorized domains               │
+  └─────────────────────────────────────────────────────────────┘
+
+    Firebase Console → Authentication → Settings → Authorized domains
+    Add: 192.168.1.8
+    (Required for Google Sign-In and Phone OTP to work on network)
+
+
+████████████████████████████████████████████████████████████████████
+█  SECTION 4 — LOGIN OPTIONS                                     █
+████████████████████████████████████████████████████████████████████
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ 4.1 — Username + Password                                   │
+  └─────────────────────────────────────────────────────────────┘
+
+    Select role tab: "Operator / Engineer" or "Administrator"
+    Choose sub-role: "Operator" or "Engineer" (if operator tab)
+    Enter username and password
+    Click "Sign In"
+
+    Default admin (if not set up):
+      Run:  cd Backend && python -c "import auth; auth.bootstrap_admin()"
+      Follow prompts to create first admin account.
+
+    Register new users:
+      Operator/Engineer: Click "New here?" on login page
+      Admin: Requires invitation token from existing admin
+
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ 4.2 — Google Sign-In                                        │
+  └─────────────────────────────────────────────────────────────┘
+
+    Switch to "Google" tab
+    Select role: Operator or Engineer (from subrole tabs)
+    Click "Sign in as 📊 Operator" or "Sign in as 🔧 Engineer"
+    Google popup appears → choose account → done
+
+    Requirements:
+      • Firebase Console → Authentication → Enable Google
+      • Your domain in Authorized domains
+      • Backend: FIREBASE_PROJECT_ID set in .env
+      • Works on free Spark plan
+
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ 4.3 — Phone + OTP                                           │
+  └─────────────────────────────────────────────────────────────┘
+
+    Switch to "Phone OTP" tab
+    Select country code from dropdown (default: 🇮🇳 +91 India)
+    Enter phone number (without country code)
+    Click "Send OTP" → receive SMS with 6-digit code
+    Enter code → click "Verify OTP"
+
+    Requirements:
+      • Firebase Console → Authentication → Enable Phone
+      • Firebase Blaze (pay-as-you-go) plan — first 10 SMS/month free
+      • Upgrade at: console.firebase.google.com → Usage and billing
+
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ 4.4 — Offline Demo                                          │
+  └─────────────────────────────────────────────────────────────┘
+
+    Click "Enter Offline Demo" button below the login form
+    Select role tab → enters simulated dashboard
+    No backend required — all data is synthetic
+
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ 4.5 — Timezone                                              │
+  └─────────────────────────────────────────────────────────────┘
+
+    Dropdown on login page (above the auth method tabs)
+    Default: India (IST, UTC+5:30)
+    19 zones available
+    Selected zone is stored in session and shown on Profile page
+
+
+████████████████████████████████████████████████████████████████████
+█  SECTION 5 — STOP SERVERS                                      █
+████████████████████████████████████████████████████████████████████
+
+  In each terminal: press  Ctrl + C
+
+  Backend terminal:  Ctrl + C  → stops uvicorn
+  Frontend terminal: Ctrl + C  → stops vite dev server
+
+
+████████████████████████████████████████████████████████████████████
+█  SECTION 6 — INSTALL AS MOBILE APP (PWA)                      █
+████████████████████████████████████████████████████████████████████
+
+  Android (Chrome):
+    Open https://192.168.1.8:5173 on your phone
+    Tap 3-dot menu → "Install app" → Add
+    App appears on home screen, opens fullscreen (no browser bar)
+
+  iOS (Safari):
+    Open the URL → Tap Share icon → "Add to Home Screen"
+
+  Desktop (Chrome/Edge):
+    Install icon appears in address bar → Click to install
+
+  The app works offline (service worker caches the shell).
+  API calls go to the backend when network is available.
+
+
+████████████████████████████████████████████████████████████████████
+█  SECTION 7 — FIX "NOT SECURE" WHEN IP CHANGES                 █
+████████████████████████████████████████████████████████████████████
+
+  When your Wi-Fi IP changes, the cert no longer matches.
+
+  Step 1 — Find new IP:
+    ipconfig | findstr "IPv4"
+    (e.g., 192.168.1.15)
+
+  Step 2 — Regenerate cert (run in project root):
+    cd C:\Users\Dell\Downloads\IntelliWatch_PC_Ready
+    python -c "
+    import datetime, ipaddress
+    from cryptography import x509
+    from cryptography.x509.oid import NameOID
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography.hazmat.backends import default_backend
+    NEW_IP = '192.168.1.15'  # CHANGE THIS to your new IP
+    key = rsa.generate_private_key(65537, 2048, default_backend())
+    subj = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, 'IntelliWatch LAN')])
+    cert = (x509.CertificateBuilder().subject_name(subj).issuer_name(subj)
+        .public_key(key.public_key()).serial_number(x509.random_serial_number())
+        .not_valid_before(datetime.datetime.now(datetime.timezone.utc))
+        .not_valid_after(datetime.datetime.now(datetime.timezone.utc)+datetime.timedelta(days=825))
+        .add_extension(x509.SubjectAlternativeName([
+            x509.DNSName('localhost'),
+            x509.IPAddress(ipaddress.IPv4Address('127.0.0.1')),
+            x509.IPAddress(ipaddress.IPv4Address(NEW_IP))]),False)
+        .add_extension(x509.BasicConstraints(ca=True,path_length=None),True)
+        .sign(key,hashes.SHA256(),default_backend()))
+    open('certs/intelliwatch-wifi.crt','wb').write(cert.public_bytes(serialization.Encoding.PEM))
+    open('certs/intelliwatch-wifi.key','wb').write(key.private_bytes(serialization.Encoding.PEM,serialization.PrivateFormat.TraditionalOpenSSL,serialization.NoEncryption()))
+    print('Cert regenerated for', NEW_IP)
+    "
+
+  Step 3 — Install new cert:
+    certutil -user -addstore Root "certs\intelliwatch-wifi.crt"
+
+  Step 4 — Restart frontend:
+    Ctrl+C in frontend terminal, then:  npm run dev
+
+  Step 5 — Update Firebase authorized domains:
+    Firebase Console → Authentication → Settings → Authorized domains
+    Add your new IP.
+
+
+████████████████████████████████████████████████████████████████████
+█  SECTION 8 — FIREBASE CONSOLE SETUP                            █
+████████████████████████████████████████████████████████████████████
+
+  URL: https://console.firebase.google.com
+  Project: intelliwatch-66ad0
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ 8.1 — Enable sign-in methods                                │
+  └─────────────────────────────────────────────────────────────┘
+
+    Authentication → Sign-in method:
+      • Google  → Enable → Save
+      • Phone   → Enable → Save (needs Blaze plan)
+
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ 8.2 — Add authorized domains                                │
+  └─────────────────────────────────────────────────────────────┘
+
+    Authentication → Settings → Authorized domains → Add domain:
+      • localhost
+      • 127.0.0.1
+      • 192.168.1.8  (your current network IP)
+
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ 8.3 — Get service account key (for backend Phone OTP)       │
+  └─────────────────────────────────────────────────────────────┘
+
+    Project Settings → Service Accounts → Generate new private key
+    Saves a JSON file. Set in Backend\.env:
+      FIREBASE_SERVICE_ACCOUNT_JSON=C:\path\to\serviceAccountKey.json
+
+    Note: Google Sign-In works WITHOUT this — only Phone OTP needs it.
+
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ 8.4 — Upgrade to Blaze plan (for Phone OTP only)            │
+  └─────────────────────────────────────────────────────────────┘
+
+    Usage and billing → Modify plan → Blaze (pay-as-you-go)
+    First 10 SMS/month free.
+    Google Sign-In is free on both Spark and Blaze plans.
+
+
+████████████████████████████████████████████████████████████████████
+█  SECTION 9 — DEPLOY TO CLOUD (FREE TIERS)                      █
+████████████████████████████████████████████████████████████████████
+
+  Full guide: DEPLOYMENT.md (in project root)
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ 9.1 — Database (Neon Postgres, free 0.5 GB)                │
+  └─────────────────────────────────────────────────────────────┘
+
+    1. Sign up at https://neon.tech
+    2. Create project → copy connection string
+    3. Set env var:
+         set NEON_DIRECT_URL=postgresql://user:pass@ep-xxx.neon.tech/db?sslmode=require
+    4. Run migration:
+         cd C:\Users\Dell\Downloads\IntelliWatch_PC_Ready
+         python migrate_sqlite_to_neon.py
+    5. Set DATABASE_URL on Render backend env vars
+
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ 9.2 — Backend (Render, free tier)                           │
+  └─────────────────────────────────────────────────────────────┘
+
+    Option A — Blueprint (recommended):
+      1. Push repo to GitHub
+      2. Render dashboard → New → Blueprint
+      3. Select your repo → render.yaml auto-detected
+      4. Set secret env vars:
+           INTELLIWATCH_SECRET_KEY
+           FIREBASE_PROJECT_ID
+           FIREBASE_SERVICE_ACCOUNT_JSON (optional)
+      5. Deploy
+
+    Option B — Manual:
+      1. Render dashboard → New → Web Service
+      2. Root Directory: Backend
+      3. Build: pip install -r requirements.txt
+      4. Start: uvicorn server:app --host 0.0.0.0 --port $PORT
+      5. Add env vars as above
+
+    Backend URL: https://intelliwatch-backend.onrender.com
+
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ 9.3 — Frontend (Vercel, free tier)                           │
+  └─────────────────────────────────────────────────────────────┘
+
+    1. Vercel dashboard → New Project → Import repo
+    2. vercel.json auto-detected
+    3. Set env vars:
+         VITE_API_URL=https://intelliwatch-backend.onrender.com
+         VITE_FIREBASE_API_KEY=AIzaSyDS_tlmIpoPG-4YeB62RjbPf5BT6x-qu0I
+         VITE_FIREBASE_AUTH_DOMAIN=intelliwatch-66ad0.firebaseapp.com
+         VITE_FIREBASE_PROJECT_ID=intelliwatch-66ad0
+         VITE_FIREBASE_STORAGE_BUCKET=intelliwatch-66ad0.firebasestorage.app
+         VITE_FIREBASE_MESSAGING_SENDER_ID=174724193863
+         VITE_FIREBASE_APP_ID=1:174724193863:web:e09ddbd891e2cc547d5b62
+    4. Deploy
+
+    Frontend URL: https://intelliwatch.vercel.app
+
+    After deploy: update INTELLIWATCH_CORS_ORIGINS on Render
+    to include your Vercel URL.
+
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ 9.4 — Update Firebase authorized domains                    │
+  └─────────────────────────────────────────────────────────────┘
+
+    Firebase Console → Authentication → Settings → Authorized domains
+    Add:
+      intelliwatch-backend.onrender.com
+      intelliwatch.vercel.app
+
+
+████████████████████████████████████████████████████████████████████
+█  SECTION 10 — GITHUB OPERATIONS                                █
+████████████████████████████████████████████████████████████████████
+
+  Repository: https://github.com/LakshmiNarayana124/Miniproject5
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ 10.1 — Push updates to GitHub                               │
+  └─────────────────────────────────────────────────────────────┘
+
+    cd C:\Users\Dell\Downloads\IntelliWatch_PC_Ready
+    git add -A
+    git commit -m "your commit message here"
+    git push miniproject5 main
+
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ 10.2 — Pull latest from GitHub                              │
+  └─────────────────────────────────────────────────────────────┘
+
+    cd C:\Users\Dell\Downloads\IntelliWatch_PC_Ready
+    git pull miniproject5 main
+
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ 10.3 — Check status                                         │
+  └─────────────────────────────────────────────────────────────┘
+
+    git status
+    git log --oneline -5
+
+
+████████████████████████████████████████████████████████████████████
+█  SECTION 11 — TROUBLESHOOTING                                   █
+████████████████████████████████████████████████████████████████████
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ Problem: Backend won't start                                │
+  └─────────────────────────────────────────────────────────────┘
+    Check:
+      echo %INTELLIWATCH_SECRET_KEY%
+    If empty:
+      set INTELLIWATCH_SECRET_KEY=<generate with:>
+      python -c "import secrets; print(secrets.token_hex(32))"
+    Then restart backend.
+
+    Check port not in use:
+      netstat -ano | findstr :8000
+    If occupied, kill the process or use different port:
+      python -m uvicorn server:app --host 0.0.0.0 --port 8001
+
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ Problem: Frontend won't start                                │
+  └─────────────────────────────────────────────────────────────┘
+    Check Node installed:
+      node --version
+    If not 18+, update Node.js.
+    Reinstall deps:
+      cd frontend
+      rm -rf node_modules
+      npm install
+      npm run dev
+
+    Check port not in use:
+      netstat -ano | findstr :5173
+
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ Problem: "Not Secure" on network                             │
+  └─────────────────────────────────────────────────────────────┘
+    Install cert (see Section 1.4).
+    If IP changed, regenerate cert (see Section 7).
+    On mobile: click "Advanced → Proceed anyway" (safe for dev).
+
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ Problem: Google Sign-In shows error                         │
+  └─────────────────────────────────────────────────────────────┘
+    "auth/configuration-not-found":
+      → Firebase Console → Authentication → Enable Google
+    "auth/unauthorized-domain":
+      → Firebase Console → Authorized domains → Add your domain/IP
+    "Firebase authentication is not available on this server":
+      → Backend .env missing FIREBASE_PROJECT_ID
+      → Or backend not restarted after .env change
+
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ Problem: Phone OTP shows error                               │
+  └─────────────────────────────────────────────────────────────┘
+    "auth/billing-not-enabled":
+      → Firebase Spark plan doesn't support Phone Auth
+      → Upgrade to Blaze plan (pay-as-you-go, 10 free SMS/month)
+    "auth/invalid-phone-number":
+      → Check country code + number format
+    "auth/captcha-check-failed":
+      → Refresh page, try again (reCAPTCHA reset)
+
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ Problem: Profile page not showing after login               │
+  └─────────────────────────────────────────────────────────────┘
+    Hard refresh:  Ctrl + Shift + R
+    If still not showing:
+      → Check Navbar has 👤 Profile link
+      → Go directly to https://localhost:5173/profile
+
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ Problem: Page blank after login                             │
+  └─────────────────────────────────────────────────────────────┘
+    Check browser console (F12) for errors.
+    Most common: sessionStorage blocked → enable cookies/storage.
+    Try: hard refresh (Ctrl+Shift+R).
+
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ Problem: CORS error in browser console                       │
+  └─────────────────────────────────────────────────────────────┘
+    Backend CORS doesn't include your origin.
+    Edit Backend/.env:
+      INTELLIWATCH_CORS_ORIGINS=https://192.168.1.8:5173,https://localhost:5173
+    Restart backend.
+
+
+████████████████████████████████████████████████████████████████████
+█  SECTION 12 — QUICK REFERENCE CARD                             █
+████████████████████████████████████████████████████████████████████
+
+  ┌──────────────────────┬──────────────────────────────────────┐
+  │ Backend start        │ cd Backend && python -m uvicorn     │
+  │                      │   server:app --host 0.0.0.0 --port 8000│
+  ├──────────────────────┼──────────────────────────────────────┤
+  │ Frontend start       │ cd frontend && npm run dev           │
+  ├──────────────────────┼──────────────────────────────────────┤
+  │ Local URL            │ https://localhost:5173               │
+  ├──────────────────────┼──────────────────────────────────────┤
+  │ Network URL          │ https://<your-ip>:5173               │
+  ├──────────────────────┼──────────────────────────────────────┤
+  │ Backend API          │ http://localhost:8000               │
+  ├──────────────────────┼──────────────────────────────────────┤
+  │ API Docs             │ http://localhost:8000/docs           │
+  ├──────────────────────┼──────────────────────────────────────┤
+  │ Stop servers         │ Ctrl + C (in each terminal)          │
+  ├──────────────────────┼──────────────────────────────────────┤
+  │ Install cert         │ certutil -user -addstore Root        │
+  │                      │   "certs\intelliwatch-wifi.crt"       │
+  ├──────────────────────┼──────────────────────────────────────┤
+  │ Find IP              │ ipconfig | findstr "IPv4"            │
+  ├──────────────────────┼──────────────────────────────────────┤
+  │ Git push             │ git add -A && git commit -m "msg"   │
+  │                      │   && git push miniproject5 main      │
+  ├──────────────────────┼──────────────────────────────────────┤
+  │ Firebase Console     │ console.firebase.google.com          │
+  │                      │ Project: intelliwatch-66ad0           │
+  ├──────────────────────┼──────────────────────────────────────┤
+  │ GitHub repo          │ github.com/LakshmiNarayana124/       │
+  │                      │   Miniproject5                        │
+  ├──────────────────────┼──────────────────────────────────────┤
+  │ Run tests (backend)  │ cd Backend && pytest tests/ -q       │
+  ├──────────────────────┼──────────────────────────────────────┤
+  │ Build frontend       │ cd frontend && npm run build         │
+  ├──────────────────────┼──────────────────────────────────────┤
+  │ Run frontend tests   │ cd frontend && npx vitest run         │
+  └──────────────────────┴──────────────────────────────────────┘
+
+
+████████████████████████████████████████████████████████████████████
+█  END OF GUIDE                                                  █
+████████████████████████████████████████████████████████████████████
