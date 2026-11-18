@@ -6,6 +6,64 @@ A full-stack predictive maintenance platform combining live IoT sensor data, ML-
 
 ---
 
+## What We Built Today
+
+### 🔐 Firebase Authentication (Google Sign-In + Phone OTP)
+- Added **Google Sign-In** tab on the login page — authenticates via Firebase popup, falls back to redirect on mobile browsers that block popups
+- Added **Phone + OTP** tab with a two-field input: country code dropdown (21 countries, default 🇮🇳 +91 India) and a separate number field
+- Backend verifies Firebase ID tokens using **Google's public X.509 certificates** — no service account private key required, only `FIREBASE_PROJECT_ID`
+- Role selection (Operator / Engineer) is taken from the existing subrole tabs — no duplicate picker
+- All Firebase error codes mapped to human-readable messages (`auth/billing-not-enabled`, `auth/configuration-not-found`, `auth/invalid-phone-number`, etc.)
+- Phone OTP token exchange uses a 15-second timeout (Google's JWKS fetch can be slow on first call)
+
+### 👤 Profile Page
+- New `/profile` route available to all roles
+- Flat, settings-style layout — no outer boxes, just section headers and divider rows
+- Shows: full name, username, role, account type, session mode (🟢 Online / 🧪 Demo), access level (🔓 / 🔒), timezone, user ID
+- **Change password** form (online accounts only) — expands inline, min 12 chars, confirm check
+- **Sign out** button
+- Light mode support — all text visible in both dark and light themes
+- Navbar link added in industrial priority order
+
+### 🗺️ Navbar Tab Reorder (Industrial Priority)
+Order changed to reflect operational workflow:
+> Dashboard → Vibration → Temperature → Current → Explorer → Vision → Admin Users → **Profile** → About
+
+### 🕐 Timezone Selector
+- Dropdown on the login card (default: India IST UTC+5:30)
+- 19 zones covering India, UAE, Pakistan, Bangladesh, Sri Lanka, Nepal, UK, Europe, Russia, USA, Brazil, Japan, Singapore, Australia, NZ, UTC
+- Selected timezone stored in the session user object and shown on the Profile page
+
+### 📱 PWA Mobile App
+- Added `public/sw.js` service worker — caches app shell, network-first for API calls, offline fallback
+- Registered in `main.jsx` on page load
+- Updated `manifest.json` — standalone display, generated 192×192 and 512×512 PNG icons
+- Installable via "Add to Home Screen" on Android (Chrome) and iOS (Safari)
+
+### 🔁 Login → Dashboard Redirect
+- `BrowserRouter` now always mounts (before login) so all routes including Profile are registered immediately
+- After login, `justLoggedIn` flag triggers a React Router redirect to `/` (dashboard) — no hard refresh needed
+- Profile link appears in the navbar immediately after login
+
+### 🐛 Bug Fixes
+- **Firebase ADMIN role conflict** — removed ADMIN from FirebaseRolePicker (backend only accepts OPERATOR/MAINTENANCE_ENGINEER via open Firebase sign-in)
+- **`setLoading(false)` after `onLogin()`** — was causing LoginPage re-render that blocked transition into the app; now only called on failure
+- **`auth/configuration-not-found`** — mapped to actionable message prompting user to enable Google sign-in in Firebase Console
+- **`auth/billing-not-enabled`** — mapped to message explaining Blaze plan requirement for phone SMS
+- **reCAPTCHA container `display:none`** — changed to `position:fixed; z-index:-1` so Firebase invisible reCAPTCHA can initialize
+- **RecaptchaVerifier explicit `.render()`** — required by Firebase modular SDK v9+
+- **Profile page not visible after login** — fixed by mounting BrowserRouter before authentication state
+
+### 🚀 Deployment Configs Added
+- `render.yaml` — Render blueprint (backend + frontend, free tier)
+- `vercel.json` — Vercel SPA config with rewrite rules and asset caching
+- `Backend/Procfile` — Render/fly.io compatible
+- `DEPLOYMENT.md` — full step-by-step guide for Neon → Render → Vercel → Firebase
+- `migrate_sqlite_to_neon.py` updated to include `firebase_identities` table
+- `database.py` now auto-detects `DATABASE_URL`/`NEON_DIRECT_URL` and uses Postgres
+
+---
+
 ## Features
 
 ### Authentication
