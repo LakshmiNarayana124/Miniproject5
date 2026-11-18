@@ -1,0 +1,61 @@
+# =============================================================================
+# IntelliWatch — Caddyfile  (Production HTTPS — FREE, auto-renewing)
+#
+# Caddy automatically provisions and renews a Let's Encrypt certificate for
+# any public domain — zero config, zero cost.
+#
+# ── Install Caddy (free, open-source, Apache-2.0) ─────────────────────────
+#   https://caddyserver.com/docs/install
+#   Windows: winget install Caddyserver.Caddy
+#
+# ── Usage ──────────────────────────────────────────────────────────────────
+#   1. Replace "yourdomain.com" below with your actual domain.
+#   2. Make sure DNS A-record points to this server's public IP.
+#   3. caddy run --config Caddyfile
+#
+# ── What Caddy does automatically ─────────────────────────────────────────
+#   • Obtains a real TLS certificate from Let's Encrypt (ACME HTTP-01).
+#   • Renews it before expiry (no cron jobs, no manual steps).
+#   • Redirects http:// → https:// automatically.
+#   • Serves the built React frontend as static files.
+#   • Proxies /auth/* and all API routes to the FastAPI backend.
+# =============================================================================
+
+yourdomain.com {
+    # ── Serve the built React frontend ──────────────────────────────────────
+    # Run `npm run build` in the frontend folder first.
+    root * /path/to/IntelliWatch_PC_Ready/frontend/dist
+    file_server
+
+    # ── Proxy API + WebSocket requests to FastAPI ────────────────────────────
+    reverse_proxy /auth/*       localhost:8000
+    reverse_proxy /sensors/*    localhost:8000
+    reverse_proxy /control/*    localhost:8000
+    reverse_proxy /learning/*   localhost:8000
+    reverse_proxy /explorer/*   localhost:8000
+    reverse_proxy /health       localhost:8000
+    reverse_proxy /ws/*         localhost:8000
+
+    # ── SPA fallback (client-side routing) ──────────────────────────────────
+    try_files {path} /index.html
+
+    # ── Security headers ─────────────────────────────────────────────────────
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options    "nosniff"
+        X-Frame-Options           "DENY"
+        Referrer-Policy           "strict-origin-when-cross-origin"
+        Permissions-Policy        "geolocation=(), microphone=(), camera=()"
+    }
+
+    # ── TLS: Caddy handles this automatically via Let's Encrypt ─────────────
+    # (No tls directive needed — Caddy does it by default for public domains)
+}
+
+# ── LOCAL DEV with Caddy (optional, uses self-signed cert) ──────────────────
+# Uncomment to use Caddy locally instead of the setup_https.ps1 script:
+#
+# localhost:8443 {
+#     tls internal   # Caddy generates a locally-trusted cert automatically
+#     reverse_proxy localhost:8000
+# }

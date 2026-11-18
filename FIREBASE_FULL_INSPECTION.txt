@@ -1,0 +1,4050 @@
+﻿INTELLIWATCH — FIREBASE INTEGRATION INSPECTION
+
+==================================================
+===== PROJECT STRUCTURE =====
+==================================================
+
+Mode   Name                                                Length LastWriteTime      
+----   ----                                                ------ -------------      
+d--h-- .git                                                       17-11-2026 21:58:08
+d----- .hypothesis                                                06-11-2026 18:49:49
+d----- .kiro                                                      02-11-2026 20:20:16
+d----- .pytest_cache                                              06-11-2026 18:37:11
+d----- .venv                                                      06-11-2026 18:33:25
+d----- .vscode                                                    08-11-2026 16:11:50
+d----- Backend                                                    16-11-2026 15:18:02
+d----- certs                                                      14-11-2026 18:21:33
+d----- deployment_backup_20261112_225948                          12-11-2026 22:59:48
+d----- docs                                                       17-11-2026 09:29:37
+d----- Firebase_Integration_Backup_20261117_215503                17-11-2026 21:55:03
+d----- frontend                                                   17-11-2026 20:28:45
+d----- KAIST                                                      01-11-2026 08:29:43
+d----- logs                                                       15-11-2026 09:23:50
+d----- runtime-logs                                               14-11-2026 21:17:38
+-a---- '@ + $LIVE + @'                                     1071   15-11-2026 09:10:38
+-a---- .coverage                                           53248  06-11-2026 19:00:48
+-a---- .env.example                                        310    17-11-2026 20:41:10
+-a---- .gitignore                                          567    07-11-2026 14:38:55
+-a---- caddy-diagnostic-errors.log                         6679   15-11-2026 09:21:42
+-a---- caddy-diagnostic-output.log                         0      15-11-2026 09:01:38
+-a---- Caddyfile                                           740    16-11-2026 21:07:46
+-a---- Caddyfile.20261116_210746.bak                       745    16-11-2026 16:10:08
+-a---- Caddyfile.backup-20261114-202329                    3442   04-11-2026 08:33:20
+-a---- Caddyfile.backup_20261115_084241                    695    14-11-2026 20:23:30
+-a---- Caddyfile.backup_20261115_092258                    930    15-11-2026 08:52:55
+-a---- Caddyfile.before_backend_https_20261115_085255.bak  740    15-11-2026 08:42:41
+-a---- docker.yaml                                         0      04-11-2026 10:20:56
+-a---- DockerFiles.txt                                     0      04-11-2026 10:18:48
+-a---- Firebase_Final_Source_Inspection.txt                112248 17-11-2026 21:58:08
+-a---- FIREBASE_FULL_INSPECTION.txt                        190    17-11-2026 22:03:37
+-a---- Firebase_Implementation_Context.txt                 30494  17-11-2026 21:57:03
+-a---- Frontend_Inspection.txt                             361226 07-11-2026 21:38:13
+-a---- IntelliWatch_Audit_Source.zip                       270465 07-11-2026 21:33:56
+-a---- IntelliWatch_Full_Inspection.txt                    999370 07-11-2026 21:37:12
+-a---- IntelliWatch_Source.zip                             583674 12-11-2026 22:37:09
+-a---- IntelliWatch_Startup_Commands.txt                   2895   15-11-2026 09:46:05
+-a---- migrate_sqlite_to_neon.py                           10995  12-11-2026 22:23:15
+-a---- migration_inspection.txt                            37510  12-11-2026 22:18:40
+-a---- README.md                                           57     12-11-2026 16:51:41
+-a---- README.txt                                          1528   03-11-2026 21:40:04
+-a---- requirements.txt                                    35     21-10-2026 21:20:23
+-a---- RUN_ON_WINDOWS.bat                                  1215   03-11-2026 17:37:14
+-a---- setup_https.ps1                                     8652   04-11-2026 08:33:09
+d----- .hypothesis                                                12-11-2026 23:01:08
+d----- .pytest_cache                                              03-11-2026 16:54:01
+d----- .venv312                                                   07-11-2026 12:00:08
+d----- database                                                   17-11-2026 00:18:28
+d----- database_backup                                            14-11-2026 18:53:28
+d----- models                                                     07-11-2026 14:52:18
+d----- neon_migration_review                                      14-11-2026 18:53:34
+d----- neon_migration_review_upload                               14-11-2026 19:18:08
+d----- tests                                                      03-11-2026 18:26:27
+d----- zip_check                                                  14-11-2026 19:21:15
+d----- __pycache__                                                12-11-2026 23:06:52
+-a---- .env                                                71159  14-11-2026 18:28:08
+-a---- .env.20261114_182408.bak                            4426   12-11-2026 21:41:45
+-a---- .env.20261114_182718.bak                            8731   14-11-2026 18:24:08
+-a---- .env.example                                        2219   03-11-2026 19:11:17
+-a---- api_routes_check.json                               679426 16-11-2026 15:18:02
+-a---- auth.py                                             66859  09-11-2026 15:54:01
+-a---- auth_security_store.py                              19245  09-11-2026 15:36:35
+-a---- calibration.py                                      17094  08-11-2026 14:29:32
+-a---- chatbot_api.py                                      6877   08-11-2026 16:11:14
+-a---- database.py                                         49823  08-11-2026 11:26:12
+-a---- database.py.backup_20261108                         45262  07-11-2026 21:18:42
+-a---- database.py.backup_before_lifecycle_20261108_111157 45365  08-11-2026 10:58:19
+-a---- equipment_controller.py                             18016  03-11-2026 16:15:22
+-a---- equipment_detection_service.py                      8560   07-11-2026 15:09:00
+-a---- explorer_ml.py                                      4708   03-11-2026 16:31:05
+-a---- feature_extractor.py                                33465  03-11-2026 16:06:21
+-a---- inference.py                                        14379  03-11-2026 16:13:35
+-a---- intelliwatch_brain.py                               30056  08-11-2026 21:41:37
+-a---- intelliwatch_brain.py.pre-db-init-fix.bak           30060  08-11-2026 14:31:51
+-a---- intelliwatch_engine.py                              61853  31-10-2026 23:29:18
+-a---- intelliwatch_source_review.zip                      77973  14-11-2026 19:19:33
+-a---- iot_layer.py                                        47941  08-11-2026 15:23:01
+-a---- iso_standards.py                                    33555  02-11-2026 22:11:08
+-a---- learning_system.py                                  6585   03-11-2026 16:30:34
+-a---- model_registry.py                                   13138  02-11-2026 22:33:07
+-a---- neon_migration_review.zip                           10159  14-11-2026 18:54:35
+-a---- obs_service.py                                      5218   03-11-2026 16:30:49
+-a---- recommendations.py                                  27798  31-10-2026 23:07:31
+-a---- requirements.txt                                    922    07-11-2026 14:59:43
+-a---- reset_engineer.py                                   936    01-11-2026 11:47:27
+-a---- sensor_config.py                                    13463  03-11-2026 18:16:04
+-a---- sensor_reader.py                                    7741   08-11-2026 14:26:22
+-a---- server.py                                           49574  11-11-2026 10:46:05
+-a---- start_https.ps1                                     739    06-11-2026 21:32:27
+-a---- training_pipeline.py                                43385  03-11-2026 16:09:35
+-a---- vision_service.py                                   22225  09-11-2026 20:07:04
+d----- assets                                                     23-10-2026 16:03:47
+d----- components                                                 16-11-2026 23:56:51
+-a---- activityLog.js                                      2550   02-11-2026 18:55:04
+-a---- apiConfig.js                                        974    17-11-2026 15:18:39
+-a---- App.css                                             31827  08-11-2026 14:56:10
+-a---- App.jsx                                             28983  08-11-2026 16:24:36
+-a---- backup.txt                                          3768   25-10-2026 19:36:17
+-a---- firebase.js                                         784    17-11-2026 20:42:20
+-a---- i18n.js                                             95381  09-11-2026 20:58:01
+-a---- index.css                                           899    25-10-2026 18:41:38
+-a---- main.jsx                                            258    17-11-2026 20:42:21
+-a---- mlEngine.js                                         13412  08-11-2026 14:38:12
+-a---- sensors.js                                          5914   03-11-2026 16:32:13
+-a---- useLang.js                                          404    02-11-2026 17:46:27
+-a---- useSensorData.js                                    17000  08-11-2026 15:47:54
+-a---- useTokenRefresh.js                                  4056   08-11-2026 12:59:40
+
+
+
+
+==================================================
+===== GIT STATUS =====
+==================================================
+ M .gitignore
+ M Backend/auth.py
+ M Backend/calibration.py
+ M Backend/database.py
+ M Backend/database/intelliwatch.db
+ M Backend/intelliwatch_brain.py
+ M Backend/iot_layer.py
+ M Backend/requirements.txt
+ M Backend/sensor_reader.py
+ M Backend/server.py
+ M Caddyfile
+ M frontend/.gitignore
+ M frontend/package-lock.json
+ M frontend/package.json
+ M frontend/src/App.css
+ M frontend/src/App.jsx
+ M frontend/src/components/AboutPage.css
+ M frontend/src/components/AboutPage.jsx
+ M frontend/src/components/AlertLog.jsx
+ M frontend/src/components/Chatbot.css
+ M frontend/src/components/Chatbot.jsx
+ M frontend/src/components/ControlSignalBanner.jsx
+ M frontend/src/components/LoginPage.jsx
+ M frontend/src/components/MLStatusPanel.jsx
+ M frontend/src/components/Navbar.jsx
+ M frontend/src/components/SensorPage.jsx
+ M frontend/src/components/UserManagement.jsx
+ M frontend/src/i18n.js
+ M frontend/src/main.jsx
+ M frontend/src/mlEngine.js
+ M frontend/src/useSensorData.js
+ M frontend/src/useTokenRefresh.js
+ M frontend/vite.config.js
+?? "'@ + $LIVE + @'"
+?? .env.example
+?? Backend/.hypothesis/
+?? Backend/api_routes_check.json
+?? Backend/auth_security_store.py
+?? Backend/chatbot_api.py
+?? Backend/database.py.backup_20261108
+?? Backend/database.py.backup_before_lifecycle_20261108_111157
+?? Backend/database/intelliwatch.db.backup_20261108_100451
+?? Backend/database/intelliwatch_backup_20261112_221636.db
+?? Backend/database_backup/
+?? Backend/equipment_detection_service.py
+?? Backend/intelliwatch_brain.py.pre-db-init-fix.bak
+?? Backend/intelliwatch_source_review.zip
+?? Backend/models/
+?? Backend/neon_migration_review.zip
+?? Backend/neon_migration_review/
+?? Backend/neon_migration_review_upload/
+?? Backend/vision_service.py
+?? Backend/zip_check/
+?? Caddyfile.20261116_210746.bak
+?? Caddyfile.backup-20261114-202329
+?? Caddyfile.backup_20261115_084241
+?? Caddyfile.backup_20261115_092258
+?? Caddyfile.before_backend_https_20261115_085255.bak
+?? FIREBASE_FULL_INSPECTION.txt
+?? Firebase_Final_Source_Inspection.txt
+?? Firebase_Implementation_Context.txt
+?? Firebase_Integration_Backup_20261117_215503/
+?? Frontend_Inspection.txt
+?? IntelliWatch_Audit_Source.zip
+?? IntelliWatch_Full_Inspection.txt
+?? IntelliWatch_Source.zip
+?? IntelliWatch_Startup_Commands.txt
+?? deployment_backup_20261112_225948/
+?? frontend/INTELLIWATCH_SOURCE.txt
+?? frontend/src/apiConfig.js
+?? frontend/src/components/Chatbot.jsx.language-backup-20261109-180359
+?? frontend/src/components/LoginPage.jsx.backup_20261116_235651
+?? frontend/src/components/LoginPage.jsx.before-auto-demo-fallback.bak
+?? frontend/src/components/LoginPage.jsx.before-login-logo.bak
+?? frontend/src/components/LoginPage.jsx.original_before_lan_auth_fix.bak
+?? frontend/src/components/LoginPage.jsx.pre_backend_login_fix.bak
+?? frontend/src/components/VisionEquipment.jsx
+?? frontend/src/firebase.js
+?? frontend/vite.config.js.20261114_182408.bak
+?? frontend/vite.config.js.before-recharts-fix.bak
+?? migrate_sqlite_to_neon.py
+?? migration_inspection.txt
+main
+miniproject5	https://github.com/LakshmiNarayana124/Miniproject5.git (fetch)
+miniproject5	https://github.com/LakshmiNarayana124/Miniproject5.git (push)
+origin	https://github.com/LakshmiNarayana124/IntelliWatch-Private.git (fetch)
+origin	https://github.com/LakshmiNarayana124/IntelliWatch-Private.git (push)
+
+
+==================================================
+===== PYTHON ENVIRONMENTS =====
+==================================================
+Python 3.12.10
+Python 3.12.10
+Firebase Admin: 7.8.0
+
+
+==================================================
+===== BACKEND REQUIREMENTS =====
+==================================================
+
+# ============================================================
+# IntelliWatch â€” Backend Dependencies
+# ============================================================
+
+# Core API
+fastapi==0.115.12
+uvicorn[standard]==0.34.3
+pydantic==2.11.5
+
+# Authentication (JWT + Argon2 password hashing)
+python-jose[cryptography]==3.5.0
+PyJWT
+argon2-cffi==23.1.0
+
+# Machine Learning / Data Science
+scikit-learn==1.6.1
+pandas==2.2.3
+numpy==1.26.4
+xgboost==2.1.3
+
+# IoT (MQTT broker connectivity + HTTP adapter)
+paho-mqtt==2.1.0
+httpx==0.28.1
+
+# Vision AI (Gemini image analysis)
+google-genai
+
+# HTTPS Certificate Trust
+truststore==0.10.5
+
+# Utilities
+python-multipart==0.0.20
+
+# Property-based Testing
+hypothesis==6.131.10
+
+# Optional: Sequence Model (GRU)
+# Uncomment to enable full SequenceModel support.
+# Requires approximately 2 GB download.
+# All other features work without it.
+# torch==2.6.0
+onnxruntime==1.31.1
+Pillow==13.0.0
+
+
+==================================================
+===== AUTH.PY — FIRST 220 LINES =====
+==================================================
+import os
+import getpass
+import sqlite3
+import json
+import hashlib
+import secrets
+import time
+import ipaddress
+
+from datetime import datetime, timedelta, timezone
+from typing import Literal
+
+import jwt
+
+from argon2 import PasswordHasher
+from argon2.exceptions import (
+    VerifyMismatchError,
+    VerificationError,
+    InvalidHashError,
+)
+
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    Request,
+    status,
+)
+
+from fastapi.security import (
+    HTTPBearer,
+    HTTPAuthorizationCredentials,
+)
+
+from pydantic import BaseModel, Field
+
+from database import (
+    initialize_database,
+    create_user,
+    get_user_by_username,
+    get_user_by_id,
+    get_all_users,
+    update_last_login,
+    get_connection,
+    get_user_permission_overrides,
+    set_user_permission,
+    clear_user_permission_override,
+    record_audit_entry,
+)
+
+from auth_security_store import (
+    initialize_security_storage,
+    store_token,
+    consume_token,
+    revoke_token,
+    revoke_user_tokens,
+    increment_session_version,
+    get_session_version,
+    check_rate_limit,
+    record_rate_limit_failure,
+    clear_rate_limit,
+    cleanup_expired_security_records,
+)
+
+
+# =========================================================
+# CONFIGURATION
+# =========================================================
+
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+JWT_ISSUER = "IntelliWatch"
+JWT_AUDIENCE = "IntelliWatch-API"
+
+RESET_TOKEN_TTL_SECONDS = 900
+ADMIN_INVITE_TTL_SECONDS = 86400
+
+password_hasher = PasswordHasher()
+security = HTTPBearer(auto_error=False)
+
+auth_router = APIRouter(
+    prefix="/auth",
+    tags=["Authentication"],
+)
+
+VALID_ROLES = {
+    "ADMIN",
+    "OPERATOR",
+    "MAINTENANCE_ENGINEER",
+}
+
+ROLE_DEFAULT_PERMISSIONS = {
+    "ADMIN": {
+        "dashboard.view",
+        "sensors.view",
+        "machine_status.view",
+        "calibration.manage",
+        "models.manage",
+        "users.manage",
+        "permissions.manage",
+    },
+    "OPERATOR": {
+        "dashboard.view",
+        "sensors.view",
+        "machine_status.view",
+        "alerts.view",
+        "recommendations.operational.view",
+    },
+    "MAINTENANCE_ENGINEER": {
+        "dashboard.view",
+        "sensors.view",
+        "machine_status.view",
+        "alerts.view",
+        "recommendations.operational.view",
+        "diagnostics.view",
+        "diagnostics.confidence.view",
+        "recommendations.maintenance.view",
+        "edge_devices.view",
+    },
+}
+
+RESTRICTED_ADMIN_SESSION_PERMISSIONS = {
+    "OPERATOR": "admin.operator_access",
+    "MAINTENANCE_ENGINEER": "admin.engineer_access",
+}
+
+ALL_PERMISSION_KEYS = {
+    "dashboard.view",
+    "sensors.view",
+    "machine_status.view",
+    "alerts.view",
+    "recommendations.operational.view",
+    "diagnostics.view",
+    "diagnostics.confidence.view",
+    "recommendations.maintenance.view",
+    "edge_devices.view",
+    "control.execute",
+    "control.acknowledge",
+    "calibration.manage",
+    "models.manage",
+    "users.manage",
+    "permissions.manage",
+    "admin.operator_access",
+    "admin.engineer_access",
+}
+
+ADMIN_ONLY_PERMISSIONS = {
+    "calibration.manage",
+    "models.manage",
+    "users.manage",
+    "permissions.manage",
+    "admin.operator_access",
+    "admin.engineer_access",
+}
+
+
+# =========================================================
+# INITIALIZATION
+# =========================================================
+
+def initialize_auth_security():
+    initialize_database()
+    initialize_security_storage()
+    cleanup_expired_security_records()
+
+
+# =========================================================
+# SHARED HELPERS
+# =========================================================
+
+def _now():
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _audit_event(category, actor=None, target=None, details=None):
+    record_audit_entry(
+        category=category,
+        actor=actor,
+        target=str(target) if target is not None else None,
+        detail_json=json.dumps(details or {}, default=str),
+    )
+
+
+def _begin_transaction():
+    connection = get_connection()
+    connection.execute("BEGIN IMMEDIATE")
+    return connection
+
+
+def _audit_transaction(connection, category, actor, target, details):
+    timestamp = _now()
+    detail_json = json.dumps(details or {}, default=str)
+
+    previous = connection.execute("""
+        SELECT hash
+        FROM audit_entries
+        ORDER BY id DESC
+        LIMIT 1
+    """).fetchone()
+
+    previous_hash = previous["hash"] if previous else ""
+
+    chain_input = "|".join((
+        str(previous_hash),
+        timestamp,
+        str(category),
+        str(actor),
+        str(target),
+        detail_json,
+    ))
+
+    entry_hash = hashlib.sha256(
+        chain_input.encode("utf-8")
+    ).hexdigest()
+
+    cursor = connection.execute("""
+        INSERT INTO audit_entries (
+            timestamp, category, actor, target, detail_json, hash
+        )
+
+
+==================================================
+===== AUTH.PY — AUTHENTICATION FUNCTIONS =====
+==================================================
+
+  Backend\auth.py:434:# =========================================================
+  Backend\auth.py:435:
+> Backend\auth.py:436:def authenticate_user(username, password):
+  Backend\auth.py:437:    user = get_user_by_username(username.strip())
+  Backend\auth.py:438:
+  Backend\auth.py:439:    if not user or not user["is_active"]:
+  Backend\auth.py:440:        return None
+  Backend\auth.py:441:
+  Backend\auth.py:442:    if user.get("is_deleted", 0):
+  Backend\auth.py:443:        return None
+  Backend\auth.py:444:
+  Backend\auth.py:445:    if not verify_password(password, user["password_hash"]):
+  Backend\auth.py:446:        return None
+  Backend\auth.py:447:
+  Backend\auth.py:448:    return user
+  Backend\auth.py:449:
+  Backend\auth.py:450:
+> Backend\auth.py:451:def create_access_token(user, session_role=None):
+  Backend\auth.py:452:    account_role = user.get("account_role", user.get("role"))
+  Backend\auth.py:453:    effective_role = session_role or user.get("role")
+  Backend\auth.py:454:
+  Backend\auth.py:455:    if account_role not in VALID_ROLES or effective_role not in VALID_ROLES:
+  Backend\auth.py:456:        raise ValueError("Invalid account or session role.")
+  Backend\auth.py:457:
+  Backend\auth.py:458:    user_id = int(user["id"])
+  Backend\auth.py:459:    session_version = get_session_version(user_id)
+  Backend\auth.py:460:
+  Backend\auth.py:461:    now = datetime.now(timezone.utc)
+  Backend\auth.py:462:
+  Backend\auth.py:463:    payload = {
+  Backend\auth.py:464:        "sub": str(user_id),
+  Backend\auth.py:465:        "session_role": effective_role,
+  Backend\auth.py:466:        "iss": JWT_ISSUER,
+  Backend\auth.py:467:        "aud": JWT_AUDIENCE,
+  Backend\auth.py:468:        "typ": "access",
+  Backend\auth.py:469:        "jti": secrets.token_urlsafe(24),
+  Backend\auth.py:470:        "sv": int(session_version),
+  Backend\auth.py:471:        "iat": now,
+  Backend\auth.py:472:        "exp": now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+  Backend\auth.py:473:    }
+  Backend\auth.py:474:
+  Backend\auth.py:475:    return jwt.encode(
+  Backend\auth.py:476:        payload,
+  Backend\auth.py:477:        get_secret_key(),
+  Backend\auth.py:478:        algorithm=ALGORITHM,
+  Backend\auth.py:479:    )
+  Backend\auth.py:480:
+  Backend\auth.py:481:
+> Backend\auth.py:482:async def get_current_user(
+  Backend\auth.py:483:    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+  Backend\auth.py:484:):
+  Backend\auth.py:485:    unauthorized = HTTPException(
+  Backend\auth.py:486:        status_code=status.HTTP_401_UNAUTHORIZED,
+  Backend\auth.py:487:        detail="Invalid or expired authentication token.",
+  Backend\auth.py:488:        headers={"WWW-Authenticate": "Bearer"},
+  Backend\auth.py:489:    )
+  Backend\auth.py:490:
+  Backend\auth.py:491:    if credentials is None or not credentials.credentials:
+  Backend\auth.py:492:        raise unauthorized
+  Backend\auth.py:493:
+  Backend\auth.py:494:    try:
+  Backend\auth.py:495:        payload = jwt.decode(
+  Backend\auth.py:496:            credentials.credentials,
+  Backend\auth.py:497:            get_secret_key(),
+  Backend\auth.py:498:            algorithms=[ALGORITHM],
+  Backend\auth.py:499:            issuer=JWT_ISSUER,
+  Backend\auth.py:500:            audience=JWT_AUDIENCE,
+  Backend\auth.py:501:            options={
+  Backend\auth.py:502:                "require": [
+  Backend\auth.py:503:                    "sub",
+  Backend\auth.py:504:                    "session_role",
+  Backend\auth.py:505:                    "iss",
+  Backend\auth.py:506:                    "aud",
+  Backend\auth.py:507:                    "typ",
+  Backend\auth.py:508:                    "jti",
+  Backend\auth.py:509:                    "sv",
+  Backend\auth.py:510:                    "iat",
+  Backend\auth.py:511:                    "exp",
+  Backend\auth.py:512:                ]
+  Backend\auth.py:513:            },
+  Backend\auth.py:514:        )
+  Backend\auth.py:515:
+  Backend\auth.py:516:        if payload.get("typ") != "access":
+  Backend\auth.py:517:            raise unauthorized
+  Backend\auth.py:682:# =========================================================
+  Backend\auth.py:683:
+> Backend\auth.py:684:class LoginRequest(BaseModel):
+  Backend\auth.py:685:    username: str = Field(min_length=3, max_length=50)
+  Backend\auth.py:686:    password: str = Field(min_length=1, max_length=128)
+  Backend\auth.py:687:    requested_role: Literal[
+  Backend\auth.py:688:        "ADMIN", "OPERATOR", "MAINTENANCE_ENGINEER"
+  Backend\auth.py:689:    ] = "OPERATOR"
+  Backend\auth.py:690:
+  Backend\auth.py:691:
+> Backend\auth.py:692:class LoginResponse(BaseModel):
+  Backend\auth.py:693:    access_token: str
+  Backend\auth.py:694:    token_type: str = "bearer"
+  Backend\auth.py:695:    expires_in: int
+  Backend\auth.py:696:    user_id: int
+  Backend\auth.py:697:    username: str
+  Backend\auth.py:698:    full_name: str
+  Backend\auth.py:699:    role: str
+  Backend\auth.py:700:    account_role: str | None = None
+  Backend\auth.py:701:    is_restricted_session: bool = False
+  Backend\auth.py:702:
+  Backend\auth.py:703:
+  Backend\auth.py:704:class UserCreateRequest(BaseModel):
+  Backend\auth.py:705:    username: str = Field(min_length=3, max_length=50)
+  Backend\auth.py:706:    full_name: str = Field(min_length=2, max_length=100)
+  Backend\auth.py:707:    password: str = Field(min_length=12, max_length=128)
+  Backend\auth.py:708:    role: Literal["OPERATOR", "MAINTENANCE_ENGINEER"]
+  Backend\auth.py:709:
+  Backend\auth.py:710:
+  Backend\auth.py:711:class UserStatusRequest(BaseModel):
+  Backend\auth.py:712:    is_active: bool
+  Backend\auth.py:713:
+  Backend\auth.py:714:
+  Backend\auth.py:715:class UserPermissionRequest(BaseModel):
+  Backend\auth.py:716:    is_granted: bool
+  Backend\auth.py:717:
+  Backend\auth.py:718:
+  Backend\auth.py:719:class RoleChangeRequest(BaseModel):
+  Backend\auth.py:720:    role: Literal["OPERATOR", "MAINTENANCE_ENGINEER"]
+  Backend\auth.py:721:
+  Backend\auth.py:722:
+  Backend\auth.py:723:class PromotionRequestModel(BaseModel):
+  Backend\auth.py:724:    reason: str = Field(min_length=5, max_length=1000)
+  Backend\auth.py:725:
+  Backend\auth.py:726:
+  Backend\auth.py:727:class PromotionReviewRequest(BaseModel):
+  Backend\auth.py:1284:# =========================================================
+  Backend\auth.py:1285:
+> Backend\auth.py:1286:@auth_router.post("/login", response_model=LoginResponse)
+  Backend\auth.py:1287:async def login(request: LoginRequest, http_request: Request):
+  Backend\auth.py:1288:    rate_key = _enforce_rate_limit(
+  Backend\auth.py:1289:        "login",
+  Backend\auth.py:1290:        http_request,
+  Backend\auth.py:1291:        request.username,
+  Backend\auth.py:1292:        max_attempts=5,
+  Backend\auth.py:1293:        window_seconds=300,
+  Backend\auth.py:1294:    )
+  Backend\auth.py:1295:
+  Backend\auth.py:1296:    user = authenticate_user(request.username, request.password)
+  Backend\auth.py:1297:
+  Backend\auth.py:1298:    if not user:
+  Backend\auth.py:1299:        _record_failure(rate_key)
+  Backend\auth.py:1300:        raise HTTPException(
+  Backend\auth.py:1301:            status_code=401,
+  Backend\auth.py:1302:            detail="Incorrect username or password, or account inactive.",
+  Backend\auth.py:1303:        )
+  Backend\auth.py:1304:
+  Backend\auth.py:1305:    account_role = user["role"]
+  Backend\auth.py:1306:    requested_role = request.requested_role
+  Backend\auth.py:1307:    is_restricted_session = False
+  Backend\auth.py:1308:
+  Backend\auth.py:1309:    if requested_role == account_role:
+  Backend\auth.py:1310:        session_role = account_role
+  Backend\auth.py:1311:
+  Backend\auth.py:1312:    elif account_role == "ADMIN":
+  Backend\auth.py:1313:        required_permission = (
+  Backend\auth.py:1314:            RESTRICTED_ADMIN_SESSION_PERMISSIONS.get(requested_role)
+  Backend\auth.py:1315:        )
+  Backend\auth.py:1316:
+  Backend\auth.py:1317:        if not required_permission:
+  Backend\auth.py:1318:            raise HTTPException(
+  Backend\auth.py:1319:                status_code=403,
+  Backend\auth.py:1320:                detail="This account cannot sign in through the selected role.",
+  Backend\auth.py:1321:            )
+  Backend\auth.py:1374:# =========================================================
+  Backend\auth.py:1375:
+> Backend\auth.py:1376:@auth_router.get("/me")
+  Backend\auth.py:1377:async def get_my_account(current_user=Depends(get_current_user)):
+  Backend\auth.py:1378:    return {
+  Backend\auth.py:1379:        "id": current_user["id"],
+  Backend\auth.py:1380:        "username": current_user["username"],
+  Backend\auth.py:1381:        "full_name": current_user["full_name"],
+  Backend\auth.py:1382:        "role": current_user["role"],
+  Backend\auth.py:1383:        "account_role": current_user["account_role"],
+  Backend\auth.py:1384:        "is_restricted_session": current_user["is_restricted_session"],
+  Backend\auth.py:1385:        "is_active": current_user["is_active"],
+  Backend\auth.py:1386:        "created_at": current_user["created_at"],
+  Backend\auth.py:1387:        "last_login": current_user["last_login"],
+  Backend\auth.py:1388:        "effective_permissions": get_effective_permissions(
+  Backend\auth.py:1389:            current_user["id"],
+  Backend\auth.py:1390:            current_user["role"],
+  Backend\auth.py:1391:            restricted_session=current_user["is_restricted_session"],
+  Backend\auth.py:1392:        ),
+  Backend\auth.py:1393:    }
+  Backend\auth.py:1394:
+  Backend\auth.py:1395:
+  Backend\auth.py:1396:# =========================================================
+  Backend\auth.py:1397:# ADMIN: CREATE USER
+  Backend\auth.py:1398:# =========================================================
+  Backend\auth.py:1399:
+> Backend\auth.py:1400:@auth_router.post("/users")
+  Backend\auth.py:1401:async def create_user_account(
+  Backend\auth.py:1402:    request: UserCreateRequest,
+  Backend\auth.py:1403:    current_admin=Depends(admin_access),
+  Backend\auth.py:1404:):
+  Backend\auth.py:1405:    try:
+  Backend\auth.py:1406:        user_id = create_user(
+  Backend\auth.py:1407:            username=request.username,
+  Backend\auth.py:1408:            full_name=request.full_name,
+  Backend\auth.py:1409:            password_hash=hash_password(request.password),
+  Backend\auth.py:1410:            role=request.role,
+  Backend\auth.py:1411:        )
+  Backend\auth.py:1412:
+  Backend\auth.py:1413:        _audit_event(
+  Backend\auth.py:1414:            "USER_CREATED_BY_ADMIN",
+  Backend\auth.py:1415:            actor=current_admin["username"],
+  Backend\auth.py:1416:            target=user_id,
+  Backend\auth.py:1417:            details={"username": request.username, "role": request.role},
+  Backend\auth.py:1418:        )
+  Backend\auth.py:1419:
+  Backend\auth.py:1420:        return {
+  Backend\auth.py:1421:            "success": True,
+  Backend\auth.py:1422:            "user_id": user_id,
+  Backend\auth.py:1423:            "username": request.username,
+  Backend\auth.py:1424:            "role": request.role,
+  Backend\auth.py:1425:            "message": "User account created successfully.",
+  Backend\auth.py:1426:        }
+  Backend\auth.py:1427:
+  Backend\auth.py:1428:    except sqlite3.IntegrityError:
+  Backend\auth.py:1429:        raise HTTPException(status_code=409, detail="Username already exists.")
+  Backend\auth.py:1430:
+  Backend\auth.py:1431:    except ValueError as error:
+  Backend\auth.py:1432:        raise HTTPException(status_code=400, detail=str(error))
+  Backend\auth.py:1433:
+  Backend\auth.py:1434:
+  Backend\auth.py:1435:# =========================================================
+  Backend\auth.py:1437:# =========================================================
+  Backend\auth.py:1438:
+> Backend\auth.py:1439:@auth_router.get("/users")
+  Backend\auth.py:1440:async def list_users(
+  Backend\auth.py:1441:    include_deleted: bool = False,
+  Backend\auth.py:1442:    current_admin=Depends(admin_access),
+  Backend\auth.py:1443:):
+  Backend\auth.py:1444:    connection = get_connection()
+  Backend\auth.py:1445:
+  Backend\auth.py:1446:    try:
+  Backend\auth.py:1447:        query = """
+  Backend\auth.py:1448:            SELECT
+  Backend\auth.py:1449:                id, username, full_name, role, is_active, is_deleted,
+  Backend\auth.py:1450:                deleted_at, deletion_reason, created_at, last_login
+  Backend\auth.py:1451:            FROM users
+  Backend\auth.py:1452:        """
+  Backend\auth.py:1453:
+  Backend\auth.py:1454:        if not include_deleted:
+  Backend\auth.py:1455:            query += " WHERE is_deleted = 0"
+  Backend\auth.py:1456:
+  Backend\auth.py:1457:        query += " ORDER BY id"
+  Backend\auth.py:1458:
+  Backend\auth.py:1459:        users = [
+  Backend\auth.py:1460:            dict(row)
+  Backend\auth.py:1461:            for row in connection.execute(query).fetchall()
+  Backend\auth.py:1462:        ]
+  Backend\auth.py:1463:
+  Backend\auth.py:1464:        return {
+  Backend\auth.py:1465:            "success": True,
+  Backend\auth.py:1466:            "total_users": len(users),
+  Backend\auth.py:1467:            "users": users,
+  Backend\auth.py:1468:        }
+  Backend\auth.py:1469:
+  Backend\auth.py:1470:    finally:
+  Backend\auth.py:1471:        connection.close()
+  Backend\auth.py:1472:
+  Backend\auth.py:1473:
+  Backend\auth.py:1474:# =========================================================
+  Backend\auth.py:1476:# =========================================================
+  Backend\auth.py:1477:
+> Backend\auth.py:1478:@auth_router.get("/users/{user_id}/permissions")
+  Backend\auth.py:1479:async def get_user_permissions(
+  Backend\auth.py:1480:    user_id: int,
+  Backend\auth.py:1481:    current_admin=Depends(admin_access),
+  Backend\auth.py:1482:):
+  Backend\auth.py:1483:    target = get_user_by_id(user_id)
+  Backend\auth.py:1484:
+  Backend\auth.py:1485:    if not target:
+  Backend\auth.py:1486:        raise HTTPException(status_code=404, detail="User not found.")
+  Backend\auth.py:1487:
+  Backend\auth.py:1488:    role = target["role"]
+  Backend\auth.py:1489:    overrides = get_user_permission_overrides(user_id)
+  Backend\auth.py:1490:
+  Backend\auth.py:1491:    return {
+  Backend\auth.py:1492:        "success": True,
+  Backend\auth.py:1493:        "user_id": user_id,
+  Backend\auth.py:1494:        "username": target["username"],
+  Backend\auth.py:1495:        "role": role,
+  Backend\auth.py:1496:        "role_default_permissions": sorted(
+  Backend\auth.py:1497:            ROLE_DEFAULT_PERMISSIONS.get(role, set())
+  Backend\auth.py:1498:        ),
+  Backend\auth.py:1499:        "overrides": overrides,
+  Backend\auth.py:1500:        "effective_permissions": get_effective_permissions(user_id, role),
+  Backend\auth.py:1501:        "available_permissions": sorted(ALL_PERMISSION_KEYS),
+  Backend\auth.py:1502:    }
+  Backend\auth.py:1503:
+  Backend\auth.py:1504:
+> Backend\auth.py:1505:@auth_router.put("/users/{user_id}/permissions/{permission_key}")
+  Backend\auth.py:1506:async def update_user_permission(
+  Backend\auth.py:1507:    user_id: int,
+  Backend\auth.py:1508:    permission_key: str,
+  Backend\auth.py:1509:    request: UserPermissionRequest,
+  Backend\auth.py:1510:    current_admin=Depends(admin_access),
+  Backend\auth.py:1511:):
+  Backend\auth.py:1512:    target = get_user_by_id(user_id)
+  Backend\auth.py:1513:
+  Backend\auth.py:1514:    if not target:
+  Backend\auth.py:1515:        raise HTTPException(status_code=404, detail="User not found.")
+  Backend\auth.py:1516:
+  Backend\auth.py:1517:    if permission_key not in ALL_PERMISSION_KEYS:
+  Backend\auth.py:1518:        raise HTTPException(status_code=400, detail="Unknown permission key.")
+  Backend\auth.py:1519:
+  Backend\auth.py:1520:    if (
+  Backend\auth.py:1521:        permission_key in ADMIN_ONLY_PERMISSIONS
+  Backend\auth.py:1522:        and target["role"] != "ADMIN"
+  Backend\auth.py:1523:        and request.is_granted
+  Backend\auth.py:1524:    ):
+  Backend\auth.py:1525:        raise HTTPException(
+  Backend\auth.py:1526:            status_code=403,
+  Backend\auth.py:1527:            detail="This permission is restricted to administrator accounts.",
+  Backend\auth.py:1528:        )
+  Backend\auth.py:1529:
+  Backend\auth.py:1530:    if (
+  Backend\auth.py:1531:        user_id == current_admin["id"]
+  Backend\auth.py:1532:        and permission_key == "permissions.manage"
+  Backend\auth.py:1533:        and not request.is_granted
+  Backend\auth.py:1534:    ):
+  Backend\auth.py:1535:        raise HTTPException(
+  Backend\auth.py:1536:            status_code=400,
+  Backend\auth.py:1537:            detail="You cannot revoke your own permission-management access.",
+  Backend\auth.py:1538:        )
+  Backend\auth.py:1539:
+  Backend\auth.py:1540:    try:
+  Backend\auth.py:1580:
+  Backend\auth.py:1581:
+> Backend\auth.py:1582:@auth_router.delete("/users/{user_id}/permissions/{permission_key}")
+  Backend\auth.py:1583:async def reset_user_permission(
+  Backend\auth.py:1584:    user_id: int,
+  Backend\auth.py:1585:    permission_key: str,
+  Backend\auth.py:1586:    current_admin=Depends(admin_access),
+  Backend\auth.py:1587:):
+  Backend\auth.py:1588:    target = get_user_by_id(user_id)
+  Backend\auth.py:1589:
+  Backend\auth.py:1590:    if not target:
+  Backend\auth.py:1591:        raise HTTPException(status_code=404, detail="User not found.")
+  Backend\auth.py:1592:
+  Backend\auth.py:1593:    if permission_key not in ALL_PERMISSION_KEYS:
+  Backend\auth.py:1594:        raise HTTPException(status_code=400, detail="Unknown permission key.")
+  Backend\auth.py:1595:
+  Backend\auth.py:1596:    if (
+  Backend\auth.py:1597:        user_id == current_admin["id"]
+  Backend\auth.py:1598:        and permission_key == "permissions.manage"
+  Backend\auth.py:1599:    ):
+  Backend\auth.py:1600:        raise HTTPException(
+  Backend\auth.py:1601:            status_code=400,
+  Backend\auth.py:1602:            detail="You cannot reset your own permission-management override.",
+  Backend\auth.py:1603:        )
+  Backend\auth.py:1604:
+  Backend\auth.py:1605:    removed = clear_user_permission_override(user_id, permission_key)
+  Backend\auth.py:1606:
+  Backend\auth.py:1607:    if (
+  Backend\auth.py:1608:        target["role"] == "ADMIN"
+  Backend\auth.py:1609:        and permission_key in RESTRICTED_ADMIN_SESSION_PERMISSIONS.values()
+  Backend\auth.py:1610:    ):
+  Backend\auth.py:1611:        increment_session_version(user_id)
+  Backend\auth.py:1612:
+  Backend\auth.py:1613:    _audit_event(
+  Backend\auth.py:1614:        "USER_PERMISSION_OVERRIDE_RESET",
+  Backend\auth.py:1615:        actor=current_admin["username"],
+  Backend\auth.py:1616:        target=user_id,
+  Backend\auth.py:1617:        details={
+  Backend\auth.py:1637:# =========================================================
+  Backend\auth.py:1638:
+> Backend\auth.py:1639:@auth_router.patch("/users/{user_id}/status")
+  Backend\auth.py:1640:async def update_user_status(
+  Backend\auth.py:1641:    user_id: int,
+  Backend\auth.py:1642:    request: UserStatusRequest,
+  Backend\auth.py:1643:    current_admin=Depends(admin_access),
+  Backend\auth.py:1644:):
+  Backend\auth.py:1645:    if user_id == current_admin["id"] and not request.is_active:
+  Backend\auth.py:1646:        raise HTTPException(
+  Backend\auth.py:1647:            status_code=400,
+  Backend\auth.py:1648:            detail="You cannot deactivate your own account.",
+  Backend\auth.py:1649:        )
+  Backend\auth.py:1650:
+  Backend\auth.py:1651:    try:
+  Backend\auth.py:1652:        updated = _change_user_status(
+  Backend\auth.py:1653:            user_id, request.is_active, current_admin["id"]
+  Backend\auth.py:1654:        )
+  Backend\auth.py:1655:
+  Backend\auth.py:1656:        return {
+  Backend\auth.py:1657:            "success": updated,
+  Backend\auth.py:1658:            "user_id": user_id,
+  Backend\auth.py:1659:            "is_active": request.is_active,
+  Backend\auth.py:1660:            "message": "User account status updated successfully.",
+  Backend\auth.py:1661:        }
+  Backend\auth.py:1662:
+  Backend\auth.py:1663:    except ValueError as error:
+  Backend\auth.py:1664:        raise HTTPException(status_code=400, detail=str(error))
+  Backend\auth.py:1665:
+  Backend\auth.py:1666:
+  Backend\auth.py:1667:# =========================================================
+  Backend\auth.py:1668:# ADMIN: CHANGE ROLE
+  Backend\auth.py:1669:# =========================================================
+  Backend\auth.py:1670:
+> Backend\auth.py:1671:@auth_router.patch("/users/{user_id}/role")
+  Backend\auth.py:1672:async def change_user_role(
+  Backend\auth.py:1673:    user_id: int,
+  Backend\auth.py:1674:    request: RoleChangeRequest,
+  Backend\auth.py:1675:    current_admin=Depends(admin_access),
+  Backend\auth.py:1676:):
+  Backend\auth.py:1677:    if user_id == current_admin["id"]:
+  Backend\auth.py:1678:        raise HTTPException(
+  Backend\auth.py:1679:            status_code=400,
+  Backend\auth.py:1680:            detail="You cannot change your own role.",
+  Backend\auth.py:1681:        )
+  Backend\auth.py:1682:
+  Backend\auth.py:1683:    try:
+  Backend\auth.py:1684:        _change_user_role(user_id, request.role, current_admin["id"])
+  Backend\auth.py:1685:
+  Backend\auth.py:1686:        return {
+  Backend\auth.py:1687:            "success": True,
+  Backend\auth.py:1688:            "user_id": user_id,
+  Backend\auth.py:1689:            "new_role": request.role,
+  Backend\auth.py:1690:            "message": "User role updated successfully.",
+  Backend\auth.py:1691:        }
+  Backend\auth.py:1692:
+  Backend\auth.py:1693:    except ValueError as error:
+  Backend\auth.py:1694:        raise HTTPException(status_code=400, detail=str(error))
+  Backend\auth.py:1695:
+  Backend\auth.py:1696:
+  Backend\auth.py:1697:# =========================================================
+  Backend\auth.py:1698:# ADMIN: TEMPORARY DELETE
+  Backend\auth.py:1699:# =========================================================
+  Backend\auth.py:1700:
+> Backend\auth.py:1701:@auth_router.delete("/users/{user_id}")
+  Backend\auth.py:1702:async def delete_user_account(
+  Backend\auth.py:1703:    user_id: int,
+  Backend\auth.py:1704:    reason: str | None = Query(default=None, max_length=1000),
+  Backend\auth.py:1705:    current_admin=Depends(admin_access),
+  Backend\auth.py:1706:):
+  Backend\auth.py:1707:    if user_id == current_admin["id"]:
+  Backend\auth.py:1708:        raise HTTPException(
+  Backend\auth.py:1709:            status_code=400,
+  Backend\auth.py:1710:            detail="You cannot delete your own account.",
+  Backend\auth.py:1711:        )
+  Backend\auth.py:1712:
+  Backend\auth.py:1713:    try:
+  Backend\auth.py:1714:        _soft_delete_account(user_id, current_admin["id"], reason)
+  Backend\auth.py:1715:
+  Backend\auth.py:1716:        return {
+  Backend\auth.py:1717:            "success": True,
+  Backend\auth.py:1718:            "user_id": user_id,
+  Backend\auth.py:1719:            "message": "Account temporarily deleted. Recovery remains possible.",
+  Backend\auth.py:1720:        }
+  Backend\auth.py:1721:
+  Backend\auth.py:1722:    except ValueError as error:
+  Backend\auth.py:1723:        raise HTTPException(status_code=400, detail=str(error))
+  Backend\auth.py:1724:
+  Backend\auth.py:1725:
+  Backend\auth.py:1726:# =========================================================
+  Backend\auth.py:1727:# ADMIN: PERMANENT DELETE
+  Backend\auth.py:1728:# =========================================================
+  Backend\auth.py:1729:
+> Backend\auth.py:1730:@auth_router.delete("/users/{user_id}/permanent-delete")
+  Backend\auth.py:1731:async def permanently_delete_user_account(
+  Backend\auth.py:1732:    user_id: int,
+  Backend\auth.py:1733:    current_admin=Depends(admin_access),
+  Backend\auth.py:1734:):
+  Backend\auth.py:1735:    if user_id == current_admin["id"]:
+  Backend\auth.py:1736:        raise HTTPException(
+  Backend\auth.py:1737:            status_code=400,
+  Backend\auth.py:1738:            detail="You cannot delete your own account.",
+  Backend\auth.py:1739:        )
+  Backend\auth.py:1740:
+  Backend\auth.py:1741:    try:
+  Backend\auth.py:1742:        _permanently_delete_account(user_id, current_admin["id"])
+  Backend\auth.py:1743:
+  Backend\auth.py:1744:        return {
+  Backend\auth.py:1745:            "success": True,
+  Backend\auth.py:1746:            "user_id": user_id,
+  Backend\auth.py:1747:            "message": "Account permanently deleted. Audit evidence retained.",
+  Backend\auth.py:1748:        }
+  Backend\auth.py:1749:
+  Backend\auth.py:1750:    except ValueError as error:
+  Backend\auth.py:1751:        raise HTTPException(status_code=400, detail=str(error))
+  Backend\auth.py:1752:
+  Backend\auth.py:1753:
+  Backend\auth.py:1754:# =========================================================
+  Backend\auth.py:1755:# USER: REQUEST ADMIN PROMOTION
+  Backend\auth.py:1756:# =========================================================
+  Backend\auth.py:1757:
+> Backend\auth.py:1758:@auth_router.post("/promotion-requests")
+  Backend\auth.py:1759:async def request_admin_promotion(
+  Backend\auth.py:1760:    request: PromotionRequestModel,
+  Backend\auth.py:1761:    current_user=Depends(get_current_user),
+  Backend\auth.py:1762:):
+  Backend\auth.py:1763:    try:
+  Backend\auth.py:1764:        request_id = _create_promotion_request(
+  Backend\auth.py:1765:            current_user["id"], request.reason
+  Backend\auth.py:1766:        )
+  Backend\auth.py:1767:
+  Backend\auth.py:1768:        return {
+  Backend\auth.py:1769:            "success": True,
+  Backend\auth.py:1770:            "request_id": request_id,
+  Backend\auth.py:1771:            "status": "PENDING",
+  Backend\auth.py:1772:            "message": "Admin promotion request submitted for review.",
+  Backend\auth.py:1773:        }
+  Backend\auth.py:1774:
+  Backend\auth.py:1775:    except sqlite3.IntegrityError:
+  Backend\auth.py:1776:        raise HTTPException(
+  Backend\auth.py:1777:            status_code=409,
+  Backend\auth.py:1778:            detail="A pending promotion request already exists.",
+  Backend\auth.py:1779:        )
+  Backend\auth.py:1780:
+  Backend\auth.py:1781:    except ValueError as error:
+  Backend\auth.py:1782:        raise HTTPException(status_code=400, detail=str(error))
+  Backend\auth.py:1783:
+  Backend\auth.py:1784:
+  Backend\auth.py:1785:# =========================================================
+  Backend\auth.py:1786:# ADMIN: REVIEW PROMOTION REQUESTS
+  Backend\auth.py:1787:# =========================================================
+  Backend\auth.py:1788:
+> Backend\auth.py:1789:@auth_router.get("/promotion-requests")
+  Backend\auth.py:1790:async def list_promotion_requests(
+  Backend\auth.py:1791:    request_status: str = "PENDING",
+  Backend\auth.py:1792:    current_admin=Depends(admin_access),
+  Backend\auth.py:1793:):
+  Backend\auth.py:1794:    try:
+  Backend\auth.py:1795:        requests = _get_promotion_requests(request_status)
+  Backend\auth.py:1796:
+  Backend\auth.py:1797:        return {
+  Backend\auth.py:1798:            "success": True,
+  Backend\auth.py:1799:            "total": len(requests),
+  Backend\auth.py:1800:            "requests": requests,
+  Backend\auth.py:1801:        }
+  Backend\auth.py:1802:
+  Backend\auth.py:1803:    except ValueError as error:
+  Backend\auth.py:1804:        raise HTTPException(status_code=400, detail=str(error))
+  Backend\auth.py:1805:
+  Backend\auth.py:1806:
+> Backend\auth.py:1807:@auth_router.post("/promotion-requests/{request_id}/review")
+  Backend\auth.py:1808:async def review_promotion_request(
+  Backend\auth.py:1809:    request_id: int,
+  Backend\auth.py:1810:    request: PromotionReviewRequest,
+  Backend\auth.py:1811:    current_admin=Depends(admin_access),
+  Backend\auth.py:1812:):
+  Backend\auth.py:1813:    try:
+  Backend\auth.py:1814:        result = _review_promotion_request(
+  Backend\auth.py:1815:            request_id,
+  Backend\auth.py:1816:            current_admin["id"],
+  Backend\auth.py:1817:            request.approve,
+  Backend\auth.py:1818:            request.remarks,
+  Backend\auth.py:1819:        )
+  Backend\auth.py:1820:
+  Backend\auth.py:1821:        return {
+  Backend\auth.py:1822:            "success": True,
+  Backend\auth.py:1823:            **result,
+  Backend\auth.py:1824:            "message": (
+  Backend\auth.py:1825:                "Promotion approved."
+  Backend\auth.py:1826:                if request.approve else "Promotion rejected."
+  Backend\auth.py:1827:            ),
+  Backend\auth.py:1828:        }
+  Backend\auth.py:1829:
+  Backend\auth.py:1830:    except ValueError as error:
+  Backend\auth.py:1831:        raise HTTPException(status_code=400, detail=str(error))
+  Backend\auth.py:1832:
+  Backend\auth.py:1833:
+  Backend\auth.py:1834:# =========================================================
+  Backend\auth.py:1835:# PUBLIC: ACCOUNT RECOVERY REQUEST
+  Backend\auth.py:1836:# =========================================================
+  Backend\auth.py:1837:
+> Backend\auth.py:1838:@auth_router.post("/account-recovery/request")
+  Backend\auth.py:1839:async def request_account_recovery(
+  Backend\auth.py:1840:    request: RecoveryRequestModel,
+  Backend\auth.py:1841:    http_request: Request,
+  Backend\auth.py:1842:):
+  Backend\auth.py:1843:    rate_key = _enforce_rate_limit(
+  Backend\auth.py:1844:        "account_recovery",
+  Backend\auth.py:1845:        http_request,
+  Backend\auth.py:1846:        request.username,
+  Backend\auth.py:1847:        max_attempts=3,
+  Backend\auth.py:1848:        window_seconds=900,
+  Backend\auth.py:1849:    )
+  Backend\auth.py:1850:
+  Backend\auth.py:1851:    try:
+  Backend\auth.py:1852:        _create_recovery_request(request.username, request.reason)
+  Backend\auth.py:1853:        _record_failure(rate_key)
+  Backend\auth.py:1854:
+  Backend\auth.py:1855:    except sqlite3.IntegrityError:
+  Backend\auth.py:1856:        _record_failure(rate_key)
+  Backend\auth.py:1857:
+  Backend\auth.py:1858:    return {
+  Backend\auth.py:1859:        "success": True,
+  Backend\auth.py:1860:        "message": _generic_recovery_message(),
+  Backend\auth.py:1861:    }
+  Backend\auth.py:1862:
+  Backend\auth.py:1863:
+  Backend\auth.py:1864:# =========================================================
+  Backend\auth.py:1865:# ADMIN: REVIEW RECOVERY REQUESTS
+  Backend\auth.py:1866:# =========================================================
+  Backend\auth.py:1867:
+> Backend\auth.py:1868:@auth_router.get("/account-recovery/requests")
+  Backend\auth.py:1869:async def list_recovery_requests(
+  Backend\auth.py:1870:    request_status: str = "PENDING",
+  Backend\auth.py:1871:    current_admin=Depends(admin_access),
+  Backend\auth.py:1872:):
+  Backend\auth.py:1873:    try:
+  Backend\auth.py:1874:        requests = _get_recovery_requests(request_status)
+  Backend\auth.py:1875:
+  Backend\auth.py:1876:        return {
+  Backend\auth.py:1877:            "success": True,
+  Backend\auth.py:1878:            "total": len(requests),
+  Backend\auth.py:1879:            "requests": requests,
+  Backend\auth.py:1880:        }
+  Backend\auth.py:1881:
+  Backend\auth.py:1882:    except ValueError as error:
+  Backend\auth.py:1883:        raise HTTPException(status_code=400, detail=str(error))
+  Backend\auth.py:1884:
+  Backend\auth.py:1885:
+> Backend\auth.py:1886:@auth_router.post("/account-recovery/requests/{request_id}/review")
+  Backend\auth.py:1887:async def review_recovery_request(
+  Backend\auth.py:1888:    request_id: int,
+  Backend\auth.py:1889:    request: RecoveryReviewRequest,
+  Backend\auth.py:1890:    current_admin=Depends(admin_access),
+  Backend\auth.py:1891:):
+  Backend\auth.py:1892:    try:
+  Backend\auth.py:1893:        result = _review_recovery_request(
+  Backend\auth.py:1894:            request_id,
+  Backend\auth.py:1895:            current_admin["id"],
+  Backend\auth.py:1896:            request.approve,
+  Backend\auth.py:1897:            request.remarks,
+  Backend\auth.py:1898:        )
+  Backend\auth.py:1899:
+  Backend\auth.py:1900:        return {
+  Backend\auth.py:1901:            "success": True,
+  Backend\auth.py:1902:            **result,
+  Backend\auth.py:1903:            "message": (
+  Backend\auth.py:1904:                "Account recovery approved."
+  Backend\auth.py:1905:                if request.approve else "Account recovery rejected."
+  Backend\auth.py:1906:            ),
+  Backend\auth.py:1907:        }
+  Backend\auth.py:1908:
+  Backend\auth.py:1909:    except ValueError as error:
+  Backend\auth.py:1910:        raise HTTPException(status_code=400, detail=str(error))
+  Backend\auth.py:1911:
+  Backend\auth.py:1912:
+  Backend\auth.py:1913:# =========================================================
+  Backend\auth.py:1914:# INITIAL ADMINISTRATOR SETUP
+  Backend\auth.py:1915:# =========================================================
+  Backend\auth.py:1916:
+  Backend\auth.py:1917:def bootstrap_admin():
+  Backend\auth.py:1918:    initialize_auth_security()
+  Backend\auth.py:1919:
+  Backend\auth.py:1920:    users = get_all_users()
+  Backend\auth.py:1921:
+  Backend\auth.py:1959:# =========================================================
+  Backend\auth.py:1960:
+> Backend\auth.py:1961:@auth_router.post("/refresh", response_model=LoginResponse)
+  Backend\auth.py:1962:async def refresh_token(current_user=Depends(get_current_user)):
+  Backend\auth.py:1963:    # Compatibility endpoint: this renews a still-valid access token.
+  Backend\auth.py:1964:    # It is not a separate long-lived refresh-token mechanism.
+  Backend\auth.py:1965:    return {
+  Backend\auth.py:1966:        "access_token": create_access_token(
+  Backend\auth.py:1967:            current_user,
+  Backend\auth.py:1968:            session_role=current_user["role"],
+  Backend\auth.py:1969:        ),
+  Backend\auth.py:1970:        "token_type": "bearer",
+  Backend\auth.py:1971:        "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+  Backend\auth.py:1972:        "user_id": current_user["id"],
+  Backend\auth.py:1973:        "username": current_user["username"],
+  Backend\auth.py:1974:        "full_name": current_user["full_name"],
+  Backend\auth.py:1975:        "role": current_user["role"],
+  Backend\auth.py:1976:        "account_role": current_user["account_role"],
+  Backend\auth.py:1977:        "is_restricted_session": current_user["is_restricted_session"],
+  Backend\auth.py:1978:    }
+  Backend\auth.py:1979:
+  Backend\auth.py:1980:
+  Backend\auth.py:1981:# =========================================================
+  Backend\auth.py:1982:# PUBLIC SELF-REGISTRATION
+  Backend\auth.py:1983:# =========================================================
+  Backend\auth.py:1984:
+> Backend\auth.py:1985:@auth_router.post("/register")
+  Backend\auth.py:1986:async def register(request: RegisterRequest, http_request: Request):
+  Backend\auth.py:1987:    rate_key = _enforce_rate_limit(
+  Backend\auth.py:1988:        "register",
+  Backend\auth.py:1989:        http_request,
+  Backend\auth.py:1990:        request.username,
+  Backend\auth.py:1991:        max_attempts=5,
+  Backend\auth.py:1992:        window_seconds=900,
+  Backend\auth.py:1993:    )
+  Backend\auth.py:1994:
+  Backend\auth.py:1995:    try:
+  Backend\auth.py:1996:        user_id = create_user(
+  Backend\auth.py:1997:            username=request.username,
+  Backend\auth.py:1998:            full_name=request.full_name,
+  Backend\auth.py:1999:            password_hash=hash_password(request.password),
+  Backend\auth.py:2000:            role=request.role,
+  Backend\auth.py:2001:        )
+  Backend\auth.py:2002:
+  Backend\auth.py:2003:        _clear_failures(rate_key)
+  Backend\auth.py:2004:
+  Backend\auth.py:2005:        _audit_event(
+  Backend\auth.py:2006:            "USER_REGISTERED",
+  Backend\auth.py:2007:            actor=request.username,
+  Backend\auth.py:2008:            target=user_id,
+  Backend\auth.py:2009:            details={"role": request.role},
+  Backend\auth.py:2010:        )
+  Backend\auth.py:2011:
+  Backend\auth.py:2012:        return {
+  Backend\auth.py:2013:            "success": True,
+  Backend\auth.py:2014:            "user_id": user_id,
+  Backend\auth.py:2015:            "username": request.username,
+  Backend\auth.py:2016:            "role": request.role,
+  Backend\auth.py:2017:            "message": "Account created successfully. You can now sign in.",
+  Backend\auth.py:2018:        }
+  Backend\auth.py:2019:
+  Backend\auth.py:2020:    except sqlite3.IntegrityError:
+  Backend\auth.py:2027:
+  Backend\auth.py:2028:
+> Backend\auth.py:2029:@auth_router.get("/registration-status")
+  Backend\auth.py:2030:async def registration_status():
+  Backend\auth.py:2031:    return {"registration_enabled": True}
+  Backend\auth.py:2032:
+  Backend\auth.py:2033:
+  Backend\auth.py:2034:# =========================================================
+  Backend\auth.py:2035:# PASSWORD RESET
+  Backend\auth.py:2036:# =========================================================
+  Backend\auth.py:2037:
+> Backend\auth.py:2038:@auth_router.post("/forgot-password")
+  Backend\auth.py:2039:async def forgot_password(
+  Backend\auth.py:2040:    request: ForgotPasswordRequest,
+  Backend\auth.py:2041:    http_request: Request,
+  Backend\auth.py:2042:):
+  Backend\auth.py:2043:    rate_key = _enforce_rate_limit(
+  Backend\auth.py:2044:        "forgot_password",
+  Backend\auth.py:2045:        http_request,
+  Backend\auth.py:2046:        request.username,
+  Backend\auth.py:2047:        max_attempts=3,
+  Backend\auth.py:2048:        window_seconds=900,
+  Backend\auth.py:2049:    )
+  Backend\auth.py:2050:
+  Backend\auth.py:2051:    # No verified email/SMS recovery provider is configured here.
+  Backend\auth.py:2052:    # Therefore, do NOT create or return a reset token from this
+  Backend\auth.py:2053:    # public endpoint. Returning a token would allow account takeover.
+  Backend\auth.py:2054:    #
+  Backend\auth.py:2055:    # Once a trusted delivery provider is configured, generate a
+  Backend\auth.py:2056:    # random token, store only its hash using store_token(), and
+  Backend\auth.py:2057:    # deliver the raw token privately through that provider.
+  Backend\auth.py:2058:
+  Backend\auth.py:2059:    user = get_user_by_username(request.username.strip())
+  Backend\auth.py:2060:
+  Backend\auth.py:2061:    if user and user["is_active"] and not user.get("is_deleted", 0):
+  Backend\auth.py:2062:        _audit_event(
+  Backend\auth.py:2063:            "PASSWORD_RESET_REQUESTED",
+  Backend\auth.py:2064:            actor="PUBLIC_RECOVERY_REQUEST",
+  Backend\auth.py:2065:            target=user["id"],
+  Backend\auth.py:2066:            details={"status": "RECOVERY_CHANNEL_NOT_CONFIGURED"},
+  Backend\auth.py:2067:        )
+  Backend\auth.py:2068:
+  Backend\auth.py:2069:    _record_failure(rate_key)
+  Backend\auth.py:2070:
+  Backend\auth.py:2071:    return {
+  Backend\auth.py:2072:        "success": True,
+  Backend\auth.py:2073:        "message": (
+  Backend\auth.py:2078:
+  Backend\auth.py:2079:
+> Backend\auth.py:2080:@auth_router.post("/reset-password")
+  Backend\auth.py:2081:async def reset_password(request: ResetPasswordRequest):
+  Backend\auth.py:2082:    # Hash before consuming the token so a password validation error
+  Backend\auth.py:2083:    # does not unnecessarily destroy a valid recovery token.
+  Backend\auth.py:2084:    try:
+  Backend\auth.py:2085:        new_hash = hash_password(request.new_password)
+  Backend\auth.py:2086:    except ValueError as error:
+  Backend\auth.py:2087:        raise HTTPException(status_code=400, detail=str(error))
+  Backend\auth.py:2088:
+  Backend\auth.py:2089:    # Tokens are stored by hash, never in plaintext.
+  Backend\auth.py:2090:    try:
+  Backend\auth.py:2091:        entry = consume_token(request.token, "PASSWORD_RESET")
+  Backend\auth.py:2092:    except Exception:
+  Backend\auth.py:2093:        entry = None
+  Backend\auth.py:2094:
+  Backend\auth.py:2095:    if not entry:
+  Backend\auth.py:2096:        raise HTTPException(
+  Backend\auth.py:2097:            status_code=400,
+  Backend\auth.py:2098:            detail="Reset token is invalid, expired or already used.",
+  Backend\auth.py:2099:        )
+  Backend\auth.py:2100:
+  Backend\auth.py:2101:    user_id = entry.get("user_id")
+  Backend\auth.py:2102:
+  Backend\auth.py:2103:    if not user_id:
+  Backend\auth.py:2104:        raise HTTPException(
+  Backend\auth.py:2105:            status_code=400,
+  Backend\auth.py:2106:            detail="Reset token is invalid or expired.",
+  Backend\auth.py:2107:        )
+  Backend\auth.py:2108:
+  Backend\auth.py:2109:    connection = _begin_transaction()
+  Backend\auth.py:2110:
+  Backend\auth.py:2111:    try:
+  Backend\auth.py:2112:        user = connection.execute("""
+  Backend\auth.py:2113:            SELECT id, username, is_active, is_deleted
+  Backend\auth.py:2114:            FROM users
+  Backend\auth.py:2115:            WHERE id = ?
+  Backend\auth.py:2167:# =========================================================
+  Backend\auth.py:2168:
+> Backend\auth.py:2169:@auth_router.post("/admin-invite")
+  Backend\auth.py:2170:async def create_admin_invite(current_admin=Depends(admin_access)):
+  Backend\auth.py:2171:    token = secrets.token_urlsafe(40)
+  Backend\auth.py:2172:    expires_at = datetime.now(timezone.utc) + timedelta(
+  Backend\auth.py:2173:        seconds=ADMIN_INVITE_TTL_SECONDS
+  Backend\auth.py:2174:    )
+  Backend\auth.py:2175:
+  Backend\auth.py:2176:    try:
+  Backend\auth.py:2177:        store_token(
+  Backend\auth.py:2178:            token,
+  Backend\auth.py:2179:            "ADMIN_INVITE",
+  Backend\auth.py:2180:            expires_at,
+  Backend\auth.py:2181:            created_by_user_id=current_admin["id"],
+  Backend\auth.py:2182:        )
+  Backend\auth.py:2183:    except Exception:
+  Backend\auth.py:2184:        raise HTTPException(
+  Backend\auth.py:2185:            status_code=500,
+  Backend\auth.py:2186:            detail="Unable to create Admin invitation.",
+  Backend\auth.py:2187:        )
+  Backend\auth.py:2188:
+  Backend\auth.py:2189:    _audit_event(
+  Backend\auth.py:2190:        "ADMIN_INVITE_CREATED",
+  Backend\auth.py:2191:        actor=current_admin["username"],
+  Backend\auth.py:2192:        details={"expires_in_hours": 24},
+  Backend\auth.py:2193:    )
+  Backend\auth.py:2194:
+  Backend\auth.py:2195:    # The raw token is shown only once to the authenticated Admin.
+  Backend\auth.py:2196:    # The persistent store must retain only its hash.
+  Backend\auth.py:2197:    return {
+  Backend\auth.py:2198:        "success": True,
+  Backend\auth.py:2199:        "admin_invite_token": token,
+  Backend\auth.py:2200:        "expires_in_hours": 24,
+  Backend\auth.py:2201:        "instructions": (
+  Backend\auth.py:2202:            "Share this token securely. It can be used once "
+  Backend\auth.py:2203:            "within 24 hours at POST /auth/register-admin."
+  Backend\auth.py:2204:        ),
+  Backend\auth.py:2206:
+  Backend\auth.py:2207:
+> Backend\auth.py:2208:@auth_router.get("/admin-invite")
+  Backend\auth.py:2209:async def list_admin_invites(current_admin=Depends(admin_access)):
+  Backend\auth.py:2210:    connection = get_connection()
+  Backend\auth.py:2211:
+  Backend\auth.py:2212:    try:
+  Backend\auth.py:2213:        rows = connection.execute("""
+  Backend\auth.py:2214:            SELECT
+  Backend\auth.py:2215:                id,
+  Backend\auth.py:2216:                created_by_user_id,
+  Backend\auth.py:2217:                created_at,
+  Backend\auth.py:2218:                expires_at
+  Backend\auth.py:2219:            FROM auth_security_tokens
+  Backend\auth.py:2220:            WHERE token_type = 'ADMIN_INVITE'
+  Backend\auth.py:2221:              AND consumed_at IS NULL
+  Backend\auth.py:2222:              AND revoked_at IS NULL
+  Backend\auth.py:2223:              AND expires_at > ?
+  Backend\auth.py:2224:            ORDER BY created_at DESC
+  Backend\auth.py:2225:        """, (_now(),)).fetchall()
+  Backend\auth.py:2226:
+  Backend\auth.py:2227:        active = []
+  Backend\auth.py:2228:
+  Backend\auth.py:2229:        for row in rows:
+  Backend\auth.py:2230:            creator = get_user_by_id(row["created_by_user_id"])
+  Backend\auth.py:2231:            active.append({
+  Backend\auth.py:2232:                "created_by": (
+  Backend\auth.py:2233:                    creator["username"] if creator else "Unavailable"
+  Backend\auth.py:2234:                ),
+  Backend\auth.py:2235:                "created_at": row["created_at"],
+  Backend\auth.py:2236:                "expires_at": row["expires_at"],
+  Backend\auth.py:2237:            })
+  Backend\auth.py:2238:
+  Backend\auth.py:2239:        return {
+  Backend\auth.py:2240:            "pending_invites": active,
+  Backend\auth.py:2241:            "count": len(active),
+  Backend\auth.py:2242:        }
+  Backend\auth.py:2243:
+  Backend\auth.py:2246:
+  Backend\auth.py:2247:
+> Backend\auth.py:2248:@auth_router.delete("/admin-invite")
+  Backend\auth.py:2249:async def revoke_admin_invites(current_admin=Depends(admin_access)):
+  Backend\auth.py:2250:    connection = _begin_transaction()
+  Backend\auth.py:2251:
+  Backend\auth.py:2252:    try:
+  Backend\auth.py:2253:        cursor = connection.execute("""
+  Backend\auth.py:2254:            UPDATE auth_security_tokens
+  Backend\auth.py:2255:            SET revoked_at = ?
+  Backend\auth.py:2256:            WHERE token_type = 'ADMIN_INVITE'
+  Backend\auth.py:2257:              AND consumed_at IS NULL
+  Backend\auth.py:2258:              AND revoked_at IS NULL
+  Backend\auth.py:2259:        """, (_now(),))
+  Backend\auth.py:2260:
+  Backend\auth.py:2261:        count = cursor.rowcount
+  Backend\auth.py:2262:
+  Backend\auth.py:2263:        _audit_transaction(
+  Backend\auth.py:2264:            connection,
+  Backend\auth.py:2265:            "ADMIN_INVITES_REVOKED",
+  Backend\auth.py:2266:            current_admin["username"],
+  Backend\auth.py:2267:            None,
+  Backend\auth.py:2268:            {"revoked_count": count},
+  Backend\auth.py:2269:        )
+  Backend\auth.py:2270:
+  Backend\auth.py:2271:        connection.commit()
+  Backend\auth.py:2272:
+  Backend\auth.py:2273:        return {
+  Backend\auth.py:2274:            "success": True,
+  Backend\auth.py:2275:            "revoked_count": count,
+  Backend\auth.py:2276:            "message": "Pending Admin invitations revoked.",
+  Backend\auth.py:2277:        }
+  Backend\auth.py:2278:
+  Backend\auth.py:2279:    except Exception:
+  Backend\auth.py:2280:        connection.rollback()
+  Backend\auth.py:2281:        raise
+  Backend\auth.py:2282:
+  Backend\auth.py:2283:    finally:
+  Backend\auth.py:2289:# =========================================================
+  Backend\auth.py:2290:
+> Backend\auth.py:2291:@auth_router.post("/register-admin")
+  Backend\auth.py:2292:async def register_admin(
+  Backend\auth.py:2293:    request: AdminRegisterRequest,
+  Backend\auth.py:2294:    http_request: Request,
+  Backend\auth.py:2295:):
+  Backend\auth.py:2296:    rate_key = _enforce_rate_limit(
+  Backend\auth.py:2297:        "register_admin",
+  Backend\auth.py:2298:        http_request,
+  Backend\auth.py:2299:        request.username,
+  Backend\auth.py:2300:        max_attempts=3,
+  Backend\auth.py:2301:        window_seconds=900,
+  Backend\auth.py:2302:    )
+  Backend\auth.py:2303:
+  Backend\auth.py:2304:    try:
+  Backend\auth.py:2305:        new_hash = hash_password(request.password)
+  Backend\auth.py:2306:    except ValueError as error:
+  Backend\auth.py:2307:        raise HTTPException(status_code=400, detail=str(error))
+  Backend\auth.py:2308:
+  Backend\auth.py:2309:    # consume_token must atomically mark the invitation as consumed.
+  Backend\auth.py:2310:    try:
+  Backend\auth.py:2311:        entry = consume_token(
+  Backend\auth.py:2312:            request.invite_token.strip(),
+  Backend\auth.py:2313:            "ADMIN_INVITE",
+  Backend\auth.py:2314:        )
+  Backend\auth.py:2315:    except Exception:
+  Backend\auth.py:2316:        entry = None
+  Backend\auth.py:2317:
+  Backend\auth.py:2318:    if not entry:
+  Backend\auth.py:2319:        _record_failure(rate_key)
+  Backend\auth.py:2320:        raise HTTPException(
+  Backend\auth.py:2321:            status_code=403,
+  Backend\auth.py:2322:            detail="Invalid, expired or already used Admin invitation.",
+  Backend\auth.py:2323:        )
+  Backend\auth.py:2324:
+  Backend\auth.py:2325:    inviter_id = entry.get("created_by_user_id")
+  Backend\auth.py:2326:
+
+
+
+
+==================================================
+===== AUTH.PY — LOGIN ROUTE AND ROLE VALIDATION =====
+==================================================
+
+  Backend\auth.py:118:        "recommendations.maintenance.view",
+  Backend\auth.py:119:        "edge_devices.view",
+  Backend\auth.py:120:    },
+  Backend\auth.py:121:}
+  Backend\auth.py:122:
+> Backend\auth.py:123:RESTRICTED_ADMIN_SESSION_PERMISSIONS = {
+  Backend\auth.py:124:    "OPERATOR": "admin.operator_access",
+  Backend\auth.py:125:    "MAINTENANCE_ENGINEER": "admin.engineer_access",
+  Backend\auth.py:126:}
+  Backend\auth.py:127:
+  Backend\auth.py:128:ALL_PERMISSION_KEYS = {
+  Backend\auth.py:129:    "dashboard.view",
+  Backend\auth.py:130:    "sensors.view",
+  Backend\auth.py:131:    "machine_status.view",
+  Backend\auth.py:132:    "alerts.view",
+  Backend\auth.py:133:    "recommendations.operational.view",
+  Backend\auth.py:134:    "diagnostics.view",
+  Backend\auth.py:135:    "diagnostics.confidence.view",
+  Backend\auth.py:136:    "recommendations.maintenance.view",
+  Backend\auth.py:137:    "edge_devices.view",
+  Backend\auth.py:138:    "control.execute",
+  Backend\auth.py:139:    "control.acknowledge",
+  Backend\auth.py:140:    "calibration.manage",
+  Backend\auth.py:141:    "models.manage",
+  Backend\auth.py:142:    "users.manage",
+  Backend\auth.py:143:    "permissions.manage",
+  Backend\auth.py:144:    "admin.operator_access",
+  Backend\auth.py:145:    "admin.engineer_access",
+  Backend\auth.py:146:}
+  Backend\auth.py:147:
+  Backend\auth.py:148:ADMIN_ONLY_PERMISSIONS = {
+  Backend\auth.py:149:    "calibration.manage",
+  Backend\auth.py:150:    "models.manage",
+  Backend\auth.py:151:    "users.manage",
+  Backend\auth.py:152:    "permissions.manage",
+  Backend\auth.py:153:    "admin.operator_access",
+  Backend\auth.py:154:    "admin.engineer_access",
+  Backend\auth.py:155:}
+  Backend\auth.py:156:
+  Backend\auth.py:157:
+  Backend\auth.py:158:# =========================================================
+  Backend\auth.py:446:        return None
+  Backend\auth.py:447:
+  Backend\auth.py:448:    return user
+  Backend\auth.py:449:
+  Backend\auth.py:450:
+> Backend\auth.py:451:def create_access_token(user, session_role=None):
+  Backend\auth.py:452:    account_role = user.get("account_role", user.get("role"))
+  Backend\auth.py:453:    effective_role = session_role or user.get("role")
+  Backend\auth.py:454:
+  Backend\auth.py:455:    if account_role not in VALID_ROLES or effective_role not in VALID_ROLES:
+  Backend\auth.py:456:        raise ValueError("Invalid account or session role.")
+  Backend\auth.py:457:
+  Backend\auth.py:458:    user_id = int(user["id"])
+  Backend\auth.py:459:    session_version = get_session_version(user_id)
+  Backend\auth.py:460:
+  Backend\auth.py:461:    now = datetime.now(timezone.utc)
+  Backend\auth.py:462:
+  Backend\auth.py:463:    payload = {
+  Backend\auth.py:464:        "sub": str(user_id),
+  Backend\auth.py:465:        "session_role": effective_role,
+  Backend\auth.py:466:        "iss": JWT_ISSUER,
+  Backend\auth.py:467:        "aud": JWT_AUDIENCE,
+  Backend\auth.py:468:        "typ": "access",
+  Backend\auth.py:469:        "jti": secrets.token_urlsafe(24),
+  Backend\auth.py:470:        "sv": int(session_version),
+  Backend\auth.py:471:        "iat": now,
+  Backend\auth.py:472:        "exp": now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+  Backend\auth.py:473:    }
+  Backend\auth.py:474:
+  Backend\auth.py:475:    return jwt.encode(
+  Backend\auth.py:476:        payload,
+  Backend\auth.py:477:        get_secret_key(),
+  Backend\auth.py:478:        algorithm=ALGORITHM,
+  Backend\auth.py:479:    )
+  Backend\auth.py:480:
+  Backend\auth.py:481:
+  Backend\auth.py:482:async def get_current_user(
+  Backend\auth.py:483:    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+  Backend\auth.py:484:):
+  Backend\auth.py:485:    unauthorized = HTTPException(
+  Backend\auth.py:486:        status_code=status.HTTP_401_UNAUTHORIZED,
+  Backend\auth.py:553:        if is_restricted_session:
+  Backend\auth.py:554:            if account_role != "ADMIN":
+  Backend\auth.py:555:                raise unauthorized
+  Backend\auth.py:556:
+  Backend\auth.py:557:            required_permission = (
+> Backend\auth.py:558:                RESTRICTED_ADMIN_SESSION_PERMISSIONS.get(session_role)
+  Backend\auth.py:559:            )
+  Backend\auth.py:560:
+  Backend\auth.py:561:            if not required_permission:
+  Backend\auth.py:562:                raise unauthorized
+  Backend\auth.py:563:
+  Backend\auth.py:564:            overrides = get_user_permission_overrides(user_id)
+  Backend\auth.py:565:
+  Backend\auth.py:566:            if overrides.get(required_permission) is not True:
+  Backend\auth.py:567:                raise unauthorized
+  Backend\auth.py:568:
+  Backend\auth.py:569:        user["account_role"] = account_role
+  Backend\auth.py:570:        user["role"] = session_role
+  Backend\auth.py:571:        user["is_restricted_session"] = is_restricted_session
+  Backend\auth.py:572:
+  Backend\auth.py:573:        return user
+  Backend\auth.py:574:
+  Backend\auth.py:575:    except HTTPException:
+  Backend\auth.py:576:        raise
+  Backend\auth.py:577:    except (
+  Backend\auth.py:578:        jwt.PyJWTError,
+  Backend\auth.py:579:        ValueError,
+  Backend\auth.py:580:        TypeError,
+  Backend\auth.py:581:        KeyError,
+  Backend\auth.py:582:        OverflowError,
+  Backend\auth.py:583:    ):
+  Backend\auth.py:584:        raise unauthorized
+  Backend\auth.py:585:
+  Backend\auth.py:586:
+  Backend\auth.py:587:# =========================================================
+  Backend\auth.py:588:# ROLE AND PERMISSION AUTHORIZATION
+  Backend\auth.py:589:# =========================================================
+  Backend\auth.py:590:
+  Backend\auth.py:591:def require_roles(*allowed_roles):
+  Backend\auth.py:592:    async def role_checker(current_user=Depends(get_current_user)):
+  Backend\auth.py:593:        if current_user["role"] not in allowed_roles:
+  Backend\auth.py:1282:# =========================================================
+  Backend\auth.py:1283:# LOGIN
+  Backend\auth.py:1284:# =========================================================
+  Backend\auth.py:1285:
+  Backend\auth.py:1286:@auth_router.post("/login", response_model=LoginResponse)
+> Backend\auth.py:1287:async def login(request: LoginRequest, http_request: Request):
+  Backend\auth.py:1288:    rate_key = _enforce_rate_limit(
+  Backend\auth.py:1289:        "login",
+  Backend\auth.py:1290:        http_request,
+  Backend\auth.py:1291:        request.username,
+  Backend\auth.py:1292:        max_attempts=5,
+  Backend\auth.py:1293:        window_seconds=300,
+  Backend\auth.py:1294:    )
+  Backend\auth.py:1295:
+  Backend\auth.py:1296:    user = authenticate_user(request.username, request.password)
+  Backend\auth.py:1297:
+  Backend\auth.py:1298:    if not user:
+  Backend\auth.py:1299:        _record_failure(rate_key)
+  Backend\auth.py:1300:        raise HTTPException(
+  Backend\auth.py:1301:            status_code=401,
+> Backend\auth.py:1302:            detail="Incorrect username or password, or account inactive.",
+  Backend\auth.py:1303:        )
+  Backend\auth.py:1304:
+  Backend\auth.py:1305:    account_role = user["role"]
+  Backend\auth.py:1306:    requested_role = request.requested_role
+  Backend\auth.py:1307:    is_restricted_session = False
+  Backend\auth.py:1308:
+  Backend\auth.py:1309:    if requested_role == account_role:
+  Backend\auth.py:1310:        session_role = account_role
+  Backend\auth.py:1311:
+  Backend\auth.py:1312:    elif account_role == "ADMIN":
+  Backend\auth.py:1313:        required_permission = (
+> Backend\auth.py:1314:            RESTRICTED_ADMIN_SESSION_PERMISSIONS.get(requested_role)
+  Backend\auth.py:1315:        )
+  Backend\auth.py:1316:
+  Backend\auth.py:1317:        if not required_permission:
+  Backend\auth.py:1318:            raise HTTPException(
+  Backend\auth.py:1319:                status_code=403,
+  Backend\auth.py:1320:                detail="This account cannot sign in through the selected role.",
+  Backend\auth.py:1321:            )
+  Backend\auth.py:1322:
+  Backend\auth.py:1323:        overrides = get_user_permission_overrides(user["id"])
+  Backend\auth.py:1324:
+  Backend\auth.py:1325:        if overrides.get(required_permission) is not True:
+  Backend\auth.py:1326:            raise HTTPException(
+  Backend\auth.py:1327:                status_code=403,
+  Backend\auth.py:1328:                detail=(
+  Backend\auth.py:1329:                    "Restricted access has not been granted for this role. "
+  Backend\auth.py:1330:                    "Sign in through the Admin tab or ask an administrator "
+  Backend\auth.py:1331:                    "to grant the required restricted access."
+  Backend\auth.py:1332:                ),
+  Backend\auth.py:1333:            )
+  Backend\auth.py:1334:
+  Backend\auth.py:1335:        session_role = requested_role
+  Backend\auth.py:1336:        is_restricted_session = True
+  Backend\auth.py:1337:
+  Backend\auth.py:1338:    else:
+  Backend\auth.py:1339:        raise HTTPException(
+  Backend\auth.py:1340:            status_code=403,
+  Backend\auth.py:1341:            detail="This account is not authorised for the selected role tab.",
+  Backend\auth.py:1342:        )
+  Backend\auth.py:1343:
+  Backend\auth.py:1344:    _clear_failures(rate_key)
+  Backend\auth.py:1345:
+  Backend\auth.py:1346:    update_last_login(user["id"])
+  Backend\auth.py:1347:
+  Backend\auth.py:1348:    _audit_event(
+> Backend\auth.py:1349:        "USER_LOGIN",
+  Backend\auth.py:1350:        actor=user["username"],
+  Backend\auth.py:1351:        target=user["id"],
+  Backend\auth.py:1352:        details={
+  Backend\auth.py:1353:            "account_role": account_role,
+  Backend\auth.py:1354:            "session_role": session_role,
+  Backend\auth.py:1355:            "is_restricted_session": is_restricted_session,
+  Backend\auth.py:1356:        },
+  Backend\auth.py:1357:    )
+  Backend\auth.py:1358:
+  Backend\auth.py:1359:    return {
+> Backend\auth.py:1360:        "access_token": create_access_token(user, session_role),
+  Backend\auth.py:1361:        "token_type": "bearer",
+  Backend\auth.py:1362:        "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+  Backend\auth.py:1363:        "user_id": user["id"],
+  Backend\auth.py:1364:        "username": user["username"],
+  Backend\auth.py:1365:        "full_name": user["full_name"],
+  Backend\auth.py:1366:        "role": session_role,
+  Backend\auth.py:1367:        "account_role": account_role,
+  Backend\auth.py:1368:        "is_restricted_session": is_restricted_session,
+  Backend\auth.py:1369:    }
+  Backend\auth.py:1370:
+  Backend\auth.py:1371:
+  Backend\auth.py:1372:# =========================================================
+  Backend\auth.py:1373:# CURRENT USER
+  Backend\auth.py:1374:# =========================================================
+  Backend\auth.py:1375:
+  Backend\auth.py:1376:@auth_router.get("/me")
+  Backend\auth.py:1377:async def get_my_account(current_user=Depends(get_current_user)):
+  Backend\auth.py:1378:    return {
+  Backend\auth.py:1379:        "id": current_user["id"],
+  Backend\auth.py:1380:        "username": current_user["username"],
+  Backend\auth.py:1381:        "full_name": current_user["full_name"],
+  Backend\auth.py:1382:        "role": current_user["role"],
+  Backend\auth.py:1383:        "account_role": current_user["account_role"],
+  Backend\auth.py:1384:        "is_restricted_session": current_user["is_restricted_session"],
+  Backend\auth.py:1385:        "is_active": current_user["is_active"],
+  Backend\auth.py:1386:        "created_at": current_user["created_at"],
+  Backend\auth.py:1387:        "last_login": current_user["last_login"],
+  Backend\auth.py:1388:        "effective_permissions": get_effective_permissions(
+  Backend\auth.py:1389:            current_user["id"],
+  Backend\auth.py:1390:            current_user["role"],
+  Backend\auth.py:1391:            restricted_session=current_user["is_restricted_session"],
+  Backend\auth.py:1392:        ),
+  Backend\auth.py:1393:    }
+  Backend\auth.py:1394:
+  Backend\auth.py:1395:
+  Backend\auth.py:1545:            updated_by=current_admin["id"],
+  Backend\auth.py:1546:        )
+  Backend\auth.py:1547:
+  Backend\auth.py:1548:        if (
+  Backend\auth.py:1549:            target["role"] == "ADMIN"
+> Backend\auth.py:1550:            and permission_key in RESTRICTED_ADMIN_SESSION_PERMISSIONS.values()
+  Backend\auth.py:1551:        ):
+  Backend\auth.py:1552:            increment_session_version(user_id)
+  Backend\auth.py:1553:
+  Backend\auth.py:1554:        _audit_event(
+  Backend\auth.py:1555:            "USER_PERMISSION_UPDATED",
+  Backend\auth.py:1556:            actor=current_admin["username"],
+  Backend\auth.py:1557:            target=user_id,
+  Backend\auth.py:1558:            details={
+  Backend\auth.py:1559:                "permission_key": permission_key,
+  Backend\auth.py:1560:                "is_granted": request.is_granted,
+  Backend\auth.py:1561:                "target_username": target["username"],
+  Backend\auth.py:1562:            },
+  Backend\auth.py:1563:        )
+  Backend\auth.py:1564:
+  Backend\auth.py:1565:    except sqlite3.IntegrityError:
+  Backend\auth.py:1566:        raise HTTPException(
+  Backend\auth.py:1567:            status_code=404,
+  Backend\auth.py:1568:            detail="Unable to update permission.",
+  Backend\auth.py:1569:        )
+  Backend\auth.py:1570:
+  Backend\auth.py:1571:    return {
+  Backend\auth.py:1572:        "success": True,
+  Backend\auth.py:1573:        "user_id": user_id,
+  Backend\auth.py:1574:        "permission_key": permission_key,
+  Backend\auth.py:1575:        "is_granted": request.is_granted,
+  Backend\auth.py:1576:        "effective_permissions": get_effective_permissions(
+  Backend\auth.py:1577:            user_id, target["role"]
+  Backend\auth.py:1578:        ),
+  Backend\auth.py:1579:    }
+  Backend\auth.py:1580:
+  Backend\auth.py:1581:
+  Backend\auth.py:1582:@auth_router.delete("/users/{user_id}/permissions/{permission_key}")
+  Backend\auth.py:1583:async def reset_user_permission(
+  Backend\auth.py:1584:    user_id: int,
+  Backend\auth.py:1585:    permission_key: str,
+  Backend\auth.py:1604:
+  Backend\auth.py:1605:    removed = clear_user_permission_override(user_id, permission_key)
+  Backend\auth.py:1606:
+  Backend\auth.py:1607:    if (
+  Backend\auth.py:1608:        target["role"] == "ADMIN"
+> Backend\auth.py:1609:        and permission_key in RESTRICTED_ADMIN_SESSION_PERMISSIONS.values()
+  Backend\auth.py:1610:    ):
+  Backend\auth.py:1611:        increment_session_version(user_id)
+  Backend\auth.py:1612:
+  Backend\auth.py:1613:    _audit_event(
+  Backend\auth.py:1614:        "USER_PERMISSION_OVERRIDE_RESET",
+  Backend\auth.py:1615:        actor=current_admin["username"],
+  Backend\auth.py:1616:        target=user_id,
+  Backend\auth.py:1617:        details={
+  Backend\auth.py:1618:            "permission_key": permission_key,
+  Backend\auth.py:1619:            "override_removed": removed,
+  Backend\auth.py:1620:            "target_username": target["username"],
+  Backend\auth.py:1621:        },
+  Backend\auth.py:1622:    )
+  Backend\auth.py:1623:
+  Backend\auth.py:1624:    return {
+  Backend\auth.py:1625:        "success": True,
+  Backend\auth.py:1626:        "user_id": user_id,
+  Backend\auth.py:1627:        "permission_key": permission_key,
+  Backend\auth.py:1628:        "override_removed": removed,
+  Backend\auth.py:1629:        "effective_permissions": get_effective_permissions(
+  Backend\auth.py:1630:            user_id, target["role"]
+  Backend\auth.py:1631:        ),
+  Backend\auth.py:1632:    }
+  Backend\auth.py:1633:
+  Backend\auth.py:1634:
+  Backend\auth.py:1635:# =========================================================
+  Backend\auth.py:1636:# ADMIN: LOCK / UNLOCK USER
+  Backend\auth.py:1637:# =========================================================
+  Backend\auth.py:1638:
+  Backend\auth.py:1639:@auth_router.patch("/users/{user_id}/status")
+  Backend\auth.py:1640:async def update_user_status(
+  Backend\auth.py:1641:    user_id: int,
+  Backend\auth.py:1642:    request: UserStatusRequest,
+  Backend\auth.py:1643:    current_admin=Depends(admin_access),
+  Backend\auth.py:1644:):
+  Backend\auth.py:1961:@auth_router.post("/refresh", response_model=LoginResponse)
+  Backend\auth.py:1962:async def refresh_token(current_user=Depends(get_current_user)):
+  Backend\auth.py:1963:    # Compatibility endpoint: this renews a still-valid access token.
+  Backend\auth.py:1964:    # It is not a separate long-lived refresh-token mechanism.
+  Backend\auth.py:1965:    return {
+> Backend\auth.py:1966:        "access_token": create_access_token(
+  Backend\auth.py:1967:            current_user,
+  Backend\auth.py:1968:            session_role=current_user["role"],
+  Backend\auth.py:1969:        ),
+  Backend\auth.py:1970:        "token_type": "bearer",
+  Backend\auth.py:1971:        "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+  Backend\auth.py:1972:        "user_id": current_user["id"],
+  Backend\auth.py:1973:        "username": current_user["username"],
+  Backend\auth.py:1974:        "full_name": current_user["full_name"],
+  Backend\auth.py:1975:        "role": current_user["role"],
+  Backend\auth.py:1976:        "account_role": current_user["account_role"],
+  Backend\auth.py:1977:        "is_restricted_session": current_user["is_restricted_session"],
+  Backend\auth.py:1978:    }
+  Backend\auth.py:1979:
+  Backend\auth.py:1980:
+  Backend\auth.py:1981:# =========================================================
+  Backend\auth.py:1982:# PUBLIC SELF-REGISTRATION
+  Backend\auth.py:1983:# =========================================================
+  Backend\auth.py:1984:
+  Backend\auth.py:1985:@auth_router.post("/register")
+  Backend\auth.py:1986:async def register(request: RegisterRequest, http_request: Request):
+  Backend\auth.py:1987:    rate_key = _enforce_rate_limit(
+  Backend\auth.py:1988:        "register",
+  Backend\auth.py:1989:        http_request,
+  Backend\auth.py:1990:        request.username,
+  Backend\auth.py:1991:        max_attempts=5,
+  Backend\auth.py:1992:        window_seconds=900,
+  Backend\auth.py:1993:    )
+  Backend\auth.py:1994:
+  Backend\auth.py:1995:    try:
+  Backend\auth.py:1996:        user_id = create_user(
+  Backend\auth.py:1997:            username=request.username,
+  Backend\auth.py:1998:            full_name=request.full_name,
+  Backend\auth.py:1999:            password_hash=hash_password(request.password),
+  Backend\auth.py:2000:            role=request.role,
+  Backend\auth.py:2001:        )
+
+
+
+
+==================================================
+===== DATABASE.PY — CONNECTION AND INITIALIZATION =====
+==================================================
+
+import sqlite3
+import json
+import hashlib
+
+from pathlib import Path
+from datetime import datetime, timezone, timedelta
+
+
+# =====================================================
+# DATABASE CONFIGURATION
+# =====================================================
+
+BASE_DIR = Path(__file__).resolve().parent
+DATABASE_DIR = BASE_DIR / "database"
+DATABASE_PATH = DATABASE_DIR / "intelliwatch.db"
+
+DATABASE_DIR.mkdir(parents=True, exist_ok=True)
+
+VALID_ROLES = {
+    "ADMIN",
+    "OPERATOR",
+    "MAINTENANCE_ENGINEER",
+}
+
+EXPLORER_HISTORY_MAX_ROWS = 500
+DEFAULT_RETENTION_DAYS = 365
+
+
+def get_connection():
+    connection = sqlite3.connect(DATABASE_PATH, timeout=30)
+    connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA foreign_keys = ON")
+    connection.execute("PRAGMA busy_timeout = 30000")
+    return connection
+
+
+def current_timestamp():
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _begin_transaction(connection):
+    connection.execute("BEGIN IMMEDIATE")
+
+
+def _insert_audit_entry(
+    connection,
+    category,
+    detail_json,
+    actor=None,
+    target=None,
+    hash_value=None,
+):
+    """Insert an audit entry using the current transaction."""
+
+    timestamp = current_timestamp()
+
+    if hash_value is None:
+        previous = connection.execute("""
+            SELECT hash
+            FROM audit_entries
+            ORDER BY id DESC
+            LIMIT 1
+        """).fetchone()
+
+        previous_hash = previous["hash"] if previous else ""
+
+        chain_input = "|".join((
+            str(previous_hash),
+            timestamp,
+            str(category),
+            str(actor),
+            str(target),
+            str(detail_json),
+        ))
+
+        hash_value = hashlib.sha256(
+            chain_input.encode("utf-8")
+        ).hexdigest()
+
+    cursor = connection.execute("""
+        INSERT INTO audit_entries (
+            timestamp,
+            category,
+            actor,
+            target,
+            detail_json,
+            hash
+        )
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (
+        timestamp,
+        category,
+        actor,
+        str(target) if target is not None else None,
+        detail_json,
+        hash_value,
+    ))
+
+    return cursor.lastrowid
+
+
+def _audit_details(connection, category, actor, target, details):
+    return _insert_audit_entry(
+        connection,
+        category,
+        json.dumps(details or {}, default=str),
+        actor=actor,
+        target=target,
+    )
+
+
+# =====================================================
+# DATABASE INITIALIZATION
+# =====================================================
+
+def initialize_database():
+    connection = get_connection()
+
+    try:
+        connection.execute("PRAGMA journal_mode = WAL")
+        connection.execute("PRAGMA synchronous = NORMAL")
+
+        cursor = connection.cursor()
+
+        # 1. RAW SENSOR READINGS
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS sensor_readings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                sensor_name TEXT NOT NULL,
+                value REAL NOT NULL,
+                unit TEXT NOT NULL,
+                axis TEXT,
+                quality TEXT DEFAULT 'VALID',
+                metadata_json TEXT
+            )
+        """)
+
+        # 2. PROCESSED SENSOR ANALYTICS
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS sensor_analytics (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sensor_name TEXT NOT NULL,
+                window_start TEXT NOT NULL,
+                window_end TEXT NOT NULL,
+                sample_count INTEGER DEFAULT 0,
+                minimum REAL,
+                maximum REAL,
+                average REAL,
+                rms REAL,
+                standard_deviation REAL,
+                anomaly_count INTEGER DEFAULT 0,
+                anomaly_rate REAL DEFAULT 0,
+                trend TEXT,
+                status TEXT,
+                created_at TEXT NOT NULL
+            )
+        """)
+
+        # 3. MACHINE HEALTH ASSESSMENTS
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS machine_assessments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                overall_status TEXT NOT NULL,
+                confidence_score REAL,
+                anomaly_rate REAL,
+                health_score REAL,
+                probable_causes_json TEXT,
+                sensor_summary_json TEXT,
+                assessment_notes TEXT
+            )
+        """)
+
+        # 4. ANOMALY EVENTS
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS anomaly_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+
+
+==================================================
+===== DATABASE.PY — USERS TABLE AND INITIALIZATION LOCATIONS =====
+==================================================
+
+  Backend\database.py:27:DEFAULT_RETENTION_DAYS = 365
+  Backend\database.py:28:
+  Backend\database.py:29:
+> Backend\database.py:30:def get_connection():
+  Backend\database.py:31:    connection = sqlite3.connect(DATABASE_PATH, timeout=30)
+  Backend\database.py:32:    connection.row_factory = sqlite3.Row
+  Backend\database.py:33:    connection.execute("PRAGMA foreign_keys = ON")
+  Backend\database.py:34:    connection.execute("PRAGMA busy_timeout = 30000")
+  Backend\database.py:35:    return connection
+  Backend\database.py:36:
+  Backend\database.py:37:
+  Backend\database.py:38:def current_timestamp():
+  Backend\database.py:39:    return datetime.now(timezone.utc).isoformat()
+  Backend\database.py:40:
+  Backend\database.py:41:
+  Backend\database.py:42:def _begin_transaction(connection):
+  Backend\database.py:43:    connection.execute("BEGIN IMMEDIATE")
+  Backend\database.py:44:
+  Backend\database.py:45:
+  Backend\database.py:46:def _insert_audit_entry(
+  Backend\database.py:47:    connection,
+  Backend\database.py:48:    category,
+  Backend\database.py:49:    detail_json,
+  Backend\database.py:50:    actor=None,
+  Backend\database.py:51:    target=None,
+  Backend\database.py:52:    hash_value=None,
+  Backend\database.py:53:):
+  Backend\database.py:54:    """Insert an audit entry using the current transaction."""
+  Backend\database.py:55:
+  Backend\database.py:56:    timestamp = current_timestamp()
+  Backend\database.py:57:
+  Backend\database.py:58:    if hash_value is None:
+  Backend\database.py:59:        previous = connection.execute("""
+  Backend\database.py:60:            SELECT hash
+  Backend\database.py:114:# DATABASE INITIALIZATION
+  Backend\database.py:115:# =====================================================
+  Backend\database.py:116:
+> Backend\database.py:117:def initialize_database():
+  Backend\database.py:118:    connection = get_connection()
+  Backend\database.py:119:
+  Backend\database.py:120:    try:
+  Backend\database.py:121:        connection.execute("PRAGMA journal_mode = WAL")
+  Backend\database.py:122:        connection.execute("PRAGMA synchronous = NORMAL")
+  Backend\database.py:123:
+  Backend\database.py:124:        cursor = connection.cursor()
+  Backend\database.py:125:
+  Backend\database.py:126:        # 1. RAW SENSOR READINGS
+  Backend\database.py:127:        cursor.execute("""
+  Backend\database.py:128:            CREATE TABLE IF NOT EXISTS sensor_readings (
+  Backend\database.py:129:                id INTEGER PRIMARY KEY AUTOINCREMENT,
+  Backend\database.py:130:                timestamp TEXT NOT NULL,
+  Backend\database.py:131:                sensor_name TEXT NOT NULL,
+  Backend\database.py:132:                value REAL NOT NULL,
+  Backend\database.py:133:                unit TEXT NOT NULL,
+  Backend\database.py:134:                axis TEXT,
+  Backend\database.py:135:                quality TEXT DEFAULT 'VALID',
+  Backend\database.py:136:                metadata_json TEXT
+  Backend\database.py:137:            )
+  Backend\database.py:138:        """)
+  Backend\database.py:139:
+  Backend\database.py:140:        # 2. PROCESSED SENSOR ANALYTICS
+  Backend\database.py:141:        cursor.execute("""
+  Backend\database.py:142:            CREATE TABLE IF NOT EXISTS sensor_analytics (
+  Backend\database.py:143:                id INTEGER PRIMARY KEY AUTOINCREMENT,
+  Backend\database.py:144:                sensor_name TEXT NOT NULL,
+  Backend\database.py:145:                window_start TEXT NOT NULL,
+  Backend\database.py:146:                window_end TEXT NOT NULL,
+  Backend\database.py:147:                sample_count INTEGER DEFAULT 0,
+  Backend\database.py:223:
+  Backend\database.py:224:        # 7. USER ACCOUNTS
+  Backend\database.py:225:        cursor.execute("""
+> Backend\database.py:226:            CREATE TABLE IF NOT EXISTS users (
+  Backend\database.py:227:                id INTEGER PRIMARY KEY AUTOINCREMENT,
+  Backend\database.py:228:                username TEXT NOT NULL COLLATE NOCASE UNIQUE,
+  Backend\database.py:229:                full_name TEXT NOT NULL,
+  Backend\database.py:230:                password_hash TEXT NOT NULL,
+  Backend\database.py:231:                role TEXT NOT NULL CHECK (
+  Backend\database.py:232:                    role IN (
+  Backend\database.py:233:                        'ADMIN',
+  Backend\database.py:234:                        'OPERATOR',
+  Backend\database.py:235:                        'MAINTENANCE_ENGINEER'
+  Backend\database.py:236:                    )
+  Backend\database.py:237:                ),
+  Backend\database.py:238:                is_active INTEGER NOT NULL DEFAULT 1
+  Backend\database.py:239:                    CHECK (is_active IN (0, 1)),
+  Backend\database.py:240:                created_at TEXT NOT NULL,
+  Backend\database.py:241:                last_login TEXT,
+  Backend\database.py:242:                is_deleted INTEGER NOT NULL DEFAULT 0
+  Backend\database.py:243:                    CHECK (is_deleted IN (0, 1)),
+  Backend\database.py:244:                deleted_at TEXT,
+  Backend\database.py:245:                deleted_by TEXT,
+  Backend\database.py:246:                deletion_reason TEXT,
+  Backend\database.py:247:                deleted_was_active INTEGER NOT NULL DEFAULT 1
+  Backend\database.py:248:                    CHECK (deleted_was_active IN (0, 1))
+  Backend\database.py:249:            )
+  Backend\database.py:250:        """)
+  Backend\database.py:251:
+  Backend\database.py:252:        # 7A. USER PERMISSIONS
+  Backend\database.py:253:        cursor.execute("""
+  Backend\database.py:254:            CREATE TABLE IF NOT EXISTS user_permissions (
+  Backend\database.py:255:                id INTEGER PRIMARY KEY AUTOINCREMENT,
+  Backend\database.py:256:                user_id INTEGER NOT NULL,
+
+
+
+
+==================================================
+===== DATABASE.PY — USER LOOKUP AND PERMISSIONS =====
+==================================================
+
+  Backend\database.py:954:
+  Backend\database.py:955:
+> Backend\database.py:956:def get_user_by_id(user_id):
+  Backend\database.py:957:    connection = get_connection()
+  Backend\database.py:958:
+  Backend\database.py:959:    try:
+  Backend\database.py:960:        row = connection.execute("""
+  Backend\database.py:961:            SELECT
+  Backend\database.py:962:                id, username, full_name, role,
+  Backend\database.py:963:                is_active, created_at, last_login,
+  Backend\database.py:964:                is_deleted, deleted_at
+  Backend\database.py:965:            FROM users
+  Backend\database.py:966:            WHERE id = ?
+  Backend\database.py:967:        """, (user_id,)).fetchone()
+  Backend\database.py:968:
+  Backend\database.py:969:        return dict(row) if row else None
+  Backend\database.py:970:
+  Backend\database.py:971:    finally:
+  Backend\database.py:972:        connection.close()
+  Backend\database.py:973:
+  Backend\database.py:974:
+  Backend\database.py:975:def get_all_users(include_deleted=False):
+  Backend\database.py:976:    connection = get_connection()
+  Backend\database.py:977:
+  Backend\database.py:978:    try:
+  Backend\database.py:979:        query = """
+  Backend\database.py:980:            SELECT
+  Backend\database.py:981:                id, username, full_name, role,
+  Backend\database.py:982:                is_active, created_at, last_login,
+  Backend\database.py:983:                is_deleted, deleted_at
+  Backend\database.py:984:            FROM users
+  Backend\database.py:985:        """
+  Backend\database.py:986:
+  Backend\database.py:987:        if not include_deleted:
+  Backend\database.py:988:            query += " WHERE is_deleted = 0"
+  Backend\database.py:989:
+  Backend\database.py:990:        query += " ORDER BY id"
+  Backend\database.py:991:
+  Backend\database.py:997:
+  Backend\database.py:998:
+> Backend\database.py:999:def update_last_login(user_id):
+  Backend\database.py:1000:    connection = get_connection()
+  Backend\database.py:1001:
+  Backend\database.py:1002:    try:
+  Backend\database.py:1003:        connection.execute("""
+  Backend\database.py:1004:            UPDATE users
+  Backend\database.py:1005:            SET last_login = ?
+  Backend\database.py:1006:            WHERE id = ?
+  Backend\database.py:1007:              AND is_active = 1
+  Backend\database.py:1008:              AND is_deleted = 0
+  Backend\database.py:1009:        """, (current_timestamp(), user_id))
+  Backend\database.py:1010:
+  Backend\database.py:1011:        connection.commit()
+  Backend\database.py:1012:
+  Backend\database.py:1013:    except Exception:
+  Backend\database.py:1014:        connection.rollback()
+  Backend\database.py:1015:        raise
+  Backend\database.py:1016:
+  Backend\database.py:1017:    finally:
+  Backend\database.py:1018:        connection.close()
+  Backend\database.py:1019:
+  Backend\database.py:1020:
+  Backend\database.py:1021:def set_user_active(user_id, is_active, actor=None):
+  Backend\database.py:1022:    """
+  Backend\database.py:1023:    Activate or deactivate an account transactionally.
+  Backend\database.py:1024:
+  Backend\database.py:1025:    The last active Admin cannot be deactivated.
+  Backend\database.py:1026:    """
+  Backend\database.py:1027:
+  Backend\database.py:1028:    connection = get_connection()
+  Backend\database.py:1029:
+  Backend\database.py:1030:    try:
+  Backend\database.py:1031:        _begin_transaction(connection)
+  Backend\database.py:1032:
+  Backend\database.py:1033:        target = connection.execute("""
+  Backend\database.py:1034:            SELECT id, username, role, is_active, is_deleted
+  Backend\database.py:1308:# =====================================================
+  Backend\database.py:1309:
+> Backend\database.py:1310:def record_audit_entry(
+  Backend\database.py:1311:    category,
+  Backend\database.py:1312:    detail_json,
+  Backend\database.py:1313:    actor=None,
+  Backend\database.py:1314:    target=None,
+  Backend\database.py:1315:    hash_value=None,
+  Backend\database.py:1316:):
+  Backend\database.py:1317:    """
+  Backend\database.py:1318:    Append an audit entry.
+  Backend\database.py:1319:
+  Backend\database.py:1320:    Generated hashes are chained transactionally. The optional explicit
+  Backend\database.py:1321:    hash parameter is retained for compatibility with existing callers
+  Backend\database.py:1322:    and test_database_helpers.py.
+  Backend\database.py:1323:    """
+  Backend\database.py:1324:
+  Backend\database.py:1325:    connection = get_connection()
+  Backend\database.py:1326:
+  Backend\database.py:1327:    try:
+  Backend\database.py:1328:        _begin_transaction(connection)
+  Backend\database.py:1329:
+  Backend\database.py:1330:        entry_id = _insert_audit_entry(
+  Backend\database.py:1331:            connection,
+  Backend\database.py:1332:            category,
+  Backend\database.py:1333:            detail_json,
+  Backend\database.py:1334:            actor,
+  Backend\database.py:1335:            target,
+  Backend\database.py:1336:            hash_value,
+  Backend\database.py:1337:        )
+  Backend\database.py:1338:
+  Backend\database.py:1339:        connection.commit()
+  Backend\database.py:1340:        return entry_id
+  Backend\database.py:1341:
+  Backend\database.py:1342:    except Exception:
+  Backend\database.py:1343:        connection.rollback()
+  Backend\database.py:1344:        raise
+  Backend\database.py:1345:
+  Backend\database.py:1705:# =====================================================
+  Backend\database.py:1706:
+> Backend\database.py:1707:def get_user_permission_overrides(user_id):
+  Backend\database.py:1708:    connection = get_connection()
+  Backend\database.py:1709:
+  Backend\database.py:1710:    try:
+  Backend\database.py:1711:        rows = connection.execute("""
+  Backend\database.py:1712:            SELECT permission_key, is_granted
+  Backend\database.py:1713:            FROM user_permissions
+  Backend\database.py:1714:            WHERE user_id = ?
+  Backend\database.py:1715:        """, (user_id,)).fetchall()
+  Backend\database.py:1716:
+  Backend\database.py:1717:        return {
+  Backend\database.py:1718:            row["permission_key"]: bool(row["is_granted"])
+  Backend\database.py:1719:            for row in rows
+  Backend\database.py:1720:        }
+  Backend\database.py:1721:
+  Backend\database.py:1722:    finally:
+  Backend\database.py:1723:        connection.close()
+  Backend\database.py:1724:
+  Backend\database.py:1725:
+  Backend\database.py:1726:def set_user_permission(
+  Backend\database.py:1727:    user_id,
+  Backend\database.py:1728:    permission_key,
+  Backend\database.py:1729:    is_granted,
+  Backend\database.py:1730:    updated_by=None,
+  Backend\database.py:1731:):
+  Backend\database.py:1732:    if not isinstance(permission_key, str) or not permission_key.strip():
+  Backend\database.py:1733:        raise ValueError("A valid permission key is required.")
+  Backend\database.py:1734:
+  Backend\database.py:1735:    if type(is_granted) is not bool:
+  Backend\database.py:1736:        raise ValueError("is_granted must be a boolean.")
+  Backend\database.py:1737:
+  Backend\database.py:1738:    connection = get_connection()
+  Backend\database.py:1739:
+  Backend\database.py:1740:    try:
+  Backend\database.py:1741:        connection.execute("""
+  Backend\database.py:1742:            INSERT INTO user_permissions (
+
+
+
+
+==================================================
+===== SERVER.PY — IMPORTS AND ROUTER REGISTRATION =====
+==================================================
+
+# -*- coding: utf-8 -*-
+"""
+INTELLIWATCH â€” FastAPI Server
+
+Handles:
+- Authentication and role-protected sensor endpoints
+- Hardware IoT ingestion and sensor streaming
+- Control signals and status streaming
+- ML and learning endpoints
+- 3D explorer and history
+- Equipment vision and object detection
+- Calibration and audit
+- Feedback and leaderboard
+
+Hardware readings are accepted only through the validated IoT layer.
+Simulation and Offline Demo remain separate frontend environments.
+"""
+
+import asyncio
+import json
+import os
+import random as _random
+import threading
+import time
+
+from copy import deepcopy
+from typing import Optional, List
+
+from fastapi import (
+    FastAPI,
+    Depends,
+    HTTPException,
+    WebSocket,
+    WebSocketDisconnect,
+    status,
+    UploadFile,
+    File,
+    Form,
+    Header,
+    Query,
+)
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPAuthorizationCredentials
+from pydantic import BaseModel, Field
+
+from auth import (
+    auth_router,
+    require_roles,
+    get_current_user,
+    initialize_auth_security,
+)
+
+from chatbot_api import router as chatbot_router
+
+import database
+import obs_service
+
+from vision_service import (
+    analyse_equipment_image_async,
+    MAX_IMAGE_SIZE,
+)
+
+from equipment_detection_service import (
+    detect_objects_async,
+    MAX_FRAME_SIZE,
+)
+
+
+# ============================================================
+# APPLICATION
+# ============================================================
+
+app = FastAPI(
+    title="IntelliWatch â€“ Real-Time Anomaly Detection",
+    version="2.0.0",
+)
+
+_raw_origins = os.environ.get(
+    "INTELLIWATCH_CORS_ORIGINS",
+    "",
+)
+
+_extra_origins = [
+    origin.strip()
+    for origin in _raw_origins.split(",")
+    if origin.strip()
+]
+
+_allowed_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:4173",
+    "http://127.0.0.1:4173",
+    "https://localhost:5173",
+    "https://127.0.0.1:5173",
+    "https://localhost:4173",
+    "https://127.0.0.1:4173",
+] + _extra_origins
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(auth_router)
+app.include_router(chatbot_router)
+
+
+# ============================================================
+# GLOBAL SINGLETONS
+# ============================================================
+
+_controller = None
+_iot_layer = None
+_learning_system = None
+_brain = None
+
+_status_clients: set = set()
+_sensor_clients: list = []
+
+_brain_lock = threading.Lock()
+
+_assessment_lock = threading.Lock()
+_latest_assessments = {}
+
+try:
+    SENSOR_STALE_SECONDS = max(
+        3.0,
+        float(
+            os.environ.get(
+                "INTELLIWATCH_SENSOR_STALE_SECONDS",
+                "10",
+            )
+        ),
+    )
+except (TypeError, ValueError):
+    SENSOR_STALE_SECONDS = 10.0
+
+
+EXPECTED_SENSORS = (
+    "vibration",
+    "temperature",
+    "current",
+)
+
+DEFAULT_SENSOR_UNITS = {
+
+
+==================================================
+===== SERVER.PY — STARTUP =====
+==================================================
+
+  Backend\server.py:46:
+  Backend\server.py:47:from auth import (
+  Backend\server.py:48:    auth_router,
+  Backend\server.py:49:    require_roles,
+  Backend\server.py:50:    get_current_user,
+> Backend\server.py:51:    initialize_auth_security,
+  Backend\server.py:52:)
+  Backend\server.py:53:
+  Backend\server.py:54:from chatbot_api import router as chatbot_router
+  Backend\server.py:55:
+  Backend\server.py:56:import database
+  Backend\server.py:57:import obs_service
+  Backend\server.py:58:
+  Backend\server.py:59:from vision_service import (
+  Backend\server.py:60:    analyse_equipment_image_async,
+  Backend\server.py:61:    MAX_IMAGE_SIZE,
+  Backend\server.py:62:)
+  Backend\server.py:63:
+  Backend\server.py:64:from equipment_detection_service import (
+  Backend\server.py:65:    detect_objects_async,
+  Backend\server.py:66:    MAX_FRAME_SIZE,
+  Backend\server.py:67:)
+  Backend\server.py:68:
+  Backend\server.py:69:
+  Backend\server.py:70:# ============================================================
+  Backend\server.py:71:# APPLICATION
+  Backend\server.py:72:# ============================================================
+  Backend\server.py:73:
+  Backend\server.py:74:app = FastAPI(
+  Backend\server.py:75:    title="IntelliWatch – Real-Time Anomaly Detection",
+  Backend\server.py:76:    version="2.0.0",
+  Backend\server.py:104:    allow_credentials=True,
+  Backend\server.py:105:    allow_methods=["*"],
+  Backend\server.py:106:    allow_headers=["*"],
+  Backend\server.py:107:)
+  Backend\server.py:108:
+> Backend\server.py:109:app.include_router(auth_router)
+  Backend\server.py:110:app.include_router(chatbot_router)
+  Backend\server.py:111:
+  Backend\server.py:112:
+  Backend\server.py:113:# ============================================================
+  Backend\server.py:114:# GLOBAL SINGLETONS
+  Backend\server.py:115:# ============================================================
+  Backend\server.py:116:
+  Backend\server.py:117:_controller = None
+  Backend\server.py:118:_iot_layer = None
+  Backend\server.py:119:_learning_system = None
+  Backend\server.py:120:_brain = None
+  Backend\server.py:121:
+  Backend\server.py:122:_status_clients: set = set()
+  Backend\server.py:123:_sensor_clients: list = []
+  Backend\server.py:124:
+  Backend\server.py:125:_brain_lock = threading.Lock()
+  Backend\server.py:126:
+  Backend\server.py:127:_assessment_lock = threading.Lock()
+  Backend\server.py:128:_latest_assessments = {}
+  Backend\server.py:129:
+  Backend\server.py:130:try:
+  Backend\server.py:131:    SENSOR_STALE_SECONDS = max(
+  Backend\server.py:132:        3.0,
+  Backend\server.py:133:        float(
+  Backend\server.py:134:            os.environ.get(
+  Backend\server.py:466:# ============================================================
+  Backend\server.py:467:# STARTUP / SHUTDOWN
+  Backend\server.py:468:# ============================================================
+  Backend\server.py:469:
+  Backend\server.py:470:@app.on_event("startup")
+> Backend\server.py:471:async def startup():
+  Backend\server.py:472:    global _controller
+  Backend\server.py:473:    global _iot_layer
+  Backend\server.py:474:    global _learning_system
+  Backend\server.py:475:    global _brain
+  Backend\server.py:476:
+> Backend\server.py:477:    database.initialize_database()
+> Backend\server.py:478:    initialize_auth_security()
+  Backend\server.py:479:
+  Backend\server.py:480:    print(
+  Backend\server.py:481:        "[startup] Authentication security storage ready"
+  Backend\server.py:482:    )
+  Backend\server.py:483:
+  Backend\server.py:484:    try:
+  Backend\server.py:485:        from intelliwatch_brain import IntelliWatchBrain
+  Backend\server.py:486:
+  Backend\server.py:487:        _brain = IntelliWatchBrain(
+  Backend\server.py:488:            auto_calibrate=False,
+  Backend\server.py:489:        )
+  Backend\server.py:490:
+  Backend\server.py:491:        print("[startup] IntelliWatchBrain ready")
+  Backend\server.py:492:
+  Backend\server.py:493:    except Exception as error:
+  Backend\server.py:494:        print(
+  Backend\server.py:495:            f"[startup] IntelliWatchBrain init warning: {error}"
+  Backend\server.py:496:        )
+  Backend\server.py:497:
+  Backend\server.py:498:    try:
+  Backend\server.py:499:        from iot_layer import IoTIntegrationLayer
+  Backend\server.py:500:
+  Backend\server.py:501:        _iot_layer = IoTIntegrationLayer(
+  Backend\server.py:502:            inference_callback=_handle_iot_inference_payload,
+  Backend\server.py:503:        )
+
+
+
+
+==================================================
+===== FRONTEND FIREBASE CONFIGURATION =====
+==================================================
+import { getApp, getApps, initializeApp } from 'firebase/app'
+
+const firebaseConfig = {
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID,
+}
+
+export const isFirebaseConfigured = Boolean(
+    firebaseConfig.apiKey &&
+    firebaseConfig.authDomain &&
+    firebaseConfig.projectId &&
+    firebaseConfig.messagingSenderId &&
+    firebaseConfig.appId
+)
+
+export const firebaseApp = isFirebaseConfigured
+    ? (getApps().length ? getApp() : initializeApp(firebaseConfig))
+    : null
+{
+  "name": "frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:https": "vite --https",
+    "dev:network": "vite --host",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview --host"
+  },
+  "dependencies": {
+    "@react-three/drei": "^10.7.9",
+    "@react-three/fiber": "^9.8.2",
+    "firebase": "^13.4.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "react-router-dom": "^7.18.5",
+    "recharts": "^3.10.1",
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.8",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "eslint": "^10.14.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.6.0",
+    "jsdom": "^31.0.0",
+    "vite": "^8.0.12",
+    "vitest": "^5.1.0"
+  },
+  "overrides": {
+    "minimatch": "^11.0.1"
+  }
+}
+
+
+==================================================
+===== FIREBASE ENVIRONMENT VARIABLE PRESENCE =====
+==================================================
+
+FILE: .\frontend\.env.local
+VITE_FIREBASE_API_KEY = [VALUE REDACTED]
+VITE_FIREBASE_AUTH_DOMAIN = [VALUE REDACTED]
+VITE_FIREBASE_PROJECT_ID = [VALUE REDACTED]
+VITE_FIREBASE_STORAGE_BUCKET = [VALUE REDACTED]
+VITE_FIREBASE_MESSAGING_SENDER_ID = [VALUE REDACTED]
+VITE_FIREBASE_APP_ID = [VALUE REDACTED]
+VITE_FIREBASE_VAPID_KEY = [VALUE REDACTED]
+
+FILE: .\frontend\.env.example
+
+FILE: .\frontend\.env.network
+
+
+==================================================
+===== LOGINPAGE — FIRST 240 LINES =====
+==================================================
+
+import { useState, useEffect } from 'react'
+import './LoginPage.css'
+
+const API = (
+  import.meta.env.VITE_API_URL || 'http://localhost:8000'
+).trim().replace(/\/+$/, '')
+
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true'
+
+const DEMO_TOKEN = 'demo-offline'
+const INTERNET_CHECK_URL =
+  import.meta.env.VITE_INTERNET_CHECK_URL ||
+  'https://www.gstatic.com/generate_204'
+
+const AVAILABILITY_TIMEOUT_MS = 3500
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// 1. HELPERS
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+function isBrowserOnline() {
+  return typeof navigator === 'undefined' || navigator.onLine
+}
+
+function getLoginErrorMessage(data, fallback) {
+  if (typeof data?.detail === 'string' && data.detail.trim()) {
+    return data.detail
+  }
+
+  if (Array.isArray(data?.detail)) {
+    const messages = data.detail
+      .map(item => item?.msg)
+      .filter(message => typeof message === 'string')
+
+    if (messages.length > 0) {
+      return messages.join('; ')
+    }
+  }
+
+  if (
+    data?.detail &&
+    typeof data.detail === 'object' &&
+    typeof data.detail.message === 'string'
+  ) {
+    return data.detail.message
+  }
+
+  if (typeof data?.message === 'string' && data.message.trim()) {
+    return data.message
+  }
+
+  return fallback
+}
+
+function saveSession(token, user) {
+  if (
+    typeof token !== 'string' ||
+    !token.trim() ||
+    !user ||
+    typeof user !== 'object'
+  ) {
+    throw new Error('Invalid authentication session.')
+  }
+
+  const serializedUser = JSON.stringify(user)
+
+  try {
+    sessionStorage.setItem('iw_token', token)
+    sessionStorage.setItem('iw_user', serializedUser)
+  } catch (error) {
+    // Do not leave an incomplete session behind.
+    try {
+      sessionStorage.removeItem('iw_token')
+      sessionStorage.removeItem('iw_user')
+    } catch (cleanupError) {
+      console.warn(
+        '[IntelliWatch] Session cleanup failed:',
+        cleanupError
+      )
+    }
+
+    throw error
+  }
+}
+
+function clearSavedSession() {
+  try {
+    sessionStorage.removeItem('iw_token')
+    sessionStorage.removeItem('iw_user')
+  } catch (error) {
+    console.warn(
+      '[IntelliWatch] Unable to clear stored session:',
+      error
+    )
+  }
+}
+
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// 2. CONNECTION DETECTION
+//
+// Online mode requires BOTH:
+//   1. Internet connectivity.
+//   2. IntelliWatch backend availability.
+//
+// If either is unavailable, the application enters demo fallback mode.
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+async function fetchWithTimeout(url, options = {}) {
+  const controller = new AbortController()
+
+  const timeout = setTimeout(
+    () => controller.abort(),
+    AVAILABILITY_TIMEOUT_MS
+  )
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    })
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
+async function checkInternetAvailability() {
+  if (!isBrowserOnline()) return false
+
+  try {
+    await fetchWithTimeout(INTERNET_CHECK_URL, {
+      method: 'GET',
+      mode: 'no-cors',
+      cache: 'no-store',
+    })
+
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function checkBackendAvailability() {
+  try {
+    const response = await fetchWithTimeout(
+      `${API}/auth/registration-status`,
+      {
+        method: 'GET',
+        cache: 'no-store',
+      }
+    )
+
+    if (!response.ok) {
+      return {
+        available: false,
+        registrationEnabled: false,
+      }
+    }
+
+    const data = await response.json()
+
+    return {
+      available: true,
+      registrationEnabled: !!data.registration_enabled,
+    }
+  } catch {
+    return {
+      available: false,
+      registrationEnabled: false,
+    }
+  }
+}
+
+async function detectAvailability() {
+  const [internetAvailable, backend] = await Promise.all([
+    checkInternetAvailability(),
+    checkBackendAvailability(),
+  ])
+
+  return {
+    checked: true,
+    internetAvailable,
+    backendAvailable: backend.available,
+    onlineMode: backend.available,
+    registrationEnabled: backend.registrationEnabled,
+  }
+}
+
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// 3. PASSWORD VISIBILITY ICON
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+function PasswordVisibilityIcon({ visible, size = 18 }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {visible ? (
+        <>
+          <path d="M3 3l18 18" />
+          <path d="M10.6 10.6a2 2 0 002.8 2.8" />
+          <path d="M9.9 5.2A10.8 10.8 0 0112 5c6.4 0 10 7 10 7a15.5 15.5 0 01-3.1 3.8" />
+          <path d="M6.2 6.2C3.5 8 2 12 2 12s3.6 7 10 7a10.5 10.5 0 004-.8" />
+        </>
+      ) : (
+        <>
+          <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" />
+          <circle cx="12" cy="12" r="3" />
+        </>
+      )}
+    </svg>
+  )
+}
+
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// 4. PASSWORD STRENGTH
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+function PasswordStrength({ password }) {
+  if (!password) return null
+
+  const score = [
+    password.length >= 12,
+    /[A-Z]/.test(password),
+    /[a-z]/.test(password),
+    /\d/.test(password),
+    /[^A-Za-z0-9]/.test(password),
+  ].filter(Boolean).length
+
+
+
+==================================================
+===== LOGINPAGE — COMPONENT DECLARATION AND STATE =====
+==================================================
+
+  frontend\src\components\LoginPage.jsx:269:
+  frontend\src\components\LoginPage.jsx:270:function AdminRegisterModal({ onClose, onDone }) {
+> frontend\src\components\LoginPage.jsx:271:  const [form, setForm] = useState({
+  frontend\src\components\LoginPage.jsx:272:    username: '',
+  frontend\src\components\LoginPage.jsx:273:    full_name: '',
+  frontend\src\components\LoginPage.jsx:274:    password: '',
+  frontend\src\components\LoginPage.jsx:275:    confirmPw: '',
+  frontend\src\components\LoginPage.jsx:276:    invite_token: '',
+  frontend\src\components\LoginPage.jsx:277:  })
+  frontend\src\components\LoginPage.jsx:278:
+> frontend\src\components\LoginPage.jsx:279:  const [showPw, setShowPw] = useState(false)
+> frontend\src\components\LoginPage.jsx:280:  const [error, setError] = useState('')
+> frontend\src\components\LoginPage.jsx:281:  const [loading, setLoading] = useState(false)
+> frontend\src\components\LoginPage.jsx:282:  const [success, setSuccess] = useState(null)
+  frontend\src\components\LoginPage.jsx:283:
+  frontend\src\components\LoginPage.jsx:284:  async function handleSubmit(e) {
+  frontend\src\components\LoginPage.jsx:285:    e.preventDefault()
+  frontend\src\components\LoginPage.jsx:286:    setError('')
+  frontend\src\components\LoginPage.jsx:287:
+  frontend\src\components\LoginPage.jsx:288:    if (
+  frontend\src\components\LoginPage.jsx:289:      !form.username.trim() ||
+  frontend\src\components\LoginPage.jsx:290:      !form.full_name.trim() ||
+  frontend\src\components\LoginPage.jsx:545:
+  frontend\src\components\LoginPage.jsx:546:function ForgotModal({ onClose }) {
+> frontend\src\components\LoginPage.jsx:547:  const [step, setStep] = useState('request')
+> frontend\src\components\LoginPage.jsx:548:  const [username, setUsername] = useState('')
+> frontend\src\components\LoginPage.jsx:549:  const [token, setToken] = useState('')
+> frontend\src\components\LoginPage.jsx:550:  const [newPw, setNewPw] = useState('')
+> frontend\src\components\LoginPage.jsx:551:  const [confirmPw, setConfirmPw] = useState('')
+> frontend\src\components\LoginPage.jsx:552:  const [showPw, setShowPw] = useState(false)
+> frontend\src\components\LoginPage.jsx:553:  const [error, setError] = useState('')
+> frontend\src\components\LoginPage.jsx:554:  const [info, setInfo] = useState('')
+> frontend\src\components\LoginPage.jsx:555:  const [loading, setLoading] = useState(false)
+> frontend\src\components\LoginPage.jsx:556:  const [done, setDone] = useState(false)
+  frontend\src\components\LoginPage.jsx:557:
+  frontend\src\components\LoginPage.jsx:558:  async function handleRequest(e) {
+  frontend\src\components\LoginPage.jsx:559:    e.preventDefault()
+  frontend\src\components\LoginPage.jsx:560:    setError('')
+  frontend\src\components\LoginPage.jsx:561:
+  frontend\src\components\LoginPage.jsx:562:    if (!username.trim()) {
+  frontend\src\components\LoginPage.jsx:563:      setError('Please enter your username.')
+  frontend\src\components\LoginPage.jsx:564:      return
+  frontend\src\components\LoginPage.jsx:857:  const accentBdr = isOp ? '#0369a155' : '#06522255'
+  frontend\src\components\LoginPage.jsx:858:
+> frontend\src\components\LoginPage.jsx:859:  const [form, setForm] = useState({
+  frontend\src\components\LoginPage.jsx:860:    username: '',
+  frontend\src\components\LoginPage.jsx:861:    full_name: '',
+  frontend\src\components\LoginPage.jsx:862:    password: '',
+  frontend\src\components\LoginPage.jsx:863:    confirmPw: '',
+  frontend\src\components\LoginPage.jsx:864:  })
+  frontend\src\components\LoginPage.jsx:865:
+> frontend\src\components\LoginPage.jsx:866:  const [showPw, setShowPw] = useState(false)
+> frontend\src\components\LoginPage.jsx:867:  const [error, setError] = useState('')
+> frontend\src\components\LoginPage.jsx:868:  const [loading, setLoading] = useState(false)
+> frontend\src\components\LoginPage.jsx:869:  const [done, setDone] = useState(false)
+  frontend\src\components\LoginPage.jsx:870:
+  frontend\src\components\LoginPage.jsx:871:  async function handleSubmit(e) {
+  frontend\src\components\LoginPage.jsx:872:    e.preventDefault()
+  frontend\src\components\LoginPage.jsx:873:    setError('')
+  frontend\src\components\LoginPage.jsx:874:
+  frontend\src\components\LoginPage.jsx:875:    if (
+  frontend\src\components\LoginPage.jsx:876:      !form.username.trim() ||
+  frontend\src\components\LoginPage.jsx:877:      !form.full_name.trim() ||
+  frontend\src\components\LoginPage.jsx:1125:
+  frontend\src\components\LoginPage.jsx:1126:function CreateAccountView({ onBackToLogin }) {
+> frontend\src\components\LoginPage.jsx:1127:  const [modal, setModal] = useState(null)
+  frontend\src\components\LoginPage.jsx:1128:
+  frontend\src\components\LoginPage.jsx:1129:  const roles = [
+  frontend\src\components\LoginPage.jsx:1130:    {
+  frontend\src\components\LoginPage.jsx:1131:      role: 'OPERATOR',
+  frontend\src\components\LoginPage.jsx:1132:      title: 'Operator Account',
+  frontend\src\components\LoginPage.jsx:1133:      desc: 'For personnel responsible for monitoring equipment and reviewing alerts.',
+  frontend\src\components\LoginPage.jsx:1134:      btn: 'Create Operator Account',
+  frontend\src\components\LoginPage.jsx:1135:      icon: '📊',
+  frontend\src\components\LoginPage.jsx:1278:// ─────────────────────────────────────────────────────────────────────────────
+  frontend\src\components\LoginPage.jsx:1279:
+> frontend\src\components\LoginPage.jsx:1280:export default function LoginPage({ onLogin }) {
+> frontend\src\components\LoginPage.jsx:1281:  useEffect(() => {
+  frontend\src\components\LoginPage.jsx:1282:    try {
+  frontend\src\components\LoginPage.jsx:1283:      localStorage.removeItem('iw_saved_accounts')
+  frontend\src\components\LoginPage.jsx:1284:    } catch (error) {
+  frontend\src\components\LoginPage.jsx:1285:      console.warn('[IntelliWatch] Legacy saved-account history could not be cleared:', error)
+  frontend\src\components\LoginPage.jsx:1286:    }
+  frontend\src\components\LoginPage.jsx:1287:  }, [])
+  frontend\src\components\LoginPage.jsx:1288:
+> frontend\src\components\LoginPage.jsx:1289:  const [mode, setMode] = useState('operator')
+> frontend\src\components\LoginPage.jsx:1290:  const [view, setView] = useState('login')
+> frontend\src\components\LoginPage.jsx:1291:  const [activeRole, setActiveRole] = useState('OPERATOR')
+  frontend\src\components\LoginPage.jsx:1292:
+> frontend\src\components\LoginPage.jsx:1293:  const [username, setUsername] = useState('')
+> frontend\src\components\LoginPage.jsx:1294:  const [password, setPassword] = useState('')
+> frontend\src\components\LoginPage.jsx:1295:  const [showPass, setShowPass] = useState(false)
+  frontend\src\components\LoginPage.jsx:1296:
+> frontend\src\components\LoginPage.jsx:1297:  const [error, setError] = useState('')
+> frontend\src\components\LoginPage.jsx:1298:  const [loading, setLoading] = useState(false)
+> frontend\src\components\LoginPage.jsx:1299:  const [modal, setModal] = useState(null)
+  frontend\src\components\LoginPage.jsx:1300:
+> frontend\src\components\LoginPage.jsx:1301:  const [availability, setAvailability] = useState({
+  frontend\src\components\LoginPage.jsx:1302:    checked: false,
+  frontend\src\components\LoginPage.jsx:1303:    internetAvailable: false,
+  frontend\src\components\LoginPage.jsx:1304:    backendAvailable: false,
+  frontend\src\components\LoginPage.jsx:1305:    onlineMode: false,
+  frontend\src\components\LoginPage.jsx:1306:    registrationEnabled: false,
+  frontend\src\components\LoginPage.jsx:1307:  })
+  frontend\src\components\LoginPage.jsx:1308:
+  frontend\src\components\LoginPage.jsx:1309:  const onlineMode = availability.onlineMode
+  frontend\src\components\LoginPage.jsx:1316:  // ==================================================
+  frontend\src\components\LoginPage.jsx:1317:
+> frontend\src\components\LoginPage.jsx:1318:  useEffect(() => {
+  frontend\src\components\LoginPage.jsx:1319:    let cancelled = false
+  frontend\src\components\LoginPage.jsx:1320:
+  frontend\src\components\LoginPage.jsx:1321:    async function updateAvailability() {
+  frontend\src\components\LoginPage.jsx:1322:      const result = await detectAvailability()
+  frontend\src\components\LoginPage.jsx:1323:
+  frontend\src\components\LoginPage.jsx:1324:      if (!cancelled) {
+  frontend\src\components\LoginPage.jsx:1325:        setAvailability(result)
+  frontend\src\components\LoginPage.jsx:1326:
+
+
+
+
+==================================================
+===== LOGINPAGE — MAIN LOGIN AND DEMO HANDLERS =====
+==================================================
+
+  frontend\src\components\LoginPage.jsx:52:
+  frontend\src\components\LoginPage.jsx:53:  return fallback
+  frontend\src\components\LoginPage.jsx:54:}
+  frontend\src\components\LoginPage.jsx:55:
+> frontend\src\components\LoginPage.jsx:56:function saveSession(token, user) {
+  frontend\src\components\LoginPage.jsx:57:  if (
+  frontend\src\components\LoginPage.jsx:58:    typeof token !== 'string' ||
+  frontend\src\components\LoginPage.jsx:59:    !token.trim() ||
+  frontend\src\components\LoginPage.jsx:60:    !user ||
+  frontend\src\components\LoginPage.jsx:61:    typeof user !== 'object'
+  frontend\src\components\LoginPage.jsx:62:  ) {
+  frontend\src\components\LoginPage.jsx:63:    throw new Error('Invalid authentication session.')
+  frontend\src\components\LoginPage.jsx:64:  }
+  frontend\src\components\LoginPage.jsx:65:
+  frontend\src\components\LoginPage.jsx:66:  const serializedUser = JSON.stringify(user)
+  frontend\src\components\LoginPage.jsx:67:
+  frontend\src\components\LoginPage.jsx:68:  try {
+  frontend\src\components\LoginPage.jsx:69:    sessionStorage.setItem('iw_token', token)
+  frontend\src\components\LoginPage.jsx:70:    sessionStorage.setItem('iw_user', serializedUser)
+  frontend\src\components\LoginPage.jsx:71:  } catch (error) {
+  frontend\src\components\LoginPage.jsx:72:    // Do not leave an incomplete session behind.
+  frontend\src\components\LoginPage.jsx:73:    try {
+  frontend\src\components\LoginPage.jsx:74:      sessionStorage.removeItem('iw_token')
+  frontend\src\components\LoginPage.jsx:75:      sessionStorage.removeItem('iw_user')
+  frontend\src\components\LoginPage.jsx:76:    } catch (cleanupError) {
+  frontend\src\components\LoginPage.jsx:77:      console.warn(
+  frontend\src\components\LoginPage.jsx:78:        '[IntelliWatch] Session cleanup failed:',
+  frontend\src\components\LoginPage.jsx:79:        cleanupError
+  frontend\src\components\LoginPage.jsx:80:      )
+  frontend\src\components\LoginPage.jsx:81:    }
+  frontend\src\components\LoginPage.jsx:82:
+  frontend\src\components\LoginPage.jsx:83:    throw error
+  frontend\src\components\LoginPage.jsx:84:  }
+  frontend\src\components\LoginPage.jsx:85:}
+  frontend\src\components\LoginPage.jsx:86:
+> frontend\src\components\LoginPage.jsx:87:function clearSavedSession() {
+  frontend\src\components\LoginPage.jsx:88:  try {
+  frontend\src\components\LoginPage.jsx:89:    sessionStorage.removeItem('iw_token')
+  frontend\src\components\LoginPage.jsx:90:    sessionStorage.removeItem('iw_user')
+  frontend\src\components\LoginPage.jsx:91:  } catch (error) {
+  frontend\src\components\LoginPage.jsx:92:    console.warn(
+  frontend\src\components\LoginPage.jsx:93:      '[IntelliWatch] Unable to clear stored session:',
+  frontend\src\components\LoginPage.jsx:94:      error
+  frontend\src\components\LoginPage.jsx:95:    )
+  frontend\src\components\LoginPage.jsx:96:  }
+  frontend\src\components\LoginPage.jsx:97:}
+  frontend\src\components\LoginPage.jsx:98:
+  frontend\src\components\LoginPage.jsx:99:
+  frontend\src\components\LoginPage.jsx:100:// ─────────────────────────────────────────────────────────────────────────────
+  frontend\src\components\LoginPage.jsx:101:// 2. CONNECTION DETECTION
+  frontend\src\components\LoginPage.jsx:102://
+  frontend\src\components\LoginPage.jsx:103:// Online mode requires BOTH:
+  frontend\src\components\LoginPage.jsx:104://   1. Internet connectivity.
+  frontend\src\components\LoginPage.jsx:105://   2. IntelliWatch backend availability.
+  frontend\src\components\LoginPage.jsx:106://
+  frontend\src\components\LoginPage.jsx:107:// If either is unavailable, the application enters demo fallback mode.
+  frontend\src\components\LoginPage.jsx:108:// ─────────────────────────────────────────────────────────────────────────────
+  frontend\src\components\LoginPage.jsx:109:
+  frontend\src\components\LoginPage.jsx:110:async function fetchWithTimeout(url, options = {}) {
+  frontend\src\components\LoginPage.jsx:111:  const controller = new AbortController()
+  frontend\src\components\LoginPage.jsx:112:
+  frontend\src\components\LoginPage.jsx:113:  const timeout = setTimeout(
+  frontend\src\components\LoginPage.jsx:114:    () => controller.abort(),
+  frontend\src\components\LoginPage.jsx:115:    AVAILABILITY_TIMEOUT_MS
+  frontend\src\components\LoginPage.jsx:116:  )
+  frontend\src\components\LoginPage.jsx:117:
+  frontend\src\components\LoginPage.jsx:118:  try {
+  frontend\src\components\LoginPage.jsx:119:    return await fetch(url, {
+  frontend\src\components\LoginPage.jsx:120:      ...options,
+  frontend\src\components\LoginPage.jsx:121:      signal: controller.signal,
+  frontend\src\components\LoginPage.jsx:122:    })
+  frontend\src\components\LoginPage.jsx:280:  const [error, setError] = useState('')
+  frontend\src\components\LoginPage.jsx:281:  const [loading, setLoading] = useState(false)
+  frontend\src\components\LoginPage.jsx:282:  const [success, setSuccess] = useState(null)
+  frontend\src\components\LoginPage.jsx:283:
+> frontend\src\components\LoginPage.jsx:284:  async function handleSubmit(e) {
+  frontend\src\components\LoginPage.jsx:285:    e.preventDefault()
+  frontend\src\components\LoginPage.jsx:286:    setError('')
+  frontend\src\components\LoginPage.jsx:287:
+  frontend\src\components\LoginPage.jsx:288:    if (
+  frontend\src\components\LoginPage.jsx:289:      !form.username.trim() ||
+  frontend\src\components\LoginPage.jsx:290:      !form.full_name.trim() ||
+  frontend\src\components\LoginPage.jsx:291:      !form.password ||
+  frontend\src\components\LoginPage.jsx:292:      !form.invite_token.trim()
+  frontend\src\components\LoginPage.jsx:293:    ) {
+  frontend\src\components\LoginPage.jsx:294:      setError('Please fill in all required fields.')
+  frontend\src\components\LoginPage.jsx:295:      return
+  frontend\src\components\LoginPage.jsx:296:    }
+  frontend\src\components\LoginPage.jsx:297:
+  frontend\src\components\LoginPage.jsx:298:    if (form.password.length < 12) {
+  frontend\src\components\LoginPage.jsx:299:      setError('Password must be at least 12 characters long.')
+  frontend\src\components\LoginPage.jsx:300:      return
+  frontend\src\components\LoginPage.jsx:301:    }
+  frontend\src\components\LoginPage.jsx:302:
+  frontend\src\components\LoginPage.jsx:303:    if (form.password !== form.confirmPw) {
+  frontend\src\components\LoginPage.jsx:304:      setError('Passwords do not match.')
+  frontend\src\components\LoginPage.jsx:305:      return
+  frontend\src\components\LoginPage.jsx:306:    }
+  frontend\src\components\LoginPage.jsx:307:
+  frontend\src\components\LoginPage.jsx:308:    setLoading(true)
+  frontend\src\components\LoginPage.jsx:309:
+  frontend\src\components\LoginPage.jsx:310:    try {
+  frontend\src\components\LoginPage.jsx:311:      const r = await fetch(`${API}/auth/register-admin`, {
+  frontend\src\components\LoginPage.jsx:312:        method: 'POST',
+  frontend\src\components\LoginPage.jsx:313:        headers: { 'Content-Type': 'application/json' },
+  frontend\src\components\LoginPage.jsx:314:        body: JSON.stringify({
+  frontend\src\components\LoginPage.jsx:315:          username: form.username.trim(),
+  frontend\src\components\LoginPage.jsx:316:          full_name: form.full_name.trim(),
+  frontend\src\components\LoginPage.jsx:317:          password: form.password,
+  frontend\src\components\LoginPage.jsx:318:          invite_token: form.invite_token.trim(),
+  frontend\src\components\LoginPage.jsx:319:        }),
+  frontend\src\components\LoginPage.jsx:867:  const [error, setError] = useState('')
+  frontend\src\components\LoginPage.jsx:868:  const [loading, setLoading] = useState(false)
+  frontend\src\components\LoginPage.jsx:869:  const [done, setDone] = useState(false)
+  frontend\src\components\LoginPage.jsx:870:
+> frontend\src\components\LoginPage.jsx:871:  async function handleSubmit(e) {
+  frontend\src\components\LoginPage.jsx:872:    e.preventDefault()
+  frontend\src\components\LoginPage.jsx:873:    setError('')
+  frontend\src\components\LoginPage.jsx:874:
+  frontend\src\components\LoginPage.jsx:875:    if (
+  frontend\src\components\LoginPage.jsx:876:      !form.username.trim() ||
+  frontend\src\components\LoginPage.jsx:877:      !form.full_name.trim() ||
+  frontend\src\components\LoginPage.jsx:878:      !form.password
+  frontend\src\components\LoginPage.jsx:879:    ) {
+  frontend\src\components\LoginPage.jsx:880:      setError('Please fill in all required fields.')
+  frontend\src\components\LoginPage.jsx:881:      return
+  frontend\src\components\LoginPage.jsx:882:    }
+  frontend\src\components\LoginPage.jsx:883:
+  frontend\src\components\LoginPage.jsx:884:    if (form.password.length < 12) {
+  frontend\src\components\LoginPage.jsx:885:      setError('Password must be at least 12 characters long.')
+  frontend\src\components\LoginPage.jsx:886:      return
+  frontend\src\components\LoginPage.jsx:887:    }
+  frontend\src\components\LoginPage.jsx:888:
+  frontend\src\components\LoginPage.jsx:889:    if (form.password !== form.confirmPw) {
+  frontend\src\components\LoginPage.jsx:890:      setError('Passwords do not match.')
+  frontend\src\components\LoginPage.jsx:891:      return
+  frontend\src\components\LoginPage.jsx:892:    }
+  frontend\src\components\LoginPage.jsx:893:
+  frontend\src\components\LoginPage.jsx:894:    setLoading(true)
+  frontend\src\components\LoginPage.jsx:895:
+  frontend\src\components\LoginPage.jsx:896:    try {
+  frontend\src\components\LoginPage.jsx:897:      const r = await fetch(`${API}/auth/register`, {
+  frontend\src\components\LoginPage.jsx:898:        method: 'POST',
+  frontend\src\components\LoginPage.jsx:899:        headers: { 'Content-Type': 'application/json' },
+  frontend\src\components\LoginPage.jsx:900:        body: JSON.stringify({
+  frontend\src\components\LoginPage.jsx:901:          username: form.username.trim(),
+  frontend\src\components\LoginPage.jsx:902:          full_name: form.full_name.trim(),
+  frontend\src\components\LoginPage.jsx:903:          password: form.password,
+  frontend\src\components\LoginPage.jsx:904:          role,
+  frontend\src\components\LoginPage.jsx:905:        }),
+  frontend\src\components\LoginPage.jsx:906:      })
+  frontend\src\components\LoginPage.jsx:1362:  // All three roles are available in fallback mode.
+  frontend\src\components\LoginPage.jsx:1363:  // The selected tab determines the simulated role.
+  frontend\src\components\LoginPage.jsx:1364:  // ==================================================
+  frontend\src\components\LoginPage.jsx:1365:
+> frontend\src\components\LoginPage.jsx:1366:  function completeDemoLogin(requestedRole) {
+  frontend\src\components\LoginPage.jsx:1367:    const demoUser = {
+  frontend\src\components\LoginPage.jsx:1368:      access_token: DEMO_TOKEN,
+  frontend\src\components\LoginPage.jsx:1369:      username: 'demo',
+  frontend\src\components\LoginPage.jsx:1370:      full_name: 'Demo User',
+  frontend\src\components\LoginPage.jsx:1371:      role: requestedRole,
+  frontend\src\components\LoginPage.jsx:1372:      account_role: 'DEMO',
+  frontend\src\components\LoginPage.jsx:1373:      is_restricted_session: true,
+  frontend\src\components\LoginPage.jsx:1374:      is_demo_session: true,
+  frontend\src\components\LoginPage.jsx:1375:      user_id: 0,
+  frontend\src\components\LoginPage.jsx:1376:      session_mode: 'DEMO',
+  frontend\src\components\LoginPage.jsx:1377:    }
+  frontend\src\components\LoginPage.jsx:1378:
+  frontend\src\components\LoginPage.jsx:1379:    const sessionUser = {
+  frontend\src\components\LoginPage.jsx:1380:      username: demoUser.username,
+  frontend\src\components\LoginPage.jsx:1381:      full_name: demoUser.full_name,
+  frontend\src\components\LoginPage.jsx:1382:      role: demoUser.role,
+  frontend\src\components\LoginPage.jsx:1383:      account_role: demoUser.account_role,
+  frontend\src\components\LoginPage.jsx:1384:      is_restricted_session: true,
+  frontend\src\components\LoginPage.jsx:1385:      is_demo_session: true,
+  frontend\src\components\LoginPage.jsx:1386:      user_id: demoUser.user_id,
+  frontend\src\components\LoginPage.jsx:1387:      session_mode: 'DEMO',
+  frontend\src\components\LoginPage.jsx:1388:    }
+  frontend\src\components\LoginPage.jsx:1389:
+  frontend\src\components\LoginPage.jsx:1390:    try {
+> frontend\src\components\LoginPage.jsx:1391:      saveSession(DEMO_TOKEN, sessionUser)
+  frontend\src\components\LoginPage.jsx:1392:      onLogin(demoUser)
+  frontend\src\components\LoginPage.jsx:1393:    } catch (error) {
+> frontend\src\components\LoginPage.jsx:1394:      clearSavedSession()
+  frontend\src\components\LoginPage.jsx:1395:
+  frontend\src\components\LoginPage.jsx:1396:      console.error(
+  frontend\src\components\LoginPage.jsx:1397:        '[IntelliWatch] Demo session initialization failed:',
+  frontend\src\components\LoginPage.jsx:1398:        error
+  frontend\src\components\LoginPage.jsx:1399:      )
+  frontend\src\components\LoginPage.jsx:1400:
+  frontend\src\components\LoginPage.jsx:1401:      setError(
+  frontend\src\components\LoginPage.jsx:1402:        'The demo session could not be initialized. Please allow session storage and refresh the application.'
+  frontend\src\components\LoginPage.jsx:1403:      )
+  frontend\src\components\LoginPage.jsx:1404:    }
+  frontend\src\components\LoginPage.jsx:1405:  }
+  frontend\src\components\LoginPage.jsx:1406:
+  frontend\src\components\LoginPage.jsx:1407:
+  frontend\src\components\LoginPage.jsx:1408:  // ==================================================
+  frontend\src\components\LoginPage.jsx:1409:  // ROLE SWITCHING
+  frontend\src\components\LoginPage.jsx:1410:  // ==================================================
+  frontend\src\components\LoginPage.jsx:1411:
+  frontend\src\components\LoginPage.jsx:1412:  function switchMode(nextMode) {
+  frontend\src\components\LoginPage.jsx:1413:    setMode(nextMode)
+  frontend\src\components\LoginPage.jsx:1414:    setUsername('')
+  frontend\src\components\LoginPage.jsx:1415:    setPassword('')
+  frontend\src\components\LoginPage.jsx:1416:    setError('')
+  frontend\src\components\LoginPage.jsx:1417:  }
+  frontend\src\components\LoginPage.jsx:1418:
+  frontend\src\components\LoginPage.jsx:1419:  function switchActiveRole(nextRole) {
+  frontend\src\components\LoginPage.jsx:1420:    setActiveRole(nextRole)
+  frontend\src\components\LoginPage.jsx:1421:    setError('')
+  frontend\src\components\LoginPage.jsx:1422:  }
+  frontend\src\components\LoginPage.jsx:1423:
+  frontend\src\components\LoginPage.jsx:1424:
+  frontend\src\components\LoginPage.jsx:1425:
+  frontend\src\components\LoginPage.jsx:1426:  // ==================================================
+  frontend\src\components\LoginPage.jsx:1427:  // LOGIN
+  frontend\src\components\LoginPage.jsx:1428:  // ==================================================
+  frontend\src\components\LoginPage.jsx:1429:
+> frontend\src\components\LoginPage.jsx:1430:  async function handleSubmit(e) {
+  frontend\src\components\LoginPage.jsx:1431:    e.preventDefault()
+  frontend\src\components\LoginPage.jsx:1432:
+  frontend\src\components\LoginPage.jsx:1433:    if (loading) return
+  frontend\src\components\LoginPage.jsx:1434:
+  frontend\src\components\LoginPage.jsx:1435:    setError('')
+  frontend\src\components\LoginPage.jsx:1436:
+  frontend\src\components\LoginPage.jsx:1437:    const enteredUsername = username.trim()
+  frontend\src\components\LoginPage.jsx:1438:
+  frontend\src\components\LoginPage.jsx:1439:    if (!enteredUsername || !password) {
+  frontend\src\components\LoginPage.jsx:1440:      setError('Please enter both username and password.')
+  frontend\src\components\LoginPage.jsx:1441:      return
+  frontend\src\components\LoginPage.jsx:1442:    }
+  frontend\src\components\LoginPage.jsx:1443:
+  frontend\src\components\LoginPage.jsx:1444:    const requestedRole =
+  frontend\src\components\LoginPage.jsx:1445:      mode === 'admin'
+  frontend\src\components\LoginPage.jsx:1446:        ? 'ADMIN'
+  frontend\src\components\LoginPage.jsx:1447:        : activeRole
+  frontend\src\components\LoginPage.jsx:1448:
+> frontend\src\components\LoginPage.jsx:1449:    const exactDemoCredentials =
+  frontend\src\components\LoginPage.jsx:1450:      DEMO_MODE &&
+  frontend\src\components\LoginPage.jsx:1451:      enteredUsername.toLowerCase() === 'demo' &&
+  frontend\src\components\LoginPage.jsx:1452:      password === 'demo'
+  frontend\src\components\LoginPage.jsx:1453:
+  frontend\src\components\LoginPage.jsx:1454:    setLoading(true)
+  frontend\src\components\LoginPage.jsx:1455:
+  frontend\src\components\LoginPage.jsx:1456:    try {
+  frontend\src\components\LoginPage.jsx:1457:      // ------------------------------------------------
+  frontend\src\components\LoginPage.jsx:1458:      // 1. DEMO LOGIN
+  frontend\src\components\LoginPage.jsx:1459:      // ------------------------------------------------
+  frontend\src\components\LoginPage.jsx:1460:      // Demo credentials create a local, restricted session.
+  frontend\src\components\LoginPage.jsx:1461:      // They never authenticate against the real backend.
+  frontend\src\components\LoginPage.jsx:1462:
+  frontend\src\components\LoginPage.jsx:1463:      
+  frontend\src\components\LoginPage.jsx:1464:
+  frontend\src\components\LoginPage.jsx:1465:      // ------------------------------------------------
+  frontend\src\components\LoginPage.jsx:1466:      // 2. CHECK SERVICE AVAILABILITY
+  frontend\src\components\LoginPage.jsx:1467:      // ------------------------------------------------
+  frontend\src\components\LoginPage.jsx:1468:
+  frontend\src\components\LoginPage.jsx:1469:      const currentAvailability = await detectAvailability()
+  frontend\src\components\LoginPage.jsx:1470:
+  frontend\src\components\LoginPage.jsx:1471:      setAvailability(currentAvailability)
+  frontend\src\components\LoginPage.jsx:1472:
+  frontend\src\components\LoginPage.jsx:1473:      // ------------------------------------------------
+  frontend\src\components\LoginPage.jsx:1474:      // 3. REGISTERED ACCOUNT AUTHENTICATION
+  frontend\src\components\LoginPage.jsx:1475:      // ------------------------------------------------
+  frontend\src\components\LoginPage.jsx:1476:
+  frontend\src\components\LoginPage.jsx:1477:      if (!currentAvailability.backendAvailable) {
+> frontend\src\components\LoginPage.jsx:1478:        if (exactDemoCredentials) {
+> frontend\src\components\LoginPage.jsx:1479:          completeDemoLogin(requestedRole)
+  frontend\src\components\LoginPage.jsx:1480:          return
+  frontend\src\components\LoginPage.jsx:1481:        }
+  frontend\src\components\LoginPage.jsx:1482:        setError(
+  frontend\src\components\LoginPage.jsx:1483:          DEMO_MODE
+  frontend\src\components\LoginPage.jsx:1484:            ? 'Online services are unavailable. Use demo / demo for the local demonstration.'
+  frontend\src\components\LoginPage.jsx:1485:            : 'The IntelliWatch backend is unavailable. Start the backend and try again.'
+  frontend\src\components\LoginPage.jsx:1486:        )
+  frontend\src\components\LoginPage.jsx:1487:        return
+  frontend\src\components\LoginPage.jsx:1488:      }
+  frontend\src\components\LoginPage.jsx:1489:      // ------------------------------------------------
+  frontend\src\components\LoginPage.jsx:1490:
+  frontend\src\components\LoginPage.jsx:1491:      let response
+  frontend\src\components\LoginPage.jsx:1492:
+  frontend\src\components\LoginPage.jsx:1493:      try {
+> frontend\src\components\LoginPage.jsx:1494:        response = await fetch(`${API}/auth/login`, {
+  frontend\src\components\LoginPage.jsx:1495:          method: 'POST',
+  frontend\src\components\LoginPage.jsx:1496:          headers: {
+  frontend\src\components\LoginPage.jsx:1497:            'Content-Type': 'application/json',
+  frontend\src\components\LoginPage.jsx:1498:          },
+  frontend\src\components\LoginPage.jsx:1499:          body: JSON.stringify({
+  frontend\src\components\LoginPage.jsx:1500:            username: enteredUsername,
+  frontend\src\components\LoginPage.jsx:1501:            password,
+  frontend\src\components\LoginPage.jsx:1502:            requested_role: requestedRole,
+  frontend\src\components\LoginPage.jsx:1503:          }),
+  frontend\src\components\LoginPage.jsx:1504:        })
+  frontend\src\components\LoginPage.jsx:1505:      } catch (networkError) {
+  frontend\src\components\LoginPage.jsx:1506:        console.error(
+  frontend\src\components\LoginPage.jsx:1507:          '[IntelliWatch Login] Authentication request failed:',
+  frontend\src\components\LoginPage.jsx:1508:          networkError
+  frontend\src\components\LoginPage.jsx:1509:        )
+  frontend\src\components\LoginPage.jsx:1510:
+  frontend\src\components\LoginPage.jsx:1511:        const refreshedAvailability = await detectAvailability()
+  frontend\src\components\LoginPage.jsx:1512:
+  frontend\src\components\LoginPage.jsx:1513:        setAvailability(refreshedAvailability)
+  frontend\src\components\LoginPage.jsx:1514:
+> frontend\src\components\LoginPage.jsx:1515:        if (exactDemoCredentials && !refreshedAvailability.backendAvailable) {
+> frontend\src\components\LoginPage.jsx:1516:          completeDemoLogin(requestedRole)
+  frontend\src\components\LoginPage.jsx:1517:          return
+  frontend\src\components\LoginPage.jsx:1518:        }
+  frontend\src\components\LoginPage.jsx:1519:
+  frontend\src\components\LoginPage.jsx:1520:        setError(
+  frontend\src\components\LoginPage.jsx:1521:          refreshedAvailability.backendAvailable
+  frontend\src\components\LoginPage.jsx:1522:            ? 'Unable to reach the authentication endpoint. Check the HTTPS certificate, API URL and CORS configuration.'
+  frontend\src\components\LoginPage.jsx:1523:            : 'The IntelliWatch backend is unavailable. Please start the backend and try again.'
+  frontend\src\components\LoginPage.jsx:1524:        )
+  frontend\src\components\LoginPage.jsx:1525:
+  frontend\src\components\LoginPage.jsx:1526:        return
+  frontend\src\components\LoginPage.jsx:1527:      }
+  frontend\src\components\LoginPage.jsx:1528:
+  frontend\src\components\LoginPage.jsx:1529:      // ------------------------------------------------
+  frontend\src\components\LoginPage.jsx:1530:      // 4. PARSE THE SERVER RESPONSE
+  frontend\src\components\LoginPage.jsx:1531:      // ------------------------------------------------
+  frontend\src\components\LoginPage.jsx:1532:
+> frontend\src\components\LoginPage.jsx:1533:      if (!response.ok && [502, 503, 504].includes(response.status) && exactDemoCredentials) {
+> frontend\src\components\LoginPage.jsx:1534:        completeDemoLogin(requestedRole)
+  frontend\src\components\LoginPage.jsx:1535:        return
+  frontend\src\components\LoginPage.jsx:1536:      }
+  frontend\src\components\LoginPage.jsx:1537:
+  frontend\src\components\LoginPage.jsx:1538:      const responseText = await response.text()
+  frontend\src\components\LoginPage.jsx:1539:
+  frontend\src\components\LoginPage.jsx:1540:      let data = {}
+  frontend\src\components\LoginPage.jsx:1541:
+  frontend\src\components\LoginPage.jsx:1542:      if (responseText.trim()) {
+  frontend\src\components\LoginPage.jsx:1543:        try {
+  frontend\src\components\LoginPage.jsx:1544:          data = JSON.parse(responseText)
+  frontend\src\components\LoginPage.jsx:1545:        } catch (parseError) {
+  frontend\src\components\LoginPage.jsx:1546:          console.error(
+  frontend\src\components\LoginPage.jsx:1547:            '[IntelliWatch Login] Invalid JSON response:',
+  frontend\src\components\LoginPage.jsx:1548:            parseError
+  frontend\src\components\LoginPage.jsx:1549:          )
+  frontend\src\components\LoginPage.jsx:1550:
+  frontend\src\components\LoginPage.jsx:1551:          setError(
+  frontend\src\components\LoginPage.jsx:1552:            `The authentication server returned an invalid response (HTTP ${response.status}).`
+  frontend\src\components\LoginPage.jsx:1553:          )
+  frontend\src\components\LoginPage.jsx:1554:
+  frontend\src\components\LoginPage.jsx:1555:          return
+  frontend\src\components\LoginPage.jsx:1556:        }
+  frontend\src\components\LoginPage.jsx:1557:      }
+  frontend\src\components\LoginPage.jsx:1558:
+  frontend\src\components\LoginPage.jsx:1559:      if (
+  frontend\src\components\LoginPage.jsx:1560:        !data ||
+  frontend\src\components\LoginPage.jsx:1561:        typeof data !== 'object' ||
+  frontend\src\components\LoginPage.jsx:1562:        Array.isArray(data)
+  frontend\src\components\LoginPage.jsx:1563:      ) {
+  frontend\src\components\LoginPage.jsx:1564:        console.error(
+  frontend\src\components\LoginPage.jsx:1565:          '[IntelliWatch Login] Server returned an invalid response object.'
+  frontend\src\components\LoginPage.jsx:1566:        )
+  frontend\src\components\LoginPage.jsx:1567:
+  frontend\src\components\LoginPage.jsx:1568:        setError(
+  frontend\src\components\LoginPage.jsx:1569:          'The authentication server returned an invalid response.'
+  frontend\src\components\LoginPage.jsx:1655:      // 7. STORE THE AUTHENTICATED SESSION
+  frontend\src\components\LoginPage.jsx:1656:      // ------------------------------------------------
+  frontend\src\components\LoginPage.jsx:1657:
+  frontend\src\components\LoginPage.jsx:1658:      try {
+> frontend\src\components\LoginPage.jsx:1659:        saveSession(data.access_token, sessionUser)
+  frontend\src\components\LoginPage.jsx:1660:      } catch (storageError) {
+  frontend\src\components\LoginPage.jsx:1661:        console.error(
+  frontend\src\components\LoginPage.jsx:1662:          '[IntelliWatch Login] Session storage failed:',
+  frontend\src\components\LoginPage.jsx:1663:          storageError
+  frontend\src\components\LoginPage.jsx:1664:        )
+  frontend\src\components\LoginPage.jsx:1665:
+> frontend\src\components\LoginPage.jsx:1666:        clearSavedSession()
+  frontend\src\components\LoginPage.jsx:1667:
+  frontend\src\components\LoginPage.jsx:1668:        setError(
+  frontend\src\components\LoginPage.jsx:1669:          'Your browser could not store the login session. Please enable session storage and try again.'
+  frontend\src\components\LoginPage.jsx:1670:        )
+  frontend\src\components\LoginPage.jsx:1671:
+  frontend\src\components\LoginPage.jsx:1672:        return
+  frontend\src\components\LoginPage.jsx:1673:      }
+  frontend\src\components\LoginPage.jsx:1674:
+  frontend\src\components\LoginPage.jsx:1675:      // ------------------------------------------------
+  frontend\src\components\LoginPage.jsx:1676:      // 9. INITIALIZE THE AUTHENTICATED APPLICATION
+  frontend\src\components\LoginPage.jsx:1677:      // ------------------------------------------------
+  frontend\src\components\LoginPage.jsx:1678:
+  frontend\src\components\LoginPage.jsx:1679:      try {
+  frontend\src\components\LoginPage.jsx:1680:        onLogin(onlineUser)
+  frontend\src\components\LoginPage.jsx:1681:      } catch (applicationError) {
+  frontend\src\components\LoginPage.jsx:1682:        console.error(
+  frontend\src\components\LoginPage.jsx:1683:          '[IntelliWatch Login] Application initialization failed after authentication:',
+  frontend\src\components\LoginPage.jsx:1684:          applicationError
+  frontend\src\components\LoginPage.jsx:1685:        )
+  frontend\src\components\LoginPage.jsx:1686:
+> frontend\src\components\LoginPage.jsx:1687:        clearSavedSession()
+  frontend\src\components\LoginPage.jsx:1688:
+  frontend\src\components\LoginPage.jsx:1689:        setError(
+  frontend\src\components\LoginPage.jsx:1690:          'Authentication succeeded, but the application could not initialize. Refresh the page and inspect the application console.'
+  frontend\src\components\LoginPage.jsx:1691:        )
+  frontend\src\components\LoginPage.jsx:1692:      }
+  frontend\src\components\LoginPage.jsx:1693:
+  frontend\src\components\LoginPage.jsx:1694:    } catch (unexpectedError) {
+  frontend\src\components\LoginPage.jsx:1695:      console.error(
+  frontend\src\components\LoginPage.jsx:1696:        '[IntelliWatch Login] Unexpected sign-in failure:',
+  frontend\src\components\LoginPage.jsx:1697:        unexpectedError
+  frontend\src\components\LoginPage.jsx:1698:      )
+  frontend\src\components\LoginPage.jsx:1699:
+  frontend\src\components\LoginPage.jsx:1700:      setError(
+  frontend\src\components\LoginPage.jsx:1701:        'An unexpected sign-in error occurred. Check the browser console for details.'
+  frontend\src\components\LoginPage.jsx:1702:      )
+  frontend\src\components\LoginPage.jsx:1703:    } finally {
+  frontend\src\components\LoginPage.jsx:1704:      setLoading(false)
+  frontend\src\components\LoginPage.jsx:1705:    }
+  frontend\src\components\LoginPage.jsx:1706:  }
+  frontend\src\components\LoginPage.jsx:1707:
+  frontend\src\components\LoginPage.jsx:1708:
+  frontend\src\components\LoginPage.jsx:1709:  // ==================================================
+  frontend\src\components\LoginPage.jsx:1710:  // CREATE ACCOUNT VIEW
+  frontend\src\components\LoginPage.jsx:1711:  // ==================================================
+  frontend\src\components\LoginPage.jsx:1712:
+  frontend\src\components\LoginPage.jsx:1713:  if (view === 'create') {
+  frontend\src\components\LoginPage.jsx:1714:    if (!regEnabled) {
+  frontend\src\components\LoginPage.jsx:1715:      return (
+  frontend\src\components\LoginPage.jsx:1716:        <div className="login-root">
+  frontend\src\components\LoginPage.jsx:1717:          <div className="login-card">
+  frontend\src\components\LoginPage.jsx:1718:            <div className="login-error" role="alert">
+  frontend\src\components\LoginPage.jsx:1719:              Account registration requires both internet and an available
+  frontend\src\components\LoginPage.jsx:1720:              IntelliWatch backend.
+  frontend\src\components\LoginPage.jsx:1721:            </div>
+  frontend\src\components\LoginPage.jsx:1722:
+  frontend\src\components\LoginPage.jsx:1930:              type="button"
+  frontend\src\components\LoginPage.jsx:1931:              className="login-btn"
+  frontend\src\components\LoginPage.jsx:1932:              aria-label="Enter Offline Demo"
+  frontend\src\components\LoginPage.jsx:1933:              onClick={() =>
+> frontend\src\components\LoginPage.jsx:1934:                completeDemoLogin(
+  frontend\src\components\LoginPage.jsx:1935:                  mode === 'admin' ? 'ADMIN' : activeRole
+  frontend\src\components\LoginPage.jsx:1936:                )
+  frontend\src\components\LoginPage.jsx:1937:              }
+  frontend\src\components\LoginPage.jsx:1938:              disabled={loading}
+  frontend\src\components\LoginPage.jsx:1939:            >
+  frontend\src\components\LoginPage.jsx:1940:              Enter Offline Demo
+  frontend\src\components\LoginPage.jsx:1941:            </button>
+  frontend\src\components\LoginPage.jsx:1942:          </div>
+  frontend\src\components\LoginPage.jsx:1943:          {/* DEMO HINT — SHOWN ONLY IN FALLBACK MODE */}
+  frontend\src\components\LoginPage.jsx:1944:
+  frontend\src\components\LoginPage.jsx:1945:          {!availability.onlineMode && DEMO_MODE && (
+  frontend\src\components\LoginPage.jsx:1946:            <p className="login-demo-hint">
+  frontend\src\components\LoginPage.jsx:1947:              Demo fallback — username: <strong>demo</strong> · password:{' '}
+  frontend\src\components\LoginPage.jsx:1948:              <strong>demo</strong>
+  frontend\src\components\LoginPage.jsx:1949:              <span style={{ display: 'block', marginTop: 4 }}>
+  frontend\src\components\LoginPage.jsx:1950:                Available for Operator, Engineer and Admin demonstration.
+  frontend\src\components\LoginPage.jsx:1951:              </span>
+  frontend\src\components\LoginPage.jsx:1952:            </p>
+  frontend\src\components\LoginPage.jsx:1953:          )}
+  frontend\src\components\LoginPage.jsx:1954:
+  frontend\src\components\LoginPage.jsx:1955:
+  frontend\src\components\LoginPage.jsx:1956:          {/* ONLINE-ONLY ACCOUNT ACTIONS */}
+  frontend\src\components\LoginPage.jsx:1957:
+  frontend\src\components\LoginPage.jsx:1958:          {onlineMode && (
+  frontend\src\components\LoginPage.jsx:1959:            <div className="login-bottom-links">
+  frontend\src\components\LoginPage.jsx:1960:              <button
+  frontend\src\components\LoginPage.jsx:1961:                type="button"
+  frontend\src\components\LoginPage.jsx:1962:                className="login-extra-btn"
+  frontend\src\components\LoginPage.jsx:1963:                onClick={() => setModal('forgot')}
+  frontend\src\components\LoginPage.jsx:1964:              >
+  frontend\src\components\LoginPage.jsx:1965:                Forgot Password?
+  frontend\src\components\LoginPage.jsx:1966:              </button>
+  frontend\src\components\LoginPage.jsx:1967:
+  frontend\src\components\LoginPage.jsx:1968:              {mode === 'admin' && (
+  frontend\src\components\LoginPage.jsx:1969:                <>
+
+
+
+
+==================================================
+===== LOGINPAGE — LOGIN FORM AND BUTTONS =====
+==================================================
+ 1780:               onClick={() => switchMode('operator')}
+ 1781:             >
+ 1782:               <span className="mode-tab-icon">ðŸ“Š</span>
+ 1783: 
+ 1784:               <span className="mode-tab-text">
+ 1785:                 <span className="mode-tab-title">
+ 1786:                   Operator / Engineer
+ 1787:                 </span>
+ 1788: 
+ 1789:                 <span className="mode-tab-sub">
+ 1790:                   Equipment monitoring and maintenance
+ 1791:                 </span>
+ 1792:               </span>
+ 1793:             </button>
+ 1794: 
+ 1795:             <button
+ 1796:               type="button"
+ 1797:               className={`mode-tab mode-tab--admin${mode === 'admin' ? ' mode-tab--active-admin' : ''}`}
+ 1798:               onClick={() => switchMode('admin')}
+ 1799:             >
+ 1800:               <span className="mode-tab-icon">ðŸ›¡ï¸</span>
+ 1801: 
+ 1802:               <span className="mode-tab-text">
+ 1803:                 <span className="mode-tab-title">
+ 1804:                   Administrator
+ 1805:                 </span>
+ 1806: 
+ 1807:                 <span className="mode-tab-sub">
+ 1808:                   System administration access
+ 1809:                 </span>
+ 1810:               </span>
+ 1811:             </button>
+ 1812:           </div>
+ 1813: 
+ 1814: 
+ 1815:           {/* OPERATOR / ENGINEER SUBROLE */}
+ 1816: 
+ 1817:           {mode === 'operator' && (
+ 1818:             <div className="subrole-bar">
+ 1819:               <button
+ 1820:                 type="button"
+ 1821:                 className={`subrole-btn${activeRole === 'OPERATOR' ? ' subrole-btn--active subrole-btn--op' : ''}`}
+ 1822:                 onClick={() => switchActiveRole('OPERATOR')}
+ 1823:               >
+ 1824:                 ðŸ“Š Operator
+ 1825:               </button>
+ 1826: 
+ 1827:               <button
+ 1828:                 type="button"
+ 1829:                 className={`subrole-btn${activeRole === 'MAINTENANCE_ENGINEER' ? ' subrole-btn--active subrole-btn--eng' : ''}`}
+ 1830:                 onClick={() => switchActiveRole('MAINTENANCE_ENGINEER')}
+ 1831:               >
+ 1832:                 ðŸ”§ Engineer
+ 1833:               </button>
+ 1834:             </div>
+ 1835:           )}
+ 1836: 
+ 1837: 
+ 1838:           {/* LOGIN FORM */}
+ 1839: 
+ 1840:           <form
+ 1841:             className="login-form"
+ 1842:             onSubmit={handleSubmit}
+ 1843:             autoComplete="off"
+ 1844:             noValidate
+ 1845:           >
+ 1846:             <div className="login-field">
+ 1847:               <label
+ 1848:                 className="login-label"
+ 1849:                 htmlFor="iw-username"
+ 1850:               >
+ 1851:                 Username
+ 1852:               </label>
+ 1853: 
+ 1854:               <div className="login-input-wrap">
+ 1855:                 <span className="login-input-icon">ðŸ‘¤</span>
+ 1856: 
+ 1857:                 <input
+ 1858:                   id="iw-username"
+ 1859:                   className="login-input"
+ 1860:                   type="text"
+ 1861:                   placeholder="Enter your username"
+ 1862:                   value={username}
+ 1863:                   onChange={e => setUsername(e.target.value)}
+ 1864:                   autoComplete="off"
+ 1865:                   disabled={loading}
+ 1866:                   spellCheck={false}
+ 1867:                 />
+ 1868:               </div>
+ 1869: 
+ 1870: 
+ 1871:             </div>
+ 1872: 
+ 1873:             <div className="login-field">
+ 1874:               <label
+ 1875:                 className="login-label"
+ 1876:                 htmlFor="iw-password"
+ 1877:               >
+ 1878:                 Password
+ 1879:               </label>
+ 1880: 
+ 1881:               <div className="login-input-wrap">
+ 1882:                 <span className="login-input-icon">ðŸ”’</span>
+ 1883: 
+ 1884:                 <input
+ 1885:                   id="iw-password"
+ 1886:                   className="login-input"
+ 1887:                   type={showPass ? 'text' : 'password'}
+ 1888:                   placeholder="Enter your password"
+ 1889:                   value={password}
+ 1890:                   onChange={e => setPassword(e.target.value)}
+ 1891:                   autoComplete="current-password"
+ 1892:                   disabled={loading}
+ 1893:                 />
+ 1894: 
+ 1895:                 <button
+ 1896:                   type="button"
+ 1897:                   className="login-eye-btn"
+ 1898:                   onClick={() => setShowPass(p => !p)}
+ 1899:                   aria-label={showPass ? 'Hide password' : 'Show password'}
+ 1900:                 >
+ 1901:                   <PasswordVisibilityIcon visible={showPass} />
+ 1902:                 </button>
+ 1903:               </div>
+ 1904:             </div>
+ 1905: 
+ 1906:             {error && (
+ 1907:               <div className="login-error" role="alert">
+ 1908:                 âš ï¸ {error}
+ 1909:               </div>
+ 1910:             )}
+ 1911: 
+ 1912:             <button
+ 1913:               className={`login-btn${mode === 'admin' ? ' login-btn--admin-purple' : ''}`}
+ 1914:               type="submit"
+ 1915:               disabled={loading}
+ 1916:             >
+ 1917:               {loading ? (
+ 1918:                 <span className="login-spinner" />
+ 1919:               ) : (
+ 1920:                 'Sign In'
+ 1921:               )}
+ 1922:             </button>
+ 1923:           </form>
+ 1924: 
+ 1925: 
+ 1926: 
+ 1927:           {/* MANUAL OFFLINE DEMO ACCESS */}
+ 1928:           <div style={{ marginTop: '14px' }}>
+ 1929:             <button
+ 1930:               type="button"
+ 1931:               className="login-btn"
+ 1932:               aria-label="Enter Offline Demo"
+ 1933:               onClick={() =>
+ 1934:                 completeDemoLogin(
+ 1935:                   mode === 'admin' ? 'ADMIN' : activeRole
+ 1936:                 )
+ 1937:               }
+ 1938:               disabled={loading}
+ 1939:             >
+ 1940:               Enter Offline Demo
+ 1941:             </button>
+ 1942:           </div>
+ 1943:           {/* DEMO HINT â€” SHOWN ONLY IN FALLBACK MODE */}
+ 1944: 
+ 1945:           {!availability.onlineMode && DEMO_MODE && (
+ 1946:             <p className="login-demo-hint">
+ 1947:               Demo fallback â€” username: <strong>demo</strong> Â· password:{' '}
+ 1948:               <strong>demo</strong>
+ 1949:               <span style={{ display: 'block', marginTop: 4 }}>
+ 1950:                 Available for Operator, Engineer and Admin demonstration.
+ 1951:               </span>
+ 1952:             </p>
+ 1953:           )}
+ 1954: 
+ 1955: 
+ 1956:           {/* ONLINE-ONLY ACCOUNT ACTIONS */}
+ 1957: 
+ 1958:           {onlineMode && (
+ 1959:             <div className="login-bottom-links">
+ 1960:               <button
+ 1961:                 type="button"
+ 1962:                 className="login-extra-btn"
+ 1963:                 onClick={() => setModal('forgot')}
+ 1964:               >
+ 1965:                 Forgot Password?
+ 1966:               </button>
+ 1967: 
+ 1968:               {mode === 'admin' && (
+ 1969:                 <>
+ 1970:                   <span className="login-extra-sep">â€¢</span>
+ 1971: 
+ 1972:                   <button
+ 1973:                     type="button"
+ 1974:                     className="login-extra-btn login-extra-btn--admin"
+ 1975:                     onClick={() => setModal('admin-register')}
+ 1976:                   >
+ 1977:                     Register as Admin
+ 1978:                   </button>
+ 1979:                 </>
+ 1980:               )}
+ 1981:             </div>
+ 1982:           )}
+ 1983:         </div>
+ 1984: 
+ 1985: 
+ 1986:         {/* ONLINE-ONLY SELF REGISTRATION */}
+ 1987: 
+ 1988:         {onlineMode && regEnabled && (
+ 1989:           <div className="new-here-strip">
+ 1990:             <span className="new-here-label">
+ 1991:               New here?
+ 1992:             </span>
+ 1993: 
+ 1994:             <button
+ 1995:               type="button"
+ 1996:               className="new-here-btn new-here-btn--op"
+ 1997:               onClick={() => setView('create')}
+ 1998:             >
+ 1999:               ðŸ“Š Operator
+ 2000:             </button>
+ 2001: 
+ 2002:             <button
+ 2003:               type="button"
+ 2004:               className="new-here-btn new-here-btn--eng"
+ 2005:               onClick={() => setView('create')}
+ 2006:             >
+ 2007:               ðŸ”§ Engineer
+ 2008:             </button>
+ 2009:           </div>
+ 2010:         )}
+ 2011:       </div>
+ 2012: 
+ 2013: 
+ 2014:       {/* ONLINE-ONLY MODALS */}
+ 2015: 
+ 2016:       {modal === 'admin-register' && onlineMode && (
+ 2017:         <AdminRegisterModal
+ 2018:           onClose={() => setModal(null)}
+ 2019:           onDone={() => setModal(null)}
+ 2020:         />
+
+
+==================================================
+===== LOGINPAGE CSS — MAIN LAYOUT =====
+==================================================
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   IntelliWatch â€” LoginPage.css
+   Single source of truth for every login-page element.
+   Color palette:
+     Primary / brand   : #aa3bff â†’ #7c3aed  (purple)
+     Admin accent      : #c4b5fd  (violet-300)
+     Operator accent   : #38bdf8  (sky-400)
+     Engineer accent   : #34d399  (emerald-400)
+     Card bg           : #13161e
+     Input bg          : #0d0f14
+     Border            : #252837
+     Body bg           : #0a0c12
+     Text primary      : #e8eaf2
+     Text muted        : #4a5070
+     Text label        : #a0a8c0
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+/* â”€â”€ Root â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.login-root {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  background: #0a0c12;
+  position: relative; overflow: hidden;
+  padding: 20px;
+}
+
+/* â”€â”€ Animated background orbs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.login-bg { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+
+.orb { position: absolute; border-radius: 50%; filter: blur(80px); animation: orbDrift 14s ease-in-out infinite alternate; }
+.orb-1 { width:420px;height:420px; background:radial-gradient(circle,#aa3bff44 0%,transparent 70%); top:-100px;left:-80px; animation-duration:16s; }
+.orb-2 { width:360px;height:360px; background:radial-gradient(circle,#3b82f633 0%,transparent 70%); bottom:-60px;right:-60px; animation-duration:12s;animation-delay:-5s; }
+.orb-3 { width:240px;height:240px; background:radial-gradient(circle,#06b6d430 0%,transparent 70%); top:50%;left:55%; animation-duration:18s;animation-delay:-3s; }
+
+@keyframes orbDrift {
+  from { transform: translate(0,0) scale(1); }
+  to   { transform: translate(30px,20px) scale(1.08); }
+}
+
+/* â”€â”€ Main card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.login-card {
+  position: relative; z-index: 1;
+  background: #13161e; border: 1px solid #252837; border-radius: 20px;
+  padding: 28px 32px 30px; width: 100%; max-width: 500px;
+  box-shadow: 0 0 0 1px #aa3bff15, 0 20px 60px rgba(0,0,0,.55), 0 0 80px #aa3bff0d;
+  animation: cardIn .45s cubic-bezier(.22,1,.36,1);
+}
+
+@keyframes cardIn {
+  from { opacity:0; transform:translateY(22px) scale(.97); }
+  to   { opacity:1; transform:translateY(0) scale(1); }
+}
+
+/* â”€â”€ Brand â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.login-brand { display:flex; align-items:center; gap:12px; margin-bottom:20px; }
+
+.login-eye {
+  font-size:34px;
+  filter: drop-shadow(0 0 12px rgba(170,59,255,.7));
+  animation: eyeGlow 2.5s ease-in-out infinite alternate;
+}
+@keyframes eyeGlow {
+  from { filter:drop-shadow(0 0 8px rgba(170,59,255,.5)); }
+  to   { filter:drop-shadow(0 0 20px rgba(170,59,255,.9)); }
+}
+.login-title   { font-size:22px;font-weight:800;color:#e8eaf2;letter-spacing:-.4px;line-height:1.1;margin:0; }
+.login-sub     { font-size:11px;color:#4a5070;margin:2px 0 0; }
+.login-welcome { font-size:13px;color:#a0a8c0;margin:0 0 16px;letter-spacing:.1px; }
+
+/* â”€â”€ Mode selector (Operator / Admin tabs) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.mode-selector {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px; margin-bottom: 20px;
+}
+
+.mode-tab {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px; border-radius: 12px;
+  border: 1.5px solid #252837; background: transparent;
+  cursor: pointer; font-family: inherit;
+  transition: all .2s; text-align: left;
+}
+.mode-tab:hover        { border-color: #38bdf840; background: #ffffff06; }
+.mode-tab--active      { border-color: #38bdf860; background: #0369a114; box-shadow: 0 0 0 2px #38bdf818; }
+.mode-tab--admin:hover { border-color: #7c3aed40; background: #7c3aed08; }
+.mode-tab--active-admin{ border-color: #7c3aed60; background: #7c3aed14; box-shadow: 0 0 0 2px #7c3aed18; }
+
+.mode-tab-icon  { font-size:22px; flex-shrink:0; }
+.mode-tab-text  { display:flex; flex-direction:column; gap:1px; min-width:0; }
+.mode-tab-title { font-size:13px; font-weight:700; color:#e8eaf2; line-height:1.2; }
+.mode-tab-sub   { font-size:10px; color:#4a5070; }
+
+/* â”€â”€ Role buttons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.login-roles {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px; margin: 16px 0 0;
+}
+
+.login-role-tag {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 11px 8px; border-radius: 12px;
+  border: 1.5px solid #252837; background: transparent;
+  cursor: pointer; font-family: inherit; text-align: center;
+  transition: all .22s;
+}
+.login-role-tag:hover:not(.login-role-tag--active) {
+  border-color: #ffffff25; background: #ffffff06; transform: translateY(-1px);
+}
+.login-role-tag--active {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 18px rgba(0,0,0,.35);
+}
+
+.login-role-tag-icon  { font-size:18px; line-height:1; }
+.login-role-tag-label { font-size:11px; font-weight:700; letter-spacing:.5px; line-height:1.2; }
+.login-role-tag-hint  { font-size:9px; color:#4a5070; line-height:1.3; }
+
+/* â”€â”€ Extra links row (Register / Forgot / Admin invite) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.login-extra-links {
+  display: flex; align-items: center; justify-content: center;
+  flex-wrap: wrap; gap: 4px 6px; margin-top: 12px;
+}
+
+.login-extra-sep { color:#252837; font-size:13px; user-select:none; }
+
+.login-extra-btn {
+  background: none; border: none; cursor: pointer; font-family: inherit;
+  font-size: 12px; color: #4a5070; padding: 3px 4px;
+  transition: color .2s; line-height: 1;
+}
+.login-extra-btn:hover          { color: #a0a8c0; }
+.login-extra-btn--admin         { color: #c4b5fd; }
+.login-extra-btn--admin:hover   { color: #e9d5ff; }
+
+/* â”€â”€ Forms â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.login-form      { display:flex; flex-direction:column; gap:13px; }
+.login-form-row  { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.login-field     { display:flex; flex-direction:column; gap:5px; }
+
+.login-label      { font-size:11px;font-weight:600;color:#a0a8c0;letter-spacing:.4px;text-transform:uppercase; }
+.login-label-hint { font-weight:400;color:#4a5070;text-transform:none;letter-spacing:0;font-size:10px; }
+.login-field-hint { font-size:10px;color:#4a5070;line-height:1.4; }
+.login-field-err  { font-size:10px;color:#f87171; }
+
+.login-input-wrap { position:relative; display:flex; align-items:center; }
+
+.login-input-icon {
+  position:absolute; left:11px; font-size:14px;
+  pointer-events:none; line-height:1;
+}
+
+.login-input {
+  width:100%; background:#0d0f14; border:1px solid #252837; border-radius:10px;
+  padding:10px 38px; font-size:13px; color:#e8eaf2;
+  font-family:inherit; outline:none; box-sizing:border-box;
+  transition:border-color .2s,box-shadow .2s;
+}
+.login-input:focus        { border-color:#aa3bff; box-shadow:0 0 0 3px #aa3bff20; }
+.login-input::placeholder { color:#4a5070; }
+.login-input:disabled     { opacity:.55; cursor:not-allowed; }
+
+.login-eye-btn {
+  position:absolute; right:11px; background:none; border:none;
+  cursor:pointer; font-size:14px; color:#4a5070; padding:0;
+  line-height:1; transition:color .2s;
+}
+.login-eye-btn:hover { color:#a0a8c0; }
+
+/* â”€â”€ Password strength meter â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.pw-strength { display:flex; align-items:center; gap:8px; margin-top:2px; }
+.pw-bars     { display:flex; gap:3px; flex:1; }
+.pw-bar      { height:3px; flex:1; border-radius:3px; transition:background .3s; }
+.pw-label    { font-size:10px; font-weight:600; min-width:66px; text-align:right; }
+
+/* â”€â”€ Feedback messages â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.login-error {
+  background:#e0555515; border:1px solid #e0555540; border-radius:8px;
+  padding:9px 12px; font-size:12px; color:#e05555; line-height:1.5;
+}
+.login-info {
+  background:#0369a115; border:1px solid #0369a140; border-radius:8px;
+  padding:9px 12px; font-size:12px; color:#38bdf8; line-height:1.6;
+}
+.login-info--token    { background:#7c3aed12; border-color:#7c3aed40; color:#c4b5fd; }
+.login-info--token pre{ white-space:pre-wrap; word-break:break-all; font-family:monospace; font-size:11px; margin:0; }
+.login-fp-desc        { font-size:13px; color:#a0a8c0; line-height:1.6; margin:0 0 4px; }
+
+/* â”€â”€ Buttons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.login-btn {
+  width:100%; padding:11px;
+  background: linear-gradient(135deg,#aa3bff 0%,#7c3aed 100%);
+  color:#fff; border:none; border-radius:10px;
+  font-size:14px; font-weight:700; font-family:inherit;
+  cursor:pointer; letter-spacing:.3px;
+  transition:opacity .2s,transform .15s,box-shadow .2s;
+  box-shadow:0 4px 20px #aa3bff30; margin-top:2px;
+}
+.login-btn:hover:not(:disabled)  { opacity:.9; transform:translateY(-1px); box-shadow:0 6px 28px #aa3bff40; }
+.login-btn:active:not(:disabled) { transform:translateY(0); }
+.login-btn:disabled              { opacity:.5; cursor:not-allowed; }
+
+/* Admin variant â€” deeper violet/indigo */
+.login-btn--admin-purple {
+  background: linear-gradient(135deg,#7c3aed,#4f46e5);
+  box-shadow: 0 4px 20px #7c3aed30;
+}
+.login-btn--admin-purple:hover:not(:disabled) { box-shadow:0 6px 28px #7c3aed50; }
+
+/* â”€â”€ Spinner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.login-spinner {
+  display:inline-block; width:16px; height:16px;
+  border:2px solid #ffffff50; border-top-color:#fff;
+  border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* â”€â”€ Hint â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.login-hint        { text-align:center; font-size:11px; color:#4a5070; margin-top:4px; }
+.login-hint strong { color:#a0a8c0; }
+
+/* â”€â”€ Modal overlay & box â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,.72); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px; animation: fadeIn .2s ease;
+}
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+
+.modal-box {
+
+
+==================================================
+===== LOGINPAGE CSS — RESPONSIVE RULES =====
+==================================================
+
+frontend\src\components\LoginPage.css:19:.login-root {
+frontend\src\components\LoginPage.css:41:.login-card {
+frontend\src\components\LoginPage.css:136:.login-form      { display:flex; flex-direction:column; gap:13px; }
+frontend\src\components\LoginPage.css:137:.login-form-row  { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+frontend\src\components\LoginPage.css:189:.login-btn {
+frontend\src\components\LoginPage.css:198:.login-btn:hover:not(:disabled)  { opacity:.9; transform:translateY(-1px); box-shadow:0 6px 28px #aa3bff40; }
+frontend\src\components\LoginPage.css:199:.login-btn:active:not(:disabled) { transform:translateY(0); }
+frontend\src\components\LoginPage.css:200:.login-btn:disabled              { opacity:.5; cursor:not-allowed; }
+frontend\src\components\LoginPage.css:203:.login-btn--admin-purple {
+frontend\src\components\LoginPage.css:207:.login-btn--admin-purple:hover:not(:disabled) { box-shadow:0 6px 28px #7c3aed50; }
+frontend\src\components\LoginPage.css:281:@media (max-width:520px) {
+frontend\src\components\LoginPage.css:282:  .login-card        { padding:22px 16px 26px; max-width:100%; }
+frontend\src\components\LoginPage.css:284:  .login-form-row    { grid-template-columns:1fr; }
+frontend\src\components\LoginPage.css:325:/* ── login-stack: vertical column that holds the card + "New here?" strip ── */
+frontend\src\components\LoginPage.css:326:.login-stack {
+frontend\src\components\LoginPage.css:378:/* ── Outer wrapper — same background as login-root ──────────────────────── */
+frontend\src\components\LoginPage.css:478:@media (max-width: 640px) {
+
+
+
+
+==================================================
+===== FIREBASE IMPORT REFERENCES =====
+==================================================
+
+frontend\src\firebase.js:1:import { getApp, getApps, initializeApp } from 'firebase/app'
+frontend\src\firebase.js:12:export const isFirebaseConfigured = Boolean(
+frontend\src\firebase.js:20:export const firebaseApp = isFirebaseConfigured
+
+
+
+
+==================================================
+===== PROJECT STARTUP SCRIPTS =====
+==================================================
+{
+  "name": "frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:https": "vite --https",
+    "dev:network": "vite --host",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview --host"
+  },
+  "dependencies": {
+    "@react-three/drei": "^10.7.9",
+    "@react-three/fiber": "^9.8.2",
+    "firebase": "^13.4.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "react-router-dom": "^7.18.5",
+    "recharts": "^3.10.1",
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.8",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "eslint": "^10.14.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.6.0",
+    "jsdom": "^31.0.0",
+    "vite": "^8.0.12",
+    "vitest": "^5.1.0"
+  },
+  "overrides": {
+    "minimatch": "^11.0.1"
+  }
+}
+
+
+==================================================
+===== EXISTING FIREBASE BACKUPS =====
+==================================================
+
+FullName                                                                                  LastWriteTime      
+--------                                                                                  -------------      
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Firebase_Integration_Backup_20261117_215503 17-11-2026 21:55:03
+
+
+

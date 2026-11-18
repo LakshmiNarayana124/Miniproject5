@@ -1,0 +1,102 @@
+﻿INTELLIWATCH — STARTUP COMMAND REFERENCE
+
+==================================================
+1. LOCALHOST DEVELOPMENT MODE
+==================================================
+
+STARTUP SEQUENCE:
+1. Open PowerShell Window 1 — Backend
+2. Open PowerShell Window 2 — Frontend
+3. Open browser: http://localhost:5173
+4. Caddy is NOT required.
+
+BACKEND — WINDOW 1:
+cd "C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend"
+
+$PYTHON = "$env:LOCALAPPDATA\Programs\Python\Python312\python.exe"
+
+& $PYTHON -m uvicorn server:app --host 127.0.0.1 --port 8000 --reload
+
+BACKEND HEALTH CHECK — OPTIONAL (NEW WINDOW):
+Invoke-WebRequest http://127.0.0.1:8000/health
+
+FRONTEND — WINDOW 2:
+cd "C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\frontend"
+
+npm run dev -- --host 0.0.0.0
+
+OPEN IN BROWSER:
+http://localhost:5173
+
+
+==================================================
+2. NETWORK / COLLEGE DEMONSTRATION MODE
+==================================================
+
+STARTUP SEQUENCE:
+1. Open PowerShell Window 1 — Backend
+2. Open PowerShell Window 2 — Frontend Build
+3. Open PowerShell Window 3 — Caddy
+4. Open browser: https://localhost:8443
+5. Other devices can use the host PC's current LAN IP.
+
+BACKEND — WINDOW 1:
+cd "C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend"
+
+$PYTHON = "$env:LOCALAPPDATA\Programs\Python\Python312\python.exe"
+
+& $PYTHON -m uvicorn server:app --host 127.0.0.1 --port 8000
+
+FRONTEND BUILD — WINDOW 2:
+cd "C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\frontend"
+
+npm run build
+
+CADDY — WINDOW 3:
+$CADDY = "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\CaddyServer.Caddy_Microsoft.Winget.Source_8wekyb3d8bbwe\caddy.exe"
+
+$CADDYFILE = "C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Caddyfile"
+
+& $CADDY validate --config $CADDYFILE
+
+& $CADDY run --config $CADDYFILE
+
+OPEN IN BROWSER:
+https://localhost:8443
+
+OTHER DEVICE:
+https://YOUR-CURRENT-LAN-IP:8443
+
+
+==================================================
+3. IMPORTANT DIFFERENCES
+==================================================
+
+LOCALHOST:
+Backend + Vite frontend.
+Caddy is not required.
+Frontend supports development hot reload.
+
+NETWORK:
+Backend + production frontend build + Caddy.
+Caddy serves frontend/dist and proxies backend API requests.
+Vite development server is not required.
+
+IMPORTANT:
+The network frontend build must use the correct API configuration.
+API requests from other devices must go through Caddy, not their own localhost.
+
+Backend listens only on 127.0.0.1:8000.
+Caddy handles HTTPS on port 8443.
+
+==================================================
+4. STOPPING SERVICES
+==================================================
+
+Press CTRL + C in each PowerShell window running a service.
+
+Do not start a second backend or Caddy instance on a port already in use.
+
+==================================================
+END OF REFERENCE
+==================================================

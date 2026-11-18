@@ -1,4 +1,3 @@
-
 """
 IntelliWatch - Sensor Reader
 
@@ -6,7 +5,7 @@ Responsibilities:
 1. Acquire vibration readings.
 2. Acquire temperature readings.
 3. Acquire electrical current readings.
-4. Support simulation mode.
+4. Support controlled simulation mode.
 5. Return readings in a consistent format.
 
 Business logic and anomaly detection belong in intelliwatch_brain.py.
@@ -27,7 +26,10 @@ from sensor_config import (
 # 1. READER CONFIGURATION
 # ============================================================
 
-SIMULATION_MODE = True
+# IoT / Hardware is the default.
+# Backend simulation must not run automatically.
+
+SIMULATION_MODE = False
 
 SIMULATION_SETTINGS = {
 
@@ -56,25 +58,16 @@ SIMULATION_SETTINGS = {
 def create_reading(sensor_type, value, unit, metadata=None):
     """
     Creates a standard reading structure.
-
-    All sensors return data in the same format.
     """
 
     return {
         "timestamp": datetime.now(timezone.utc).isoformat(),
-
         "sensor_type": sensor_type,
-
         "sensor_name": SENSOR_CONFIG[sensor_type]["sensor_name"],
-
         "parameter": SENSOR_CONFIG[sensor_type]["parameter"],
-
         "value": value,
-
         "unit": unit,
-
         "quality": "GOOD",
-
         "metadata": metadata or {}
     }
 
@@ -90,13 +83,10 @@ def read_vibration():
         settings = SIMULATION_SETTINGS["vibration"]
 
         base = settings["base_value"]
-
         variation = settings["variation"]
 
         x = base + random.uniform(-variation, variation)
-
         y = base + random.uniform(-variation, variation)
-
         z = random.uniform(-variation, variation)
 
         magnitude = math.sqrt(
@@ -105,11 +95,8 @@ def read_vibration():
 
         return create_reading(
             sensor_type="vibration",
-
             value=round(magnitude, 4),
-
             unit="g",
-
             metadata={
                 "x": round(x, 4),
                 "y": round(y, 4),
@@ -143,11 +130,8 @@ def read_temperature():
 
         return create_reading(
             sensor_type="temperature",
-
             value=round(temperature, 2),
-
             unit="°C",
-
             metadata={
                 "measurement_type": "simulated_temperature"
             }
@@ -178,11 +162,8 @@ def read_current():
 
         return create_reading(
             sensor_type="current",
-
             value=round(abs(current), 3),
-
             unit="A",
-
             metadata={
                 "measurement_type": "simulated_current"
             }
@@ -202,7 +183,11 @@ def read_all_sensors():
     Collects readings from all three sensors.
 
     Each sensor is read independently.
-    The results are returned together.
+
+    In hardware mode, unavailable hardware produces an
+    ERROR-quality reading with value=None.
+
+    Synthetic readings are never silently substituted.
     """
 
     readings = {}
@@ -274,7 +259,7 @@ def start_sensor_reading(interval=1, total_cycles=None):
 
     print(
         "Mode:",
-        "SIMULATION" if SIMULATION_MODE else "HARDWARE"
+        "SIMULATION" if SIMULATION_MODE else "HARDWARE / IoT"
     )
 
     try:
@@ -295,6 +280,12 @@ def start_sensor_reading(interval=1, total_cycles=None):
                     f"| {data['quality']}"
                 )
 
+                if data.get("error"):
+                    print(
+                        "  Sensor status:",
+                        data["error"]
+                    )
+
             cycle += 1
 
             time.sleep(interval)
@@ -311,12 +302,9 @@ def start_sensor_reading(interval=1, total_cycles=None):
 if __name__ == "__main__":
 
     print("\n===================================")
-
     print("       INTELLIWATCH SENSOR TEST")
-
     print("===================================")
 
-    # Read all sensors for five cycles.
     start_sensor_reading(
         interval=1,
         total_cycles=5

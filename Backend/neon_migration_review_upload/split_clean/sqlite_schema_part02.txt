@@ -1,0 +1,315 @@
+                    timestamp TEXT NOT NULL,
+                    features TEXT NOT NULL,
+                    quality TEXT,
+                    FOREIGN KEY(pattern_id)
+                    REFERENCES unknown_patterns(pattern_id)
+                )
+FOREIGN KEY: (0, 0, 'unknown_patterns', 'pattern_id', 'pattern_id', 'NO ACTION', 'NO ACTION', 'NONE')
+
+TYPE: table
+NAME: explorer_history
+TABLE: explorer_history
+SQL: CREATE TABLE explorer_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                entry_type TEXT NOT NULL,
+                active_user TEXT,
+                arrangement_json TEXT,
+                classification_label TEXT,
+                confidence REAL,
+                model_version TEXT,
+                UNIQUE(timestamp, entry_type)
+            )
+
+TYPE: table
+NAME: knowledge_profiles
+TABLE: knowledge_profiles
+SQL: CREATE TABLE knowledge_profiles (
+                    profile_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    label TEXT NOT NULL,
+                    feature_names TEXT NOT NULL,
+                    sample_count INTEGER NOT NULL,
+                    means TEXT NOT NULL,
+                    m2_values TEXT NOT NULL,
+                    minimums TEXT NOT NULL,
+                    maximums TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+
+TYPE: table
+NAME: machine_assessments
+TABLE: machine_assessments
+SQL: CREATE TABLE machine_assessments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                timestamp TEXT NOT NULL,
+
+                overall_status TEXT NOT NULL,
+
+                confidence_score REAL,
+                anomaly_rate REAL,
+                health_score REAL,
+
+                probable_causes_json TEXT,
+                sensor_summary_json TEXT,
+
+                assessment_notes TEXT
+            )
+
+TYPE: table
+NAME: machine_config
+TABLE: machine_config
+SQL: CREATE TABLE machine_config (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                parameter_name TEXT NOT NULL UNIQUE,
+
+                parameter_value TEXT NOT NULL,
+
+                unit TEXT,
+
+                description TEXT,
+
+                updated_at TEXT NOT NULL
+            )
+
+TYPE: table
+NAME: ml_models
+TABLE: ml_models
+SQL: CREATE TABLE ml_models (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                family TEXT NOT NULL,
+                model_name TEXT NOT NULL,
+                version TEXT NOT NULL,
+                is_active INTEGER NOT NULL DEFAULT 0
+                    CHECK (is_active IN (0, 1)),
+                training_timestamp TEXT NOT NULL,
+                dataset_hash TEXT NOT NULL,
+                artifact_path TEXT NOT NULL,
+                metrics_json TEXT,
+                schema_version TEXT DEFAULT '1.0',
+                UNIQUE(family, version)
+            )
+
+TYPE: table
+NAME: recommendations
+TABLE: recommendations
+SQL: CREATE TABLE recommendations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                timestamp TEXT NOT NULL,
+
+                assessment_id INTEGER,
+
+                category TEXT NOT NULL,
+
+                priority TEXT NOT NULL,
+
+                recommendation TEXT NOT NULL,
+
+                reason TEXT,
+
+                sensor_name TEXT,
+
+                action_status TEXT DEFAULT 'PENDING',
+
+                FOREIGN KEY (assessment_id)
+                    REFERENCES machine_assessments(id)
+            )
+FOREIGN KEY: (0, 0, 'machine_assessments', 'assessment_id', 'id', 'NO ACTION', 'NO ACTION', 'NONE')
+
+TYPE: table
+NAME: sensor_analytics
+TABLE: sensor_analytics
+SQL: CREATE TABLE sensor_analytics (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                sensor_name TEXT NOT NULL,
+
+                window_start TEXT NOT NULL,
+                window_end TEXT NOT NULL,
+
+                sample_count INTEGER DEFAULT 0,
+
+                minimum REAL,
+                maximum REAL,
+                average REAL,
+
+                rms REAL,
+                standard_deviation REAL,
+
+                anomaly_count INTEGER DEFAULT 0,
+                anomaly_rate REAL DEFAULT 0,
+
+                trend TEXT,
+                status TEXT,
+
+                created_at TEXT NOT NULL
+            )
+
+TYPE: table
+NAME: sensor_knowledge_profiles
+TABLE: sensor_knowledge_profiles
+SQL: CREATE TABLE sensor_knowledge_profiles (
+                    sensor_profile_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    sensor_name TEXT NOT NULL,
+                    feature_name TEXT NOT NULL,
+                    label TEXT NOT NULL,
+                    sample_count INTEGER NOT NULL,
+                    mean_value REAL NOT NULL,
+                    m2_value REAL NOT NULL,
+                    minimum_value REAL NOT NULL,
+                    maximum_value REAL NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+
+TYPE: table
+NAME: sensor_readings
+TABLE: sensor_readings
+SQL: CREATE TABLE sensor_readings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                timestamp TEXT NOT NULL,
+                sensor_name TEXT NOT NULL,
+
+                value REAL NOT NULL,
+                unit TEXT NOT NULL,
+
+                axis TEXT,
+
+                quality TEXT DEFAULT 'VALID',
+
+                metadata_json TEXT
+            )
+
+TYPE: table
+NAME: sensor_status_history
+TABLE: sensor_status_history
+SQL: CREATE TABLE sensor_status_history (
+                    history_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp TEXT NOT NULL,
+                    sensor_name TEXT NOT NULL,
+                    feature_name TEXT NOT NULL,
+                    sensor_value REAL NOT NULL,
+                    status TEXT NOT NULL,
+                    classification TEXT,
+                    explanation TEXT
+                )
+
+TYPE: table
+NAME: sqlite_sequence
+TABLE: sqlite_sequence
+SQL: CREATE TABLE sqlite_sequence(name,seq)
+
+TYPE: table
+NAME: system_status_history
+TABLE: system_status_history
+SQL: CREATE TABLE system_status_history (
+                    history_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp TEXT NOT NULL,
+                    overall_status TEXT NOT NULL,
+                    sensor_statuses TEXT NOT NULL,
+                    explanation TEXT
+                )
+
+TYPE: table
+NAME: threshold_definitions
+TABLE: threshold_definitions
+SQL: CREATE TABLE threshold_definitions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                parameter_name TEXT NOT NULL,
+                normal_max REAL NOT NULL,
+                warning_max REAL NOT NULL,
+                source_standard TEXT,
+                equipment_specific INTEGER NOT NULL DEFAULT 0
+                    CHECK (equipment_specific IN (0, 1)),
+                confirmed_by TEXT,
+                confirmed_at TEXT,
+                active INTEGER NOT NULL DEFAULT 0
+            )
+
+TYPE: table
+NAME: unknown_patterns
+TABLE: unknown_patterns
+SQL: CREATE TABLE unknown_patterns (
+                    pattern_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    feature_names TEXT NOT NULL,
+                    sample_count INTEGER NOT NULL,
+                    means TEXT NOT NULL,
+                    m2_values TEXT NOT NULL,
+                    minimums TEXT NOT NULL,
+                    maximums TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    first_seen TEXT NOT NULL,
+                    last_seen TEXT NOT NULL
+                )
+
+TYPE: table
+NAME: user_permissions
+TABLE: user_permissions
+SQL: CREATE TABLE user_permissions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                permission_key TEXT NOT NULL,
+                is_granted INTEGER NOT NULL
+                    CHECK (is_granted IN (0, 1)),
+                updated_by INTEGER,
+                updated_at TEXT NOT NULL,
+
+                FOREIGN KEY (user_id)
+                    REFERENCES users(id)
+                    ON DELETE CASCADE,
+
+                FOREIGN KEY (updated_by)
+                    REFERENCES users(id)
+                    ON DELETE SET NULL,
+
+                UNIQUE (user_id, permission_key)
+            )
+FOREIGN KEY: (0, 0, 'users', 'updated_by', 'id', 'NO ACTION', 'SET NULL', 'NONE')
+FOREIGN KEY: (1, 0, 'users', 'user_id', 'id', 'NO ACTION', 'CASCADE', 'NONE')
+
+TYPE: table
+NAME: users
+TABLE: users
+SQL: CREATE TABLE users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                username TEXT NOT NULL COLLATE NOCASE UNIQUE,
+                full_name TEXT NOT NULL,
+
+                password_hash TEXT NOT NULL,
+
+                role TEXT NOT NULL CHECK (
+                    role IN (
+                        'ADMIN',
+                        'OPERATOR',
+                        'MAINTENANCE_ENGINEER'
+                    )
+                ),
+
+                is_active INTEGER NOT NULL DEFAULT 1
+                    CHECK (is_active IN (0, 1)),
+
+                created_at TEXT NOT NULL,
+                last_login TEXT
+            , is_deleted INTEGER NOT NULL DEFAULT 0 CHECK (is_deleted IN (0, 1)), deleted_at TEXT, deleted_by TEXT, deletion_reason TEXT, deleted_was_active INTEGER NOT NULL DEFAULT 1 CHECK (deleted_was_active IN (0, 1)), session_version INTEGER NOT NULL DEFAULT 0
+                    CHECK (session_version >= 0))
+
+TYPE: table
+NAME: verified_labels
+TABLE: verified_labels
+SQL: CREATE TABLE verified_labels (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER,
+                label TEXT NOT NULL,
+                feature_vector_json TEXT NOT NULL,
+                model_version TEXT NOT NULL,
+                verified_by TEXT NOT NULL,
+                verified_at TEXT NOT NULL,
+                FOREIGN KEY (event_id)
+                    REFERENCES anomaly_events(id)
+            )
+FOREIGN KEY: (0, 0, 'anomaly_events', 'event_id', 'id', 'NO ACTION', 'NO ACTION', 'NONE')

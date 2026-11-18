@@ -1,0 +1,66 @@
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                            784     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                            788             INSERT INTO machine_config (                                         
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                            794             DO UPDATE SET                                                        
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                            818     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                            822             SELECT parameter_value                                               
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                            839     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                            843             SELECT *                                                             
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                            858     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                            862             SELECT *                                                             
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                            876     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                            880             SELECT *                                                             
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                            912     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                            916             INSERT INTO users (                                                  
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                            930         return cursor.lastrowid                                                  
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                            941     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                            945             SELECT *                                                             
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                            957     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                            976     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1000     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1004             UPDATE users                                                         
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1028     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1034             SELECT id, username, role, is_active, is_deleted                     
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1051                 SELECT COUNT(*) AS total                                         
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1064             UPDATE users                                                         
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1104     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1110             SELECT *                                                             
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1124             UPDATE users                                                         
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1166     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1172             SELECT *                                                             
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1182             UPDATE users                                                         
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1222     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1228             SELECT *                                                             
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1257             "DELETE FROM users WHERE id = ?",                                    
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1281     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1285             UPDATE control_signals                                               
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1325     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1361     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1365             INSERT INTO verified_labels (                                        
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1380         return cursor.lastrowid                                                  
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1391     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1395             INSERT INTO accuracy_trend (                                         
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1406         return cursor.lastrowid                                                  
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1422         DELETE FROM explorer_history                                             
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1424             SELECT id                                                            
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1440     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1444             INSERT INTO explorer_history (                                       
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1463         return cursor.lastrowid                                                  
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1475     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1479             SELECT *                                                             
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1492     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1496             SELECT *                                                             
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1529     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1534                 f"DELETE FROM {table} WHERE timestamp < ?",                      
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1563     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1567             INSERT INTO edge_devices (                                           
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1573             DO UPDATE SET                                                        
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1600     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1604             UPDATE edge_devices                                                  
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1631     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1635             INSERT INTO control_signal_queue (                                   
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1647         return cursor.lastrowid                                                  
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1658     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1662             SELECT *                                                             
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1680     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1684             UPDATE control_signal_queue                                          
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database.py                           1708     connection = get_connection()                                                

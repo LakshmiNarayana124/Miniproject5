@@ -1,0 +1,653 @@
+
+TYPE: index
+NAME: idx_analytics_sensor_window
+TABLE: sensor_analytics
+SQL: CREATE INDEX idx_analytics_sensor_window
+            ON sensor_analytics(sensor_name, window_end)
+        
+
+TYPE: index
+NAME: idx_anomaly_severity_timestamp
+TABLE: anomaly_events
+SQL: CREATE INDEX idx_anomaly_severity_timestamp
+            ON anomaly_events(severity, timestamp)
+        
+
+TYPE: index
+NAME: idx_assessment_timestamp
+TABLE: machine_assessments
+SQL: CREATE INDEX idx_assessment_timestamp
+            ON machine_assessments(timestamp)
+        
+
+TYPE: index
+NAME: idx_audit_category_ts
+TABLE: audit_entries
+SQL: CREATE INDEX idx_audit_category_ts
+            ON audit_entries(category, timestamp)
+        
+
+TYPE: index
+NAME: idx_auth_rate_blocked
+TABLE: auth_rate_limits
+SQL: CREATE INDEX idx_auth_rate_blocked
+            ON auth_rate_limits(blocked_until)
+        
+
+TYPE: index
+NAME: idx_auth_tokens_type_expiry
+TABLE: auth_security_tokens
+SQL: CREATE INDEX idx_auth_tokens_type_expiry
+            ON auth_security_tokens(token_type, expires_at)
+        
+
+TYPE: index
+NAME: idx_auth_tokens_user
+TABLE: auth_security_tokens
+SQL: CREATE INDEX idx_auth_tokens_user
+            ON auth_security_tokens(user_id)
+        
+
+TYPE: index
+NAME: idx_control_intent_ts
+TABLE: control_signals
+SQL: CREATE INDEX idx_control_intent_ts
+            ON control_signals(intent, timestamp)
+        
+
+TYPE: index
+NAME: idx_edge_status
+TABLE: edge_devices
+SQL: CREATE INDEX idx_edge_status
+            ON edge_devices(status)
+        
+
+TYPE: index
+NAME: idx_explorer_ts
+TABLE: explorer_history
+SQL: CREATE INDEX idx_explorer_ts
+            ON explorer_history(timestamp)
+        
+
+TYPE: index
+NAME: idx_ml_models_active
+TABLE: ml_models
+SQL: CREATE INDEX idx_ml_models_active
+            ON ml_models(family, is_active)
+        
+
+TYPE: index
+NAME: idx_one_pending_account_recovery
+TABLE: account_recovery_requests
+SQL: CREATE UNIQUE INDEX idx_one_pending_account_recovery
+            ON account_recovery_requests(user_id)
+            WHERE status = 'PENDING'
+        
+
+TYPE: index
+NAME: idx_one_pending_admin_promotion
+TABLE: admin_promotion_requests
+SQL: CREATE UNIQUE INDEX idx_one_pending_admin_promotion
+            ON admin_promotion_requests(user_id)
+            WHERE status = 'PENDING'
+        
+
+TYPE: index
+NAME: idx_queue_device_delivered
+TABLE: control_signal_queue
+SQL: CREATE INDEX idx_queue_device_delivered
+            ON control_signal_queue(device_id, delivered_at)
+        
+
+TYPE: index
+NAME: idx_recommendation_assessment
+TABLE: recommendations
+SQL: CREATE INDEX idx_recommendation_assessment
+            ON recommendations(assessment_id)
+        
+
+TYPE: index
+NAME: idx_sensor_name_timestamp
+TABLE: sensor_readings
+SQL: CREATE INDEX idx_sensor_name_timestamp
+            ON sensor_readings(sensor_name, timestamp)
+        
+
+TYPE: index
+NAME: idx_sensor_timestamp
+TABLE: sensor_readings
+SQL: CREATE INDEX idx_sensor_timestamp
+            ON sensor_readings(timestamp)
+        
+
+TYPE: index
+NAME: idx_trend_model_time
+TABLE: accuracy_trend
+SQL: CREATE INDEX idx_trend_model_time
+            ON accuracy_trend(model_id, measured_at)
+        
+
+TYPE: index
+NAME: idx_user_permissions_user_id
+TABLE: user_permissions
+SQL: CREATE INDEX idx_user_permissions_user_id
+            ON user_permissions(user_id)
+        
+
+TYPE: index
+NAME: idx_users_deleted_active
+TABLE: users
+SQL: CREATE INDEX idx_users_deleted_active
+            ON users(is_deleted, is_active)
+        
+
+TYPE: index
+NAME: idx_users_role_active
+TABLE: users
+SQL: CREATE INDEX idx_users_role_active
+            ON users(role, is_active)
+        
+
+TYPE: index
+NAME: idx_verified_model_ts
+TABLE: verified_labels
+SQL: CREATE INDEX idx_verified_model_ts
+            ON verified_labels(model_version, verified_at)
+        
+
+TYPE: index
+NAME: sqlite_autoindex_auth_rate_limits_1
+TABLE: auth_rate_limits
+SQL: None
+
+TYPE: index
+NAME: sqlite_autoindex_auth_security_tokens_1
+TABLE: auth_security_tokens
+SQL: None
+
+TYPE: index
+NAME: sqlite_autoindex_edge_devices_1
+TABLE: edge_devices
+SQL: None
+
+TYPE: index
+NAME: sqlite_autoindex_explorer_history_1
+TABLE: explorer_history
+SQL: None
+
+TYPE: index
+NAME: sqlite_autoindex_machine_config_1
+TABLE: machine_config
+SQL: None
+
+TYPE: index
+NAME: sqlite_autoindex_ml_models_1
+TABLE: ml_models
+SQL: None
+
+TYPE: index
+NAME: sqlite_autoindex_user_permissions_1
+TABLE: user_permissions
+SQL: None
+
+TYPE: index
+NAME: sqlite_autoindex_users_1
+TABLE: users
+SQL: None
+
+TYPE: table
+NAME: account_recovery_requests
+TABLE: account_recovery_requests
+SQL: CREATE TABLE account_recovery_requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                recovery_reason TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'PENDING'
+                    CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
+                reviewed_by INTEGER,
+                review_remarks TEXT,
+                requested_at TEXT NOT NULL,
+                reviewed_at TEXT,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
+            )
+FOREIGN KEY: (0, 0, 'users', 'reviewed_by', 'id', 'NO ACTION', 'SET NULL', 'NONE')
+FOREIGN KEY: (1, 0, 'users', 'user_id', 'id', 'NO ACTION', 'CASCADE', 'NONE')
+
+TYPE: table
+NAME: accuracy_trend
+TABLE: accuracy_trend
+SQL: CREATE TABLE accuracy_trend (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                model_id INTEGER NOT NULL,
+                f1_score REAL NOT NULL,
+                measured_at TEXT NOT NULL,
+                FOREIGN KEY (model_id)
+                    REFERENCES ml_models(id)
+            )
+FOREIGN KEY: (0, 0, 'ml_models', 'model_id', 'id', 'NO ACTION', 'NO ACTION', 'NONE')
+
+TYPE: table
+NAME: admin_promotion_requests
+TABLE: admin_promotion_requests
+SQL: CREATE TABLE admin_promotion_requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                request_reason TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'PENDING'
+                    CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
+                reviewed_by INTEGER,
+                review_remarks TEXT,
+                requested_at TEXT NOT NULL,
+                reviewed_at TEXT,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
+            )
+FOREIGN KEY: (0, 0, 'users', 'reviewed_by', 'id', 'NO ACTION', 'SET NULL', 'NONE')
+FOREIGN KEY: (1, 0, 'users', 'user_id', 'id', 'NO ACTION', 'CASCADE', 'NONE')
+
+TYPE: table
+NAME: analysis_events
+TABLE: analysis_events
+SQL: CREATE TABLE analysis_events (
+                    event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    pattern_id INTEGER,
+                    timestamp TEXT NOT NULL,
+                    analysis_mode TEXT NOT NULL,
+                    stability_score REAL,
+                    scenarios TEXT,
+                    decision TEXT,
+                    explanation TEXT,
+                    manual_note TEXT
+                )
+
+TYPE: table
+NAME: anomaly_events
+TABLE: anomaly_events
+SQL: CREATE TABLE anomaly_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                timestamp TEXT NOT NULL,
+
+                sensor_name TEXT NOT NULL,
+
+                severity TEXT NOT NULL,
+
+                observed_value REAL,
+                expected_min REAL,
+                expected_max REAL,
+
+                deviation REAL,
+
+                probable_cause TEXT,
+
+                description TEXT,
+
+                assessment_id INTEGER,
+
+                FOREIGN KEY (assessment_id)
+                    REFERENCES machine_assessments(id)
+            )
+FOREIGN KEY: (0, 0, 'machine_assessments', 'assessment_id', 'id', 'NO ACTION', 'NO ACTION', 'NONE')
+
+TYPE: table
+NAME: audit_entries
+TABLE: audit_entries
+SQL: CREATE TABLE audit_entries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                category TEXT NOT NULL,
+                actor TEXT,
+                target TEXT,
+                detail_json TEXT NOT NULL,
+                hash TEXT NOT NULL
+            )
+
+TYPE: table
+NAME: auth_rate_limits
+TABLE: auth_rate_limits
+SQL: CREATE TABLE auth_rate_limits (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                scope TEXT NOT NULL,
+                subject_hash TEXT NOT NULL,
+                window_started_at TEXT NOT NULL,
+                attempts INTEGER NOT NULL DEFAULT 0
+                    CHECK (attempts >= 0),
+                blocked_until TEXT,
+                updated_at TEXT NOT NULL,
+                UNIQUE (scope, subject_hash)
+            )
+
+TYPE: table
+NAME: auth_security_tokens
+TABLE: auth_security_tokens
+SQL: CREATE TABLE auth_security_tokens (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                token_hash TEXT NOT NULL UNIQUE,
+                token_type TEXT NOT NULL
+                    CHECK (
+                        token_type IN (
+                            'PASSWORD_RESET',
+                            'ADMIN_INVITE'
+                        )
+                    ),
+                user_id INTEGER,
+                created_by_user_id INTEGER,
+                created_at TEXT NOT NULL,
+                expires_at TEXT NOT NULL,
+                consumed_at TEXT,
+                revoked_at TEXT,
+                metadata_json TEXT,
+                FOREIGN KEY (user_id)
+                    REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (created_by_user_id)
+                    REFERENCES users(id) ON DELETE SET NULL
+            )
+FOREIGN KEY: (0, 0, 'users', 'created_by_user_id', 'id', 'NO ACTION', 'SET NULL', 'NONE')
+FOREIGN KEY: (1, 0, 'users', 'user_id', 'id', 'NO ACTION', 'CASCADE', 'NONE')
+
+TYPE: table
+NAME: control_signal_queue
+TABLE: control_signal_queue
+SQL: CREATE TABLE control_signal_queue (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                device_id TEXT NOT NULL,
+                intent TEXT NOT NULL,
+                priority INTEGER NOT NULL,
+                queued_at TEXT NOT NULL,
+                delivered_at TEXT,
+                FOREIGN KEY (device_id)
+                    REFERENCES edge_devices(device_id)
+            )
+FOREIGN KEY: (0, 0, 'edge_devices', 'device_id', 'device_id', 'NO ACTION', 'NO ACTION', 'NONE')
+
+TYPE: table
+NAME: control_signals
+TABLE: control_signals
+SQL: CREATE TABLE control_signals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp TEXT NOT NULL,
+        intent TEXT NOT NULL,
+        system_status TEXT NOT NULL,
+        target_equipment TEXT,
+        priority INTEGER NOT NULL,
+        triggering_params_json TEXT,
+        model_version TEXT,
+        ack_timestamp TEXT,
+        resulting_equipment_state TEXT
+    )
+
+TYPE: table
+NAME: edge_devices
+TABLE: edge_devices
+SQL: CREATE TABLE edge_devices (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                device_id TEXT NOT NULL UNIQUE,
+                protocol TEXT NOT NULL,
+                capabilities_json TEXT,
+                status TEXT NOT NULL DEFAULT 'offline',
+                last_known_state_json TEXT,
+                last_heartbeat TEXT,
+                registered_at TEXT NOT NULL
+            )
+
+TYPE: table
+NAME: engine_observations
+TABLE: engine_observations
+SQL: CREATE TABLE engine_observations (
+                    observation_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    pattern_id INTEGER,
+                    timestamp TEXT NOT NULL,
+                    features TEXT NOT NULL,
+                    quality TEXT,
+                    FOREIGN KEY(pattern_id)
+                    REFERENCES unknown_patterns(pattern_id)
+                )
+FOREIGN KEY: (0, 0, 'unknown_patterns', 'pattern_id', 'pattern_id', 'NO ACTION', 'NO ACTION', 'NONE')
+
+TYPE: table
+NAME: explorer_history
+TABLE: explorer_history
+SQL: CREATE TABLE explorer_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                entry_type TEXT NOT NULL,
+                active_user TEXT,
+                arrangement_json TEXT,
+                classification_label TEXT,
+                confidence REAL,
+                model_version TEXT,
+                UNIQUE(timestamp, entry_type)
+            )
+
+TYPE: table
+NAME: knowledge_profiles
+TABLE: knowledge_profiles
+SQL: CREATE TABLE knowledge_profiles (
+                    profile_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    label TEXT NOT NULL,
+                    feature_names TEXT NOT NULL,
+                    sample_count INTEGER NOT NULL,
+                    means TEXT NOT NULL,
+                    m2_values TEXT NOT NULL,
+                    minimums TEXT NOT NULL,
+                    maximums TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+
+TYPE: table
+NAME: machine_assessments
+TABLE: machine_assessments
+SQL: CREATE TABLE machine_assessments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                timestamp TEXT NOT NULL,
+
+                overall_status TEXT NOT NULL,
+
+                confidence_score REAL,
+                anomaly_rate REAL,
+                health_score REAL,
+
+                probable_causes_json TEXT,
+                sensor_summary_json TEXT,
+
+                assessment_notes TEXT
+            )
+
+TYPE: table
+NAME: machine_config
+TABLE: machine_config
+SQL: CREATE TABLE machine_config (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                parameter_name TEXT NOT NULL UNIQUE,
+
+                parameter_value TEXT NOT NULL,
+
+                unit TEXT,
+
+                description TEXT,
+
+                updated_at TEXT NOT NULL
+            )
+
+TYPE: table
+NAME: ml_models
+TABLE: ml_models
+SQL: CREATE TABLE ml_models (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                family TEXT NOT NULL,
+                model_name TEXT NOT NULL,
+                version TEXT NOT NULL,
+                is_active INTEGER NOT NULL DEFAULT 0
+                    CHECK (is_active IN (0, 1)),
+                training_timestamp TEXT NOT NULL,
+                dataset_hash TEXT NOT NULL,
+                artifact_path TEXT NOT NULL,
+                metrics_json TEXT,
+                schema_version TEXT DEFAULT '1.0',
+                UNIQUE(family, version)
+            )
+
+TYPE: table
+NAME: recommendations
+TABLE: recommendations
+SQL: CREATE TABLE recommendations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                timestamp TEXT NOT NULL,
+
+                assessment_id INTEGER,
+
+                category TEXT NOT NULL,
+
+                priority TEXT NOT NULL,
+
+                recommendation TEXT NOT NULL,
+
+                reason TEXT,
+
+                sensor_name TEXT,
+
+                action_status TEXT DEFAULT 'PENDING',
+
+                FOREIGN KEY (assessment_id)
+                    REFERENCES machine_assessments(id)
+            )
+FOREIGN KEY: (0, 0, 'machine_assessments', 'assessment_id', 'id', 'NO ACTION', 'NO ACTION', 'NONE')
+
+TYPE: table
+NAME: sensor_analytics
+TABLE: sensor_analytics
+SQL: CREATE TABLE sensor_analytics (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                sensor_name TEXT NOT NULL,
+
+                window_start TEXT NOT NULL,
+                window_end TEXT NOT NULL,
+
+                sample_count INTEGER DEFAULT 0,
+
+                minimum REAL,
+                maximum REAL,
+                average REAL,
+
+                rms REAL,
+                standard_deviation REAL,
+
+                anomaly_count INTEGER DEFAULT 0,
+                anomaly_rate REAL DEFAULT 0,
+
+                trend TEXT,
+                status TEXT,
+
+                created_at TEXT NOT NULL
+            )
+
+TYPE: table
+NAME: sensor_knowledge_profiles
+TABLE: sensor_knowledge_profiles
+SQL: CREATE TABLE sensor_knowledge_profiles (
+                    sensor_profile_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    sensor_name TEXT NOT NULL,
+                    feature_name TEXT NOT NULL,
+                    label TEXT NOT NULL,
+                    sample_count INTEGER NOT NULL,
+                    mean_value REAL NOT NULL,
+                    m2_value REAL NOT NULL,
+                    minimum_value REAL NOT NULL,
+                    maximum_value REAL NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+
+TYPE: table
+NAME: sensor_readings
+TABLE: sensor_readings
+SQL: CREATE TABLE sensor_readings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                timestamp TEXT NOT NULL,
+                sensor_name TEXT NOT NULL,
+
+                value REAL NOT NULL,
+                unit TEXT NOT NULL,
+
+                axis TEXT,
+
+                quality TEXT DEFAULT 'VALID',
+
+                metadata_json TEXT
+            )
+
+TYPE: table
+NAME: sensor_status_history
+TABLE: sensor_status_history
+SQL: CREATE TABLE sensor_status_history (
+                    history_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp TEXT NOT NULL,
+                    sensor_name TEXT NOT NULL,
+                    feature_name TEXT NOT NULL,
+                    sensor_value REAL NOT NULL,
+                    status TEXT NOT NULL,
+                    classification TEXT,
+                    explanation TEXT
+                )
+
+TYPE: table
+NAME: sqlite_sequence
+TABLE: sqlite_sequence
+SQL: CREATE TABLE sqlite_sequence(name,seq)
+
+TYPE: table
+NAME: system_status_history
+TABLE: system_status_history
+SQL: CREATE TABLE system_status_history (
+                    history_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp TEXT NOT NULL,
+                    overall_status TEXT NOT NULL,
+                    sensor_statuses TEXT NOT NULL,
+                    explanation TEXT
+                )
+
+TYPE: table
+NAME: threshold_definitions
+TABLE: threshold_definitions
+SQL: CREATE TABLE threshold_definitions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                parameter_name TEXT NOT NULL,
+                normal_max REAL NOT NULL,
+                warning_max REAL NOT NULL,
+                source_standard TEXT,
+                equipment_specific INTEGER NOT NULL DEFAULT 0
+                    CHECK (equipment_specific IN (0, 1)),
+                confirmed_by TEXT,
+                confirmed_at TEXT,
+                active INTEGER NOT NULL DEFAULT 0
+            )
+
+TYPE: table
+NAME: unknown_patterns
+TABLE: unknown_patterns
+SQL: CREATE TABLE unknown_patterns (
+                    pattern_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    feature_names TEXT NOT NULL,
+                    sample_count INTEGER NOT NULL,
+                    means TEXT NOT NULL,
+                    m2_values TEXT NOT NULL,
+                    minimums TEXT NOT NULL,
+                    maximums TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    first_seen TEXT NOT NULL,
+                    last_seen TEXT NOT NULL
+                )
+
+TYPE: table
+NAME: user_permissions
+TABLE: user_permissions
+SQL: CREATE TABLE user_permissions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,

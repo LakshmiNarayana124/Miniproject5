@@ -1,0 +1,4 @@
+# file: C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\equipment_controller.py
+# hypothesis_version: 6.131.10
+
+[0.05, 1.0, 5.0, 1000.0, 500, 'ADMIN', 'CRITICAL', 'DE_RATE', 'MAINTENANCE_ENGINEER', 'NORMAL', 'RUN', 'SHUTDOWN', 'WARNING', 'ack_timestamp', 'actuation_failure', 'control_ack', 'control_dispatch', 'control_signal_id', 'default', 'delivered', 'detail', 'equipment', 'equipment_state', 'fail_safe', 'inputs', 'intent', 'model_version', 'priority', 'reason', 'rejected_attempt', 'role', 'status', 'system', 'timestamp', 'triggering_params', 'type', 'unauthorized', 'unknown', 'username']

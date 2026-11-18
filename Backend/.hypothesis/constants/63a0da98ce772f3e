@@ -1,0 +1,4 @@
+# file: C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\model_registry.py
+# hypothesis_version: 6.131.10
+
+['1.0', 'artifact_path', 'dataset_hash', 'ensemble', 'family', 'is_active', 'manifest', 'manifest.json', 'metrics', 'model', 'model_name', 'models', 'schema_version', 'training_timestamp', 'utf-8', 'version']

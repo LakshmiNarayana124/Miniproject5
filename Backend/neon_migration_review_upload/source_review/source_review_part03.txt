@@ -1,0 +1,572 @@
+    username = username.strip()
+    full_name = full_name.strip()
+    role = role.upper().strip()
+
+    if not username or not full_name or not password_hash:
+        raise ValueError("All user details are required.")
+
+    if role not in VALID_ROLES:
+        raise ValueError("Invalid user role.")
+
+    connection = get_connection()
+
+    try:
+        cursor = connection.execute("""
+            INSERT INTO users (
+                username, full_name, password_hash,
+                role, created_at
+            )
+            VALUES (?, ?, ?, ?, ?)
+        """, (
+            username,
+            full_name,
+            password_hash,
+            role,
+            current_timestamp(),
+        ))
+
+        connection.commit()
+        return cursor.lastrowid
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+def get_user_by_username(username):
+    connection = get_connection()
+
+    try:
+        row = connection.execute("""
+            SELECT *
+            FROM users
+            WHERE username = ?
+        """, (username.strip(),)).fetchone()
+
+        return dict(row) if row else None
+
+    finally:
+        connection.close()
+
+
+def get_user_by_id(user_id):
+    connection = get_connection()
+
+    try:
+        row = connection.execute("""
+            SELECT
+                id, username, full_name, role,
+                is_active, created_at, last_login,
+                is_deleted, deleted_at
+            FROM users
+            WHERE id = ?
+        """, (user_id,)).fetchone()
+
+        return dict(row) if row else None
+
+    finally:
+        connection.close()
+
+
+def get_all_users(include_deleted=False):
+    connection = get_connection()
+
+    try:
+        query = """
+            SELECT
+                id, username, full_name, role,
+                is_active, created_at, last_login,
+                is_deleted, deleted_at
+            FROM users
+        """
+
+        if not include_deleted:
+            query += " WHERE is_deleted = 0"
+
+        query += " ORDER BY id"
+
+        rows = connection.execute(query).fetchall()
+        return [dict(row) for row in rows]
+
+    finally:
+        connection.close()
+
+
+def update_last_login(user_id):
+    connection = get_connection()
+
+    try:
+        connection.execute("""
+            UPDATE users
+            SET last_login = ?
+            WHERE id = ?
+              AND is_active = 1
+              AND is_deleted = 0
+        """, (current_timestamp(), user_id))
+
+        connection.commit()
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+def set_user_active(user_id, is_active, actor=None):
+    """
+    Activate or deactivate an account transactionally.
+
+    The last active Admin cannot be deactivated.
+    """
+
+    connection = get_connection()
+
+    try:
+        _begin_transaction(connection)
+
+        target = connection.execute("""
+            SELECT id, username, role, is_active, is_deleted
+            FROM users
+            WHERE id = ?
+        """, (user_id,)).fetchone()
+
+        if not target or target["is_deleted"]:
+            connection.rollback()
+            return False
+
+        active = int(bool(is_active))
+
+        if (
+            target["role"] == "ADMIN"
+            and target["is_active"]
+            and not active
+        ):
+            count = connection.execute("""
+                SELECT COUNT(*) AS total
+                FROM users
+                WHERE role = 'ADMIN'
+                  AND is_active = 1
+                  AND is_deleted = 0
+            """).fetchone()["total"]
+
+            if count <= 1:
+                raise ValueError(
+                    "The last active administrator cannot be deactivated."
+                )
+
+        cursor = connection.execute("""
+            UPDATE users
+            SET is_active = ?
+            WHERE id = ? AND is_deleted = 0
+        """, (active, user_id))
+
+        if cursor.rowcount:
+            _audit_details(
+                connection,
+                "USER_UNLOCKED" if active else "USER_LOCKED",
+                actor,
+                user_id,
+                {
+                    "username": target["username"],
+                    "role": target["role"],
+                    "is_active": bool(active),
+                },
+            )
+
+        connection.commit()
+        return cursor.rowcount > 0
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+# =====================================================
+# 13. ACCOUNT LIFECYCLE
+# =====================================================
+
+def delete_user(user_id: int, deleted_by=None, reason=None) -> bool:
+    """
+    Temporarily delete an Operator or Maintenance Engineer.
+
+    The user record, permissions and related history are preserved.
+    """
+
+    connection = get_connection()
+
+    try:
+        _begin_transaction(connection)
+
+        target = connection.execute("""
+            SELECT *
+            FROM users
+            WHERE id = ?
+        """, (user_id,)).fetchone()
+
+        if (
+            not target
+            or target["is_deleted"]
+            or target["role"] == "ADMIN"
+        ):
+            connection.rollback()
+            return False
+
+        connection.execute("""
+            UPDATE users
+            SET is_deleted = 1,
+                is_active = 0,
+                deleted_at = ?,
+                deleted_by = ?,
+                deletion_reason = ?,
+                deleted_was_active = is_active
+            WHERE id = ?
+        """, (
+            current_timestamp(),
+            str(deleted_by) if deleted_by is not None else None,
+            reason,
+            user_id,
+        ))
+
+        _audit_details(
+            connection,
+            "USER_TEMPORARILY_DELETED",
+            deleted_by,
+            user_id,
+            {
+                "username": target["username"],
+                "role": target["role"],
+                "reason": reason,
+                "previously_active": bool(target["is_active"]),
+            },
+        )
+
+        connection.commit()
+        return True
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+def restore_user(user_id: int, restored_by=None) -> bool:
+    """Restore a temporarily deleted account and its previous active state."""
+
+    connection = get_connection()
+
+    try:
+        _begin_transaction(connection)
+
+        target = connection.execute("""
+            SELECT *
+            FROM users
+            WHERE id = ?
+        """, (user_id,)).fetchone()
+
+        if not target or not target["is_deleted"]:
+            connection.rollback()
+            return False
+
+        connection.execute("""
+            UPDATE users
+            SET is_deleted = 0,
+                is_active = deleted_was_active,
+                deleted_at = NULL,
+                deleted_by = NULL,
+                deletion_reason = NULL,
+                deleted_was_active = 1
+            WHERE id = ?
+        """, (user_id,))
+
+        _audit_details(
+            connection,
+            "USER_RESTORED",
+            restored_by,
+            user_id,
+            {
+                "username": target["username"],
+                "previous_role": target["role"],
+            },
+        )
+
+        connection.commit()
+        return True
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+def permanently_delete_user(user_id: int, deleted_by=None) -> bool:
+    """
+    Permanently delete a previously soft-deleted non-Admin account.
+
+    The permanent-deletion audit entry is inserted before the account
+    is removed. Audit history is intentionally independent of users.
+    """
+
+    connection = get_connection()
+
+    try:
+        _begin_transaction(connection)
+
+        target = connection.execute("""
+            SELECT *
+            FROM users
+            WHERE id = ?
+        """, (user_id,)).fetchone()
+
+        if (
+            not target
+            or not target["is_deleted"]
+            or target["role"] == "ADMIN"
+        ):
+            connection.rollback()
+            return False
+
+        _audit_details(
+            connection,
+            "USER_PERMANENTLY_DELETED",
+            deleted_by,
+            user_id,
+            {
+                "username": target["username"],
+                "full_name": target["full_name"],
+                "role": target["role"],
+                "deleted_at": target["deleted_at"],
+                "reason": target["deletion_reason"],
+                "permanently_deleted_at": current_timestamp(),
+            },
+        )
+
+        connection.execute(
+            "DELETE FROM users WHERE id = ?",
+            (user_id,),
+        )
+
+        connection.commit()
+        return True
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+# =====================================================
+# 14. CONTROL ACKNOWLEDGEMENTS
+# =====================================================
+
+def save_control_ack(
+    control_signal_id,
+    ack_timestamp,
+    resulting_equipment_state,
+):
+    connection = get_connection()
+
+    try:
+        cursor = connection.execute("""
+            UPDATE control_signals
+            SET ack_timestamp = ?,
+                resulting_equipment_state = ?
+            WHERE id = ?
+        """, (
+            ack_timestamp,
+            resulting_equipment_state,
+            control_signal_id,
+        ))
+
+        connection.commit()
+        return cursor.rowcount > 0
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+# =====================================================
+# 15. AUDIT LOG
+# =====================================================
+
+def record_audit_entry(
+    category,
+    detail_json,
+    actor=None,
+    target=None,
+    hash_value=None,
+):
+    """
+    Append an audit entry.
+
+    Generated hashes are chained transactionally. The optional explicit
+    hash parameter is retained for compatibility with existing callers
+    and test_database_helpers.py.
+    """
+
+    connection = get_connection()
+
+    try:
+        _begin_transaction(connection)
+
+        entry_id = _insert_audit_entry(
+            connection,
+            category,
+            detail_json,
+            actor,
+            target,
+            hash_value,
+        )
+
+        connection.commit()
+        return entry_id
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+# =====================================================
+# 16. ML LABELS AND ACCURACY
+# =====================================================
+
+def save_verified_label(
+    event_id,
+    label,
+    feature_vector_json,
+    model_version,
+    verified_by,
+):
+    connection = get_connection()
+
+    try:
+        cursor = connection.execute("""
+            INSERT INTO verified_labels (
+                event_id, label, feature_vector_json,
+                model_version, verified_by, verified_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            event_id,
+            label,
+            feature_vector_json,
+            model_version,
+            verified_by,
+            current_timestamp(),
+        ))
+
+        connection.commit()
+        return cursor.lastrowid
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+def append_accuracy_trend(model_id, f1_score):
+    connection = get_connection()
+
+    try:
+        cursor = connection.execute("""
+            INSERT INTO accuracy_trend (
+                model_id, f1_score, measured_at
+            )
+            VALUES (?, ?, ?)
+        """, (
+            model_id,
+            f1_score,
+            current_timestamp(),
+        ))
+
+        connection.commit()
+        return cursor.lastrowid
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+# =====================================================
+# 17. EXPLORER HISTORY
+# =====================================================
+
+def _evict_explorer_history(connection):
+    connection.execute("""
+        DELETE FROM explorer_history
+        WHERE id NOT IN (
+            SELECT id
+            FROM explorer_history
+            ORDER BY timestamp DESC, id DESC
+            LIMIT ?
+        )
+    """, (EXPLORER_HISTORY_MAX_ROWS,))
+
+
+def save_explorer_history_entry(
+    entry_type,
+    active_user=None,
+    arrangement_json=None,
+    classification_label=None,
+    confidence=None,
+    model_version=None,
+):
+    connection = get_connection()
+
+    try:
+        cursor = connection.execute("""
+            INSERT INTO explorer_history (
+                timestamp, entry_type, active_user,
+                arrangement_json, classification_label,
+                confidence, model_version
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            current_timestamp(),
+            entry_type,
+            active_user,
+            arrangement_json,
+            classification_label,
+            confidence,
+            model_version,
+        ))
+
+        _evict_explorer_history(connection)
+
+        connection.commit()
+        return cursor.lastrowid
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+def get_explorer_history(limit=100):

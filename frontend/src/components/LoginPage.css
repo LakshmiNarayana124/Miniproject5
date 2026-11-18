@@ -481,3 +481,263 @@
   .new-here-strip      { flex-direction: column; gap: 6px; }
   .new-here-btn        { width: 100%; justify-content: center; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FIREBASE AUTH — Google Sign-In + Phone / OTP
+═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Auth-method tabs (Password / Google / Phone) ──────────────────────── */
+.auth-method-tabs {
+  display: flex;
+  gap: 4px;
+  background: #0d0f14;
+  border: 1px solid #252837;
+  border-radius: 10px;
+  padding: 3px;
+  margin-bottom: 16px;
+}
+
+.auth-method-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 6px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  color: #4a5070;
+  cursor: pointer;
+  letter-spacing: .3px;
+  transition: all .18s;
+  white-space: nowrap;
+}
+.auth-method-tab:hover { color: #a0a8c0; background: #ffffff08; }
+.auth-method-tab--active {
+  background: #1e2130;
+  color: #e8eaf2;
+  box-shadow: 0 1px 4px rgba(0,0,0,.4);
+}
+
+/* ── Google Sign-In button ──────────────────────────────────────────────── */
+.google-signin-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 11px 16px;
+  background: #fff;
+  color: #3c4043;
+  border: 1px solid #dadce0;
+  border-radius: 10px;
+  font-family: 'Google Sans', inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .18s, box-shadow .18s, transform .15s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.12);
+  letter-spacing: .2px;
+  margin-top: 4px;
+}
+.google-signin-btn:hover:not(:disabled) {
+  background: #f8f9fa;
+  box-shadow: 0 2px 10px rgba(0,0,0,.18);
+  transform: translateY(-1px);
+}
+.google-signin-btn:active:not(:disabled) { transform: translateY(0); }
+.google-signin-btn:disabled { opacity: .55; cursor: not-allowed; }
+
+.google-signin-icon { width: 18px; height: 18px; flex-shrink: 0; }
+
+.google-signin-or {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0 2px;
+  color: #4a5070;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+}
+.google-signin-or::before,
+.google-signin-or::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #252837;
+}
+
+/* ── Phone / OTP ────────────────────────────────────────────────────────── */
+.phone-otp-wrap { display: flex; flex-direction: column; gap: 12px; margin-top: 2px; }
+
+.phone-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.phone-country-code {
+  width: 76px;
+  flex-shrink: 0;
+  background: #0d0f14;
+  border: 1px solid #252837;
+  border-radius: 10px;
+  padding: 10px 8px;
+  font-size: 13px;
+  color: #e8eaf2;
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color .2s, box-shadow .2s;
+  text-align: center;
+}
+.phone-country-code:focus { border-color: #aa3bff; box-shadow: 0 0 0 3px #aa3bff20; }
+
+.phone-number-input {
+  flex: 1;
+}
+
+.otp-info {
+  background: #06b6d412;
+  border: 1px solid #06b6d430;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 11px;
+  color: #67e8f9;
+  line-height: 1.5;
+}
+
+.otp-input-wrap {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.otp-input {
+  flex: 1;
+  background: #0d0f14;
+  border: 1px solid #252837;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #e8eaf2;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 6px;
+  outline: none;
+  box-sizing: border-box;
+  text-align: center;
+  transition: border-color .2s, box-shadow .2s;
+}
+.otp-input:focus { border-color: #aa3bff; box-shadow: 0 0 0 3px #aa3bff20; }
+.otp-input::placeholder { letter-spacing: 2px; font-size: 14px; color: #4a5070; }
+
+.otp-resend-btn {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 11px;
+  color: #aa3bff;
+  cursor: pointer;
+  padding: 4px;
+  white-space: nowrap;
+  transition: color .2s;
+}
+.otp-resend-btn:hover:not(:disabled) { color: #c77dff; }
+.otp-resend-btn:disabled { color: #4a5070; cursor: not-allowed; }
+
+/* invisible recaptcha container — must NOT be display:none, reCAPTCHA needs it in the DOM */
+#recaptcha-container { position: fixed; bottom: 0; left: 0; z-index: -1; }
+
+/* ── Firebase role-selection after auth ─────────────────────────────────── */
+.firebase-role-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.firebase-role-pick-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #a0a8c0;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  margin: 0 0 2px;
+}
+
+.firebase-role-pick-btns {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+.firebase-role-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 6px;
+  background: transparent;
+  border: 1.5px solid #252837;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  color: #4a5070;
+  cursor: pointer;
+  transition: all .18s;
+  letter-spacing: .2px;
+}
+.firebase-role-btn:hover { border-color: #aa3bff40; color: #c4b5fd; background: #aa3bff08; }
+.firebase-role-btn--active {
+  border-color: #aa3bff60;
+  color: #c4b5fd;
+  background: #aa3bff12;
+  box-shadow: 0 0 0 2px #aa3bff18;
+}
+.firebase-role-btn-icon { font-size: 18px; }
+
+/* ── Timezone select — compact height ────────────────────────────────────── */
+select.login-input {
+  padding: 7px 24px 7px 38px !important;
+  height: 38px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: #0d0f14 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23a0a8c0' d='M6 8L2 4h8z'/%3E%3C/svg%3E") no-repeat right 10px center;
+  cursor: pointer;
+}
+select.login-input::-ms-expand { display: none; }
+select.login-input option {
+  background: #0d0f14;
+  color: #e8eaf2;
+  padding: 4px;
+}
+
+/* ── Phone country code dropdown — compact ──────────────────────────────── */
+select.phone-country-code {
+  appearance: none;
+  -webkit-appearance: none;
+  background: #0d0f14 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='%23a0a8c0' d='M6 8L2 4h8z'/%3E%3C/svg%3E") no-repeat right 6px center;
+  color: #e8eaf2;
+  cursor: pointer;
+  padding: 7px 22px 7px 10px !important;
+  height: 38px;
+}
+select.phone-country-code::-ms-expand { display: none; }
+select.phone-country-code option {
+  background: #0d0f14;
+  color: #e8eaf2;
+  padding: 4px;
+}
+
+/* ── Mobile adjustments ─────────────────────────────────────────────────── */
+@media (max-width: 520px) {
+  .auth-method-tab { font-size: 10px; padding: 7px 4px; }
+  .firebase-role-pick-btns { grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .phone-country-code { width: 64px; }
+}

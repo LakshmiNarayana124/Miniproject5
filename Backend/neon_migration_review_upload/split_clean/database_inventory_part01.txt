@@ -1,0 +1,67 @@
+
+Path                                                                                  LineNumber Line                                                                             
+----                                                                                  ---------- ----                                                                             
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                                  3 import sqlite3                                                                   
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                                 45     get_connection,                                                              
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                                186     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                                187     connection.execute("BEGIN IMMEDIATE")                                        
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                                196         SELECT hash                                                              
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                                218         INSERT INTO audit_entries (                                              
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                                231     return cursor.lastrowid                                                      
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                                236         SELECT id, username, role, is_active, is_deleted                         
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                                254         "SELECT * FROM users WHERE id = ?",                                      
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                                263         SELECT COUNT(*) AS total                                                 
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                                786             UPDATE users                                                         
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                                842             UPDATE users                                                         
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                                890             UPDATE users                                                         
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                                965             "DELETE FROM users WHERE id = ?",                                    
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                                997             INSERT INTO admin_promotion_requests (                               
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                               1012         return cursor.lastrowid                                                  
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                               1024     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                               1061             SELECT r.*, u.username, u.role, u.is_active, u.is_deleted            
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                               1083                 UPDATE users                                                     
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                               1092             UPDATE admin_promotion_requests                                      
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                               1137             SELECT id, username, is_deleted                                      
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                               1147             INSERT INTO account_recovery_requests (                              
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                               1162         return cursor.lastrowid                                                  
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                               1164     except sqlite3.IntegrityError:                                               
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                               1178     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                               1215             SELECT r.*, u.username, u.is_deleted, u.deleted_was_active           
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                               1232                 UPDATE users                                                     
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                               1246             UPDATE account_recovery_requests                                     
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                               1428     except sqlite3.IntegrityError:                                               
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                               1444     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                               1565     except sqlite3.IntegrityError:                                               
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                               1568             detail="Unable to update permission.",                               
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                               1775     except sqlite3.IntegrityError:                                               
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                               1855     except sqlite3.IntegrityError:                                               
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                               1953     except (ValueError, sqlite3.IntegrityError) as error:                        
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                               2020     except sqlite3.IntegrityError:                                               
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                               2113             SELECT id, username, is_active, is_deleted                           
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                               2126             UPDATE users                                                         
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                               2210     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                               2254             UPDATE auth_security_tokens                                          
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth.py                               2365     except sqlite3.IntegrityError:                                               
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth_security_store.py                   3 import sqlite3                                                                   
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth_security_store.py                  60     connection = sqlite3.connect(                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth_security_store.py                  66     connection.row_factory = sqlite3.Row                                         
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth_security_store.py                  67     connection.execute("PRAGMA foreign_keys = ON")                               
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth_security_store.py                  68     connection.execute("PRAGMA busy_timeout = 30000")                            
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth_security_store.py                  81         connection.execute("BEGIN IMMEDIATE")                                    
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth_security_store.py                  84             CREATE TABLE IF NOT EXISTS auth_security_tokens (                    
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth_security_store.py                 109             CREATE TABLE IF NOT EXISTS auth_rate_limits (                        
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth_security_store.py                 125                 "PRAGMA table_info(users)"                                       
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth_security_store.py                 184         connection.execute("BEGIN IMMEDIATE")                                    
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth_security_store.py                 187             INSERT INTO auth_security_tokens (                                   
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth_security_store.py                 208         return cursor.lastrowid                                                  
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth_security_store.py                 227         connection.execute("BEGIN IMMEDIATE")                                    
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth_security_store.py                 230             SELECT *                                                             
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth_security_store.py                 248             UPDATE auth_security_tokens                                          
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth_security_store.py                 283         connection.execute("BEGIN IMMEDIATE")                                    
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth_security_store.py                 286             UPDATE auth_security_tokens                                          
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth_security_store.py                 316         connection.execute("BEGIN IMMEDIATE")                                    
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth_security_store.py                 320                 UPDATE auth_security_tokens                                      
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth_security_store.py                 331                 UPDATE auth_security_tokens                                      
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth_security_store.py                 362         connection.execute("BEGIN IMMEDIATE")                                    
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth_security_store.py                 365             UPDATE users                                                         
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\auth_security_store.py                 377             SELECT session_version                                               

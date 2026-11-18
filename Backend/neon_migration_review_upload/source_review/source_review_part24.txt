@@ -1,0 +1,240 @@
+# ============================================================
+
+class FeedbackRequest(BaseModel):
+    name: str
+    email: Optional[str] = None
+    type: str = "general"
+    message: str
+
+
+@app.post(
+    "/feedback",
+    tags=["Feedback"],
+)
+async def submit_feedback(req: FeedbackRequest):
+    if not req.name.strip():
+        raise HTTPException(
+            400,
+            "name is required",
+        )
+
+    if not req.message.strip():
+        raise HTTPException(
+            400,
+            "message is required",
+        )
+
+    obs_service.log_event(
+        "feedback",
+        "user_feedback",
+        {
+            "name": req.name.strip(),
+            "email": (
+                (req.email or "").strip() or None
+            ),
+            "type": req.type,
+            "message": req.message.strip(),
+        },
+    )
+
+    return {
+        "success": True,
+        "message": "Feedback received — thank you!",
+    }
+
+
+# ============================================================
+# LEADERBOARD ENDPOINT
+# ============================================================
+
+_LEADERBOARD_BASE = [
+    {
+        "rank": 1,
+        "name": "Tata Steel Ltd.",
+        "abbr": "TSL",
+        "sector": "Steel Manufacturing",
+        "score": 88,
+        "assets": 1240,
+        "uptime": 98.7,
+        "mtbf": 5200,
+        "responseS": 4,
+        "badge": "🥇",
+        "trend": "up",
+    },
+    {
+        "rank": 2,
+        "name": "Tech Mahindra Smart Infra",
+        "abbr": "TSI",
+        "sector": "Manufacturing",
+        "score": 81,
+        "assets": 880,
+        "uptime": 97.9,
+        "mtbf": 4100,
+        "responseS": 7,
+        "badge": "🥈",
+        "trend": "up",
+    },
+    {
+        "rank": 3,
+        "name": "Reliance Petrochemicals",
+        "abbr": "RPC",
+        "sector": "Petrochemical",
+        "score": 76,
+        "assets": 760,
+        "uptime": 97.2,
+        "mtbf": 3800,
+        "responseS": 12,
+        "badge": "🥉",
+        "trend": "stable",
+    },
+    {
+        "rank": 4,
+        "name": "Indian Railways (Rolling Stock)",
+        "abbr": "IR-RS",
+        "sector": "Transport",
+        "score": 71,
+        "assets": 2100,
+        "uptime": 96.5,
+        "mtbf": 2900,
+        "responseS": 18,
+        "badge": "🎖️",
+        "trend": "up",
+    },
+    {
+        "rank": 5,
+        "name": "ONGC Offshore Platforms",
+        "abbr": "ONGC",
+        "sector": "Oil & Gas",
+        "score": 65,
+        "assets": 430,
+        "uptime": 95.8,
+        "mtbf": 2400,
+        "responseS": 28,
+        "badge": "🎖️",
+        "trend": "down",
+    },
+    {
+        "rank": 6,
+        "name": "Siemens India Ltd.",
+        "abbr": "SIL",
+        "sector": "Industrial Automation",
+        "score": 59,
+        "assets": 320,
+        "uptime": 94.6,
+        "mtbf": 2100,
+        "responseS": 45,
+        "badge": "",
+        "trend": "stable",
+    },
+    {
+        "rank": 7,
+        "name": "Larsen & Toubro Power",
+        "abbr": "L&T P",
+        "sector": "Heavy Engineering",
+        "score": 52,
+        "assets": 290,
+        "uptime": 93.1,
+        "mtbf": 1750,
+        "responseS": 72,
+        "badge": "",
+        "trend": "up",
+    },
+]
+
+_leaderboard_state = [
+    dict(org)
+    for org in _LEADERBOARD_BASE
+]
+
+_leaderboard_tick = 0
+
+
+def _tick_leaderboard():
+    global _leaderboard_tick
+
+    _leaderboard_tick += 1
+
+    for org, base in zip(
+        _leaderboard_state,
+        _LEADERBOARD_BASE,
+    ):
+        d_score = (
+            (_random.random() - 0.5) * 0.4
+        )
+
+        d_uptime = (
+            (_random.random() - 0.5) * 0.04
+        )
+
+        d_mtbf = round(
+            (_random.random() - 0.5) * 20
+        )
+
+        d_response = (
+            (_random.random() - 0.5) * 0.5
+        )
+
+        old_score = org["score"]
+
+        new_score = round(
+            max(
+                base["score"] - 3,
+                min(
+                    base["score"] + 3,
+                    old_score + d_score,
+                ),
+            )
+        )
+
+        new_uptime = round(
+            min(
+                99.9,
+                max(
+                    90.0,
+                    org["uptime"] + d_uptime,
+                ),
+            ),
+            2,
+        )
+
+        new_mtbf = max(
+            500,
+            org["mtbf"] + d_mtbf,
+        )
+
+        new_resp = round(
+            max(
+                1.0,
+                org["responseS"] + d_response
+            ),
+            1,
+        )
+
+        org["score"] = new_score
+        org["uptime"] = new_uptime
+        org["mtbf"] = new_mtbf
+        org["responseS"] = new_resp
+
+        org["trend"] = (
+            "up"
+            if new_score > old_score
+            else "down"
+            if new_score < old_score
+            else org["trend"]
+        )
+
+
+@app.get(
+    "/leaderboard",
+    tags=["Leaderboard"],
+)
+async def get_leaderboard():
+    _tick_leaderboard()
+
+    return {
+        "tick": _leaderboard_tick,
+        "organisations": _leaderboard_state,
+        "last_updated": time.time(),
+    }
+
+===== END FILE: server.py =====

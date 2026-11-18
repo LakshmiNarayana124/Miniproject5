@@ -1,0 +1,62 @@
+
+DATABASE: C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database\intelliwatch.db
+INTEGRITY: ok
+account_recovery_requests: 0 rows
+accuracy_trend: 0 rows
+admin_promotion_requests: 0 rows
+analysis_events: 718 rows
+anomaly_events: 0 rows
+audit_entries: 174 rows
+auth_rate_limits: 1 rows
+auth_security_tokens: 0 rows
+control_signal_queue: 0 rows
+control_signals: 114 rows
+edge_devices: 0 rows
+engine_observations: 718 rows
+explorer_history: 500 rows
+knowledge_profiles: 9 rows
+machine_assessments: 0 rows
+machine_config: 0 rows
+ml_models: 78 rows
+recommendations: 84 rows
+sensor_analytics: 0 rows
+sensor_knowledge_profiles: 6 rows
+sensor_readings: 15 rows
+sensor_status_history: 177 rows
+system_status_history: 843 rows
+threshold_definitions: 3 rows
+unknown_patterns: 399 rows
+user_permissions: 0 rows
+users: 3 rows
+verified_labels: 0 rows
+
+DATABASE: C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\database_backup\intelliwatch_pre_neon.db
+INTEGRITY: ok
+account_recovery_requests: 0 rows
+accuracy_trend: 0 rows
+admin_promotion_requests: 0 rows
+analysis_events: 718 rows
+anomaly_events: 0 rows
+audit_entries: 174 rows
+auth_rate_limits: 1 rows
+auth_security_tokens: 0 rows
+control_signal_queue: 0 rows
+control_signals: 114 rows
+edge_devices: 0 rows
+engine_observations: 718 rows
+explorer_history: 500 rows
+knowledge_profiles: 9 rows
+machine_assessments: 0 rows
+machine_config: 0 rows
+ml_models: 78 rows
+recommendations: 84 rows
+sensor_analytics: 0 rows
+sensor_knowledge_profiles: 6 rows
+sensor_readings: 15 rows
+sensor_status_history: 177 rows
+system_status_history: 843 rows
+threshold_definitions: 3 rows
+unknown_patterns: 399 rows
+user_permissions: 0 rows
+users: 3 rows
+verified_labels: 0 rows

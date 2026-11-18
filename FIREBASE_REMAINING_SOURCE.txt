@@ -1,0 +1,791 @@
+========== CURRENT USER AUTHENTICATION ==========
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+):
+    unauthorized = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid or expired authentication token.",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    if credentials is None or not credentials.credentials:
+        raise unauthorized
+
+    try:
+        payload = jwt.decode(
+            credentials.credentials,
+            get_secret_key(),
+            algorithms=[ALGORITHM],
+            issuer=JWT_ISSUER,
+            audience=JWT_AUDIENCE,
+            options={
+                "require": [
+                    "sub",
+                    "session_role",
+                    "iss",
+                    "aud",
+                    "typ",
+                    "jti",
+                    "sv",
+                    "iat",
+                    "exp",
+                ]
+            },
+        )
+
+        if payload.get("typ") != "access":
+            raise unauthorized
+
+        user_id = int(payload["sub"])
+
+        if user_id <= 0:
+            raise unauthorized
+
+        session_role = payload.get("session_role")
+
+        if session_role not in VALID_ROLES:
+            raise unauthorized
+
+        token_version = payload.get("sv")
+
+        if not isinstance(token_version, int):
+            raise unauthorized
+
+        current_version = get_session_version(user_id)
+
+        if token_version != current_version:
+            raise unauthorized
+
+        user = get_user_by_id(user_id)
+
+        if (
+            not user
+            or not user["is_active"]
+            or user.get("is_deleted", 0)
+        ):
+            raise unauthorized
+
+        user = dict(user)
+        account_role = user["role"]
+
+        is_restricted_session = session_role != account_role
+
+        if is_restricted_session:
+            if account_role != "ADMIN":
+                raise unauthorized
+
+            required_permission = (
+                RESTRICTED_ADMIN_SESSION_PERMISSIONS.get(session_role)
+            )
+
+            if not required_permission:
+                raise unauthorized
+
+            overrides = get_user_permission_overrides(user_id)
+
+            if overrides.get(required_permission) is not True:
+                raise unauthorized
+
+        user["account_role"] = account_role
+        user["role"] = session_role
+        user["is_restricted_session"] = is_restricted_session
+
+        return user
+
+    except HTTPException:
+        raise
+    except (
+        jwt.PyJWTError,
+        ValueError,
+        TypeError,
+        KeyError,
+
+========== SERVER STARTUP ==========
+            code=1011,
+            reason="Authentication service unavailable",
+        )
+        return None
+
+    if user.get("role") not in WEBSOCKET_ALLOWED_ROLES:
+        await websocket.close(
+            code=1008,
+            reason="Insufficient permissions",
+        )
+        return None
+
+    return user
+
+
+# ============================================================
+# STARTUP / SHUTDOWN
+# ============================================================
+
+@app.on_event("startup")
+async def startup():
+    global _controller
+    global _iot_layer
+    global _learning_system
+    global _brain
+
+    database.initialize_database()
+    initialize_auth_security()
+
+    print(
+        "[startup] Authentication security storage ready"
+    )
+
+    try:
+        from intelliwatch_brain import IntelliWatchBrain
+
+        _brain = IntelliWatchBrain(
+            auto_calibrate=False,
+        )
+
+        print("[startup] IntelliWatchBrain ready")
+
+    except Exception as error:
+        print(
+            f"[startup] IntelliWatchBrain init warning: {error}"
+        )
+
+    try:
+        from iot_layer import IoTIntegrationLayer
+
+        _iot_layer = IoTIntegrationLayer(
+            inference_callback=_handle_iot_inference_payload,
+        )
+
+        _iot_layer.start_heartbeat()
+
+        print(
+            "[startup] IoTIntegrationLayer ready "
+            "with hardware inference callback"
+        )
+
+    except Exception as error:
+        print(
+            f"[startup] IoT layer init warning: {error}"
+        )
+
+    try:
+        from equipment_controller import EquipmentController
+
+        _controller = EquipmentController(
+            iot_layer=_iot_layer
+        )
+
+        _controller.add_alert_listener(
+            _broadcast_alert
+        )
+
+    except Exception as error:
+        print(
+            f"[startup] EquipmentController init warning: {error}"
+        )
+
+    try:
+        from learning_system import LearningSystem
+
+        _learning_system = LearningSystem()
+
+    except Exception as error:
+        print(
+            f"[startup] LearningSystem init warning: {error}"
+        )
+
+    try:
+        from explorer_ml import train_explorer_model
+        from model_registry import registry
+
+        if registry.active_model("explorer") is None:
+            train_explorer_model()
+
+    except Exception as error:
+
+========== LOGIN FORM JSX ==========
+                </span>
+              </span>
+            </button>
+
+            <button
+              type="button"
+              className={`mode-tab mode-tab--admin${mode === 'admin' ? ' mode-tab--active-admin' : ''}`}
+              onClick={() => switchMode('admin')}
+            >
+              <span className="mode-tab-icon">🛡️</span>
+
+              <span className="mode-tab-text">
+                <span className="mode-tab-title">
+                  Administrator
+                </span>
+
+                <span className="mode-tab-sub">
+                  System administration access
+                </span>
+              </span>
+            </button>
+          </div>
+
+
+          {/* OPERATOR / ENGINEER SUBROLE */}
+
+          {mode === 'operator' && (
+            <div className="subrole-bar">
+              <button
+                type="button"
+                className={`subrole-btn${activeRole === 'OPERATOR' ? ' subrole-btn--active subrole-btn--op' : ''}`}
+                onClick={() => switchActiveRole('OPERATOR')}
+              >
+                📊 Operator
+              </button>
+
+              <button
+                type="button"
+                className={`subrole-btn${activeRole === 'MAINTENANCE_ENGINEER' ? ' subrole-btn--active subrole-btn--eng' : ''}`}
+                onClick={() => switchActiveRole('MAINTENANCE_ENGINEER')}
+              >
+                🔧 Engineer
+              </button>
+            </div>
+          )}
+
+
+          {/* LOGIN FORM */}
+
+          <form
+            className="login-form"
+            onSubmit={handleSubmit}
+            autoComplete="off"
+            noValidate
+          >
+            <div className="login-field">
+              <label
+                className="login-label"
+                htmlFor="iw-username"
+              >
+                Username
+              </label>
+
+              <div className="login-input-wrap">
+                <span className="login-input-icon">👤</span>
+
+                <input
+                  id="iw-username"
+                  className="login-input"
+                  type="text"
+                  placeholder="Enter your username"
+                  value={username}
+                  onChange={e => setUsername(e.target.value)}
+                  autoComplete="off"
+                  disabled={loading}
+                  spellCheck={false}
+                />
+              </div>
+
+
+            </div>
+
+            <div className="login-field">
+              <label
+                className="login-label"
+                htmlFor="iw-password"
+              >
+                Password
+              </label>
+
+              <div className="login-input-wrap">
+                <span className="login-input-icon">🔒</span>
+
+                <input
+                  id="iw-password"
+                  className="login-input"
+                  type={showPass ? 'text' : 'password'}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  disabled={loading}
+                />
+
+                <button
+                  type="button"
+                  className="login-eye-btn"
+                  onClick={() => setShowPass(p => !p)}
+                  aria-label={showPass ? 'Hide password' : 'Show password'}
+                >
+                  <PasswordVisibilityIcon visible={showPass} />
+                </button>
+              </div>
+            </div>
+
+            {error && (
+              <div className="login-error" role="alert">
+                ⚠️ {error}
+              </div>
+            )}
+
+            <button
+              className={`login-btn${mode === 'admin' ? ' login-btn--admin-purple' : ''}`}
+              type="submit"
+              disabled={loading}
+            >
+              {loading ? (
+                <span className="login-spinner" />
+              ) : (
+                'Sign In'
+              )}
+            </button>
+          </form>
+
+
+
+          {/* MANUAL OFFLINE DEMO ACCESS */}
+          <div style={{ marginTop: '14px' }}>
+            <button
+              type="button"
+              className="login-btn"
+              aria-label="Enter Offline Demo"
+              onClick={() =>
+                completeDemoLogin(
+                  mode === 'admin' ? 'ADMIN' : activeRole
+                )
+              }
+              disabled={loading}
+            >
+              Enter Offline Demo
+            </button>
+          </div>
+          {/* DEMO HINT — SHOWN ONLY IN FALLBACK MODE */}
+
+          {!availability.onlineMode && DEMO_MODE && (
+            <p className="login-demo-hint">
+              Demo fallback — username: <strong>demo</strong> · password:{' '}
+              <strong>demo</strong>
+              <span style={{ display: 'block', marginTop: 4 }}>
+                Available for Operator, Engineer and Admin demonstration.
+              </span>
+            </p>
+          )}
+
+
+          {/* ONLINE-ONLY ACCOUNT ACTIONS */}
+
+          {onlineMode && (
+            <div className="login-bottom-links">
+              <button
+                type="button"
+                className="login-extra-btn"
+                onClick={() => setModal('forgot')}
+              >
+                Forgot Password?
+              </button>
+
+              {mode === 'admin' && (
+                <>
+                  <span className="login-extra-sep">•</span>
+
+                  <button
+                    type="button"
+                    className="login-extra-btn login-extra-btn--admin"
+                    onClick={() => setModal('admin-register')}
+                  >
+                    Register as Admin
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+
+        {/* ONLINE-ONLY SELF REGISTRATION */}
+
+        {onlineMode && regEnabled && (
+          <div className="new-here-strip">
+            <span className="new-here-label">
+              New here?
+            </span>
+
+            <button
+              type="button"
+              className="new-here-btn new-here-btn--op"
+              onClick={() => setView('create')}
+            >
+              📊 Operator
+            </button>
+
+            <button
+              type="button"
+              className="new-here-btn new-here-btn--eng"
+              onClick={() => setView('create')}
+            >
+              🔧 Engineer
+            </button>
+          </div>
+        )}
+      </div>
+
+
+      {/* ONLINE-ONLY MODALS */}
+
+      {modal === 'admin-register' && onlineMode && (
+        <AdminRegisterModal
+          onClose={() => setModal(null)}
+          onDone={() => setModal(null)}
+        />
+      )}
+
+      {modal === 'forgot' && onlineMode && (
+        <ForgotModal
+          onClose={() => setModal(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+========== LOGIN PAGE CSS: STRUCTURE AND RESPONSIVE RULES ==========
+
+  frontend\src\components\LoginPage.css:16:----------------------------------------------------------------------------- */
+  frontend\src\components\LoginPage.css:17:
+  frontend\src\components\LoginPage.css:18:/* -- Root ------------------------------------------------------------------- */
+> frontend\src\components\LoginPage.css:19:.login-root {
+  frontend\src\components\LoginPage.css:20:  min-height: 100vh;
+  frontend\src\components\LoginPage.css:21:  display: flex; align-items: center; justify-content: center;
+  frontend\src\components\LoginPage.css:22:  background: #0a0c12;
+  frontend\src\components\LoginPage.css:23:  position: relative; overflow: hidden;
+  frontend\src\components\LoginPage.css:24:  padding: 20px;
+  frontend\src\components\LoginPage.css:25:}
+  frontend\src\components\LoginPage.css:26:
+  frontend\src\components\LoginPage.css:27:/* -- Animated background orbs ---------------------------------------------- */
+  frontend\src\components\LoginPage.css:38:}
+  frontend\src\components\LoginPage.css:39:
+  frontend\src\components\LoginPage.css:40:/* -- Main card ------------------------------------------------------------- */
+> frontend\src\components\LoginPage.css:41:.login-card {
+  frontend\src\components\LoginPage.css:42:  position: relative; z-index: 1;
+  frontend\src\components\LoginPage.css:43:  background: #13161e; border: 1px solid #252837; border-radius: 20px;
+  frontend\src\components\LoginPage.css:44:  padding: 28px 32px 30px; width: 100%; max-width: 500px;
+  frontend\src\components\LoginPage.css:45:  box-shadow: 0 0 0 1px #aa3bff15, 0 20px 60px rgba(0,0,0,.55), 0 0 80px #aa3bff0d;
+  frontend\src\components\LoginPage.css:46:  animation: cardIn .45s cubic-bezier(.22,1,.36,1);
+  frontend\src\components\LoginPage.css:47:}
+  frontend\src\components\LoginPage.css:48:
+  frontend\src\components\LoginPage.css:49:@keyframes cardIn {
+  frontend\src\components\LoginPage.css:90:.mode-tab-title { font-size:13px; font-weight:700; color:#e8eaf2; line-height:1.2; }
+  frontend\src\components\LoginPage.css:91:.mode-tab-sub   { font-size:10px; color:#4a5070; }
+  frontend\src\components\LoginPage.css:92:
+> frontend\src\components\LoginPage.css:93:/* -- Role buttons ---------------------------------------------------------- */
+> frontend\src\components\LoginPage.css:94:.login-roles {
+  frontend\src\components\LoginPage.css:95:  display: grid; grid-template-columns: 1fr 1fr;
+  frontend\src\components\LoginPage.css:96:  gap: 8px; margin: 16px 0 0;
+  frontend\src\components\LoginPage.css:97:}
+  frontend\src\components\LoginPage.css:98:
+> frontend\src\components\LoginPage.css:99:.login-role-tag {
+  frontend\src\components\LoginPage.css:100:  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  frontend\src\components\LoginPage.css:101:  padding: 11px 8px; border-radius: 12px;
+  frontend\src\components\LoginPage.css:102:  border: 1.5px solid #252837; background: transparent;
+  frontend\src\components\LoginPage.css:103:  cursor: pointer; font-family: inherit; text-align: center;
+  frontend\src\components\LoginPage.css:104:  transition: all .22s;
+  frontend\src\components\LoginPage.css:105:}
+> frontend\src\components\LoginPage.css:106:.login-role-tag:hover:not(.login-role-tag--active) {
+  frontend\src\components\LoginPage.css:107:  border-color: #ffffff25; background: #ffffff06; transform: translateY(-1px);
+  frontend\src\components\LoginPage.css:108:}
+> frontend\src\components\LoginPage.css:109:.login-role-tag--active {
+  frontend\src\components\LoginPage.css:110:  transform: translateY(-1px);
+  frontend\src\components\LoginPage.css:111:  box-shadow: 0 4px 18px rgba(0,0,0,.35);
+  frontend\src\components\LoginPage.css:112:}
+  frontend\src\components\LoginPage.css:113:
+> frontend\src\components\LoginPage.css:114:.login-role-tag-icon  { font-size:18px; line-height:1; }
+> frontend\src\components\LoginPage.css:115:.login-role-tag-label { font-size:11px; font-weight:700; letter-spacing:.5px; line-height:1.2; }
+> frontend\src\components\LoginPage.css:116:.login-role-tag-hint  { font-size:9px; color:#4a5070; line-height:1.3; }
+  frontend\src\components\LoginPage.css:117:
+  frontend\src\components\LoginPage.css:118:/* -- Extra links row (Register / Forgot / Admin invite) -------------------- */
+  frontend\src\components\LoginPage.css:119:.login-extra-links {
+  frontend\src\components\LoginPage.css:120:  display: flex; align-items: center; justify-content: center;
+  frontend\src\components\LoginPage.css:121:  flex-wrap: wrap; gap: 4px 6px; margin-top: 12px;
+  frontend\src\components\LoginPage.css:122:}
+  frontend\src\components\LoginPage.css:123:
+  frontend\src\components\LoginPage.css:124:.login-extra-sep { color:#252837; font-size:13px; user-select:none; }
+  frontend\src\components\LoginPage.css:133:.login-extra-btn--admin:hover   { color: #e9d5ff; }
+  frontend\src\components\LoginPage.css:134:
+  frontend\src\components\LoginPage.css:135:/* -- Forms ----------------------------------------------------------------- */
+> frontend\src\components\LoginPage.css:136:.login-form      { display:flex; flex-direction:column; gap:13px; }
+> frontend\src\components\LoginPage.css:137:.login-form-row  { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  frontend\src\components\LoginPage.css:138:.login-field     { display:flex; flex-direction:column; gap:5px; }
+  frontend\src\components\LoginPage.css:139:
+  frontend\src\components\LoginPage.css:140:.login-label      { font-size:11px;font-weight:600;color:#a0a8c0;letter-spacing:.4px;text-transform:uppercase; }
+  frontend\src\components\LoginPage.css:141:.login-label-hint { font-weight:400;color:#4a5070;text-transform:none;letter-spacing:0;font-size:10px; }
+  frontend\src\components\LoginPage.css:142:.login-field-hint { font-size:10px;color:#4a5070;line-height:1.4; }
+  frontend\src\components\LoginPage.css:143:.login-field-err  { font-size:10px;color:#f87171; }
+  frontend\src\components\LoginPage.css:144:
+> frontend\src\components\LoginPage.css:145:.login-input-wrap { position:relative; display:flex; align-items:center; }
+  frontend\src\components\LoginPage.css:146:
+> frontend\src\components\LoginPage.css:147:.login-input-icon {
+  frontend\src\components\LoginPage.css:148:  position:absolute; left:11px; font-size:14px;
+  frontend\src\components\LoginPage.css:149:  pointer-events:none; line-height:1;
+  frontend\src\components\LoginPage.css:150:}
+  frontend\src\components\LoginPage.css:151:
+> frontend\src\components\LoginPage.css:152:.login-input {
+  frontend\src\components\LoginPage.css:153:  width:100%; background:#0d0f14; border:1px solid #252837; border-radius:10px;
+  frontend\src\components\LoginPage.css:154:  padding:10px 38px; font-size:13px; color:#e8eaf2;
+  frontend\src\components\LoginPage.css:155:  font-family:inherit; outline:none; box-sizing:border-box;
+  frontend\src\components\LoginPage.css:156:  transition:border-color .2s,box-shadow .2s;
+  frontend\src\components\LoginPage.css:157:}
+> frontend\src\components\LoginPage.css:158:.login-input:focus        { border-color:#aa3bff; box-shadow:0 0 0 3px #aa3bff20; }
+> frontend\src\components\LoginPage.css:159:.login-input::placeholder { color:#4a5070; }
+> frontend\src\components\LoginPage.css:160:.login-input:disabled     { opacity:.55; cursor:not-allowed; }
+  frontend\src\components\LoginPage.css:161:
+  frontend\src\components\LoginPage.css:162:.login-eye-btn {
+  frontend\src\components\LoginPage.css:163:  position:absolute; right:11px; background:none; border:none;
+  frontend\src\components\LoginPage.css:164:  cursor:pointer; font-size:14px; color:#4a5070; padding:0;
+  frontend\src\components\LoginPage.css:165:  line-height:1; transition:color .2s;
+  frontend\src\components\LoginPage.css:166:}
+  frontend\src\components\LoginPage.css:167:.login-eye-btn:hover { color:#a0a8c0; }
+  frontend\src\components\LoginPage.css:168:
+  frontend\src\components\LoginPage.css:173:.pw-label    { font-size:10px; font-weight:600; min-width:66px; text-align:right; }
+  frontend\src\components\LoginPage.css:174:
+  frontend\src\components\LoginPage.css:175:/* -- Feedback messages ----------------------------------------------------- */
+> frontend\src\components\LoginPage.css:176:.login-error {
+  frontend\src\components\LoginPage.css:177:  background:#e0555515; border:1px solid #e0555540; border-radius:8px;
+  frontend\src\components\LoginPage.css:178:  padding:9px 12px; font-size:12px; color:#e05555; line-height:1.5;
+  frontend\src\components\LoginPage.css:179:}
+  frontend\src\components\LoginPage.css:180:.login-info {
+  frontend\src\components\LoginPage.css:181:  background:#0369a115; border:1px solid #0369a140; border-radius:8px;
+  frontend\src\components\LoginPage.css:182:  padding:9px 12px; font-size:12px; color:#38bdf8; line-height:1.6;
+  frontend\src\components\LoginPage.css:183:}
+  frontend\src\components\LoginPage.css:184:.login-info--token    { background:#7c3aed12; border-color:#7c3aed40; color:#c4b5fd; }
+  frontend\src\components\LoginPage.css:263:.modal-success p    { font-size:14px; color:#e8eaf2; line-height:1.6; margin:0; }
+  frontend\src\components\LoginPage.css:264:.modal-success-sub  { font-size:12px; color:#a0a8c0 !important; }
+  frontend\src\components\LoginPage.css:265:
+> frontend\src\components\LoginPage.css:266:/* -- Register modal role pills --------------------------------------------- */
+> frontend\src\components\LoginPage.css:267:.reg-role-row   { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+> frontend\src\components\LoginPage.css:268:.reg-role-pills { display:flex; gap:8px; flex-wrap:wrap; }
+  frontend\src\components\LoginPage.css:269:
+> frontend\src\components\LoginPage.css:270:.reg-role-pill {
+  frontend\src\components\LoginPage.css:271:  display: flex; align-items: center; gap: 6px;
+  frontend\src\components\LoginPage.css:272:  padding: 7px 14px; border-radius: 20px;
+  frontend\src\components\LoginPage.css:273:  border: 1.5px solid #252837; background: transparent;
+  frontend\src\components\LoginPage.css:274:  font-family: inherit; font-size: 12px; font-weight: 700;
+  frontend\src\components\LoginPage.css:275:  cursor: pointer; color: #a0a8c0; transition: all .2s;
+  frontend\src\components\LoginPage.css:276:}
+> frontend\src\components\LoginPage.css:277:.reg-role-pill:hover          { border-color: #38bdf840; color: #38bdf8; background: #0369a10e; }
+> frontend\src\components\LoginPage.css:278:.reg-role-pill--active        { border-color: #38bdf860; color: #38bdf8; background: #0369a114; box-shadow: 0 0 0 2px #38bdf818; }
+  frontend\src\components\LoginPage.css:279:
+  frontend\src\components\LoginPage.css:280:/* -- Mobile ---------------------------------------------------------------- */
+> frontend\src\components\LoginPage.css:281:@media (max-width:520px) {
+> frontend\src\components\LoginPage.css:282:  .login-card        { padding:22px 16px 26px; max-width:100%; }
+  frontend\src\components\LoginPage.css:283:  .mode-selector     { grid-template-columns:1fr; }
+> frontend\src\components\LoginPage.css:284:  .login-form-row    { grid-template-columns:1fr; }
+> frontend\src\components\LoginPage.css:285:  .login-roles       { grid-template-columns:1fr 1fr; }
+> frontend\src\components\LoginPage.css:286:  .login-role-tag    { flex-direction:row; gap:10px; padding:10px 14px; }
+> frontend\src\components\LoginPage.css:287:  .login-role-tag-hint { display:none; }
+  frontend\src\components\LoginPage.css:288:  .modal-box         { padding:20px 18px 24px; }
+  frontend\src\components\LoginPage.css:289:}
+  frontend\src\components\LoginPage.css:290:
+> frontend\src\components\LoginPage.css:291:/* -- Sub-role bar (Operator / Engineer � below the mode tabs) -------------- */
+> frontend\src\components\LoginPage.css:292:.subrole-bar {
+  frontend\src\components\LoginPage.css:293:  display: flex; justify-content: space-between;
+  frontend\src\components\LoginPage.css:294:  gap: 8px; margin-bottom: 16px;
+  frontend\src\components\LoginPage.css:295:}
+  frontend\src\components\LoginPage.css:296:
+> frontend\src\components\LoginPage.css:297:.subrole-btn {
+  frontend\src\components\LoginPage.css:298:  flex: 1; padding: 9px 8px;
+  frontend\src\components\LoginPage.css:299:  background: transparent; border: 1.5px solid #252837; border-radius: 10px;
+  frontend\src\components\LoginPage.css:300:  font-family: inherit; font-size: 12px; font-weight: 700; color: #4a5070;
+  frontend\src\components\LoginPage.css:301:  cursor: pointer; transition: all .18s; letter-spacing: .2px;
+  frontend\src\components\LoginPage.css:302:}
+> frontend\src\components\LoginPage.css:303:.subrole-btn:hover { border-color: #ffffff25; color: #a0a8c0; background: #ffffff06; }
+  frontend\src\components\LoginPage.css:304:
+> frontend\src\components\LoginPage.css:305:.subrole-btn--op  { color: #38bdf8; border-color: #0369a155; background: #0369a10e; }
+> frontend\src\components\LoginPage.css:306:.subrole-btn--eng { color: #34d399; border-color: #06522255; background: #0652220e; }
+> frontend\src\components\LoginPage.css:307:.subrole-btn--active { transform: translateY(-1px); }
+> frontend\src\components\LoginPage.css:308:.subrole-btn--op.subrole-btn--active  { box-shadow: 0 0 0 2px #0369a128; }
+> frontend\src\components\LoginPage.css:309:.subrole-btn--eng.subrole-btn--active { box-shadow: 0 0 0 2px #06522228; }
+  frontend\src\components\LoginPage.css:310:
+  frontend\src\components\LoginPage.css:311:/* -- Offline demo hint ----------------------------------------------------- */
+  frontend\src\components\LoginPage.css:312:.login-demo-hint {
+  frontend\src\components\LoginPage.css:313:  margin: 14px 0 0; padding: 8px 12px;
+  frontend\src\components\LoginPage.css:314:  background: #0d0f14; border: 1px dashed #252837; border-radius: 8px;
+  frontend\src\components\LoginPage.css:315:  font-size: 11px; color: #4a5070; text-align: center; line-height: 1.5;
+  frontend\src\components\LoginPage.css:316:}
+  frontend\src\components\LoginPage.css:317:.login-demo-hint strong { color: #a0a8c0; }
+  frontend\src\components\LoginPage.css:372:
+  frontend\src\components\LoginPage.css:373:/* ---------------------------------------------------------------------------
+  frontend\src\components\LoginPage.css:374:   CREATE ACCOUNT VIEW
+> frontend\src\components\LoginPage.css:375:   Full-screen role-selection layout (GitHub/Slack-style)
+  frontend\src\components\LoginPage.css:376:--------------------------------------------------------------------------- */
+  frontend\src\components\LoginPage.css:377:
+> frontend\src\components\LoginPage.css:378:/* -- Outer wrapper � same background as login-root ------------------------ */
+  frontend\src\components\LoginPage.css:379:.create-account-wrap {
+  frontend\src\components\LoginPage.css:380:  position: relative; z-index: 1;
+  frontend\src\components\LoginPage.css:381:  width: 100%; max-width: 860px;
+  frontend\src\components\LoginPage.css:382:  margin: 0 auto;
+  frontend\src\components\LoginPage.css:383:  padding: 28px 20px 40px;
+  frontend\src\components\LoginPage.css:384:  animation: cardIn .45s cubic-bezier(.22,1,.36,1);
+  frontend\src\components\LoginPage.css:385:}
+  frontend\src\components\LoginPage.css:386:
+  frontend\src\components\LoginPage.css:391:  justify-content: center;
+  frontend\src\components\LoginPage.css:392:}
+  frontend\src\components\LoginPage.css:393:
+> frontend\src\components\LoginPage.css:394:/* -- Two-column role card grid -------------------------------------------- */
+> frontend\src\components\LoginPage.css:395:.role-cards-grid {
+  frontend\src\components\LoginPage.css:396:  display: grid;
+  frontend\src\components\LoginPage.css:397:  grid-template-columns: 1fr 1fr;
+  frontend\src\components\LoginPage.css:398:  gap: 20px;
+  frontend\src\components\LoginPage.css:399:}
+  frontend\src\components\LoginPage.css:400:
+> frontend\src\components\LoginPage.css:401:/* -- Individual role card ------------------------------------------------- */
+> frontend\src\components\LoginPage.css:402:.role-card {
+  frontend\src\components\LoginPage.css:403:  background: #13161e;
+> frontend\src\components\LoginPage.css:404:  border: 1.5px solid var(--role-border, #252837);
+  frontend\src\components\LoginPage.css:405:  border-radius: 18px;
+  frontend\src\components\LoginPage.css:406:  padding: 24px 22px 22px;
+  frontend\src\components\LoginPage.css:407:  display: flex; flex-direction: column; gap: 16px;
+> frontend\src\components\LoginPage.css:408:  box-shadow: 0 0 0 1px var(--role-glow, transparent), 0 8px 32px rgba(0,0,0,.45);
+  frontend\src\components\LoginPage.css:409:  transition: transform .2s, box-shadow .2s;
+  frontend\src\components\LoginPage.css:410:}
+> frontend\src\components\LoginPage.css:411:.role-card:hover {
+  frontend\src\components\LoginPage.css:412:  transform: translateY(-3px);
+> frontend\src\components\LoginPage.css:413:  box-shadow: 0 0 0 1px var(--role-border, #252837),
+  frontend\src\components\LoginPage.css:414:              0 12px 40px rgba(0,0,0,.55),
+> frontend\src\components\LoginPage.css:415:              0 0 28px var(--role-glow, transparent);
+  frontend\src\components\LoginPage.css:416:}
+  frontend\src\components\LoginPage.css:417:
+  frontend\src\components\LoginPage.css:418:/* Card top section */
+> frontend\src\components\LoginPage.css:419:.role-card-top { display: flex; flex-direction: column; gap: 8px; }
+  frontend\src\components\LoginPage.css:420:
+> frontend\src\components\LoginPage.css:421:.role-card-icon {
+  frontend\src\components\LoginPage.css:422:  font-size: 36px; line-height: 1;
+> frontend\src\components\LoginPage.css:423:  filter: drop-shadow(0 0 10px var(--role-accent, #fff));
+  frontend\src\components\LoginPage.css:424:}
+  frontend\src\components\LoginPage.css:425:
+> frontend\src\components\LoginPage.css:426:.role-card-title {
+  frontend\src\components\LoginPage.css:427:  font-size: 16px; font-weight: 800;
+> frontend\src\components\LoginPage.css:428:  color: var(--role-accent, #e8eaf2);
+  frontend\src\components\LoginPage.css:429:  margin: 0; line-height: 1.2;
+  frontend\src\components\LoginPage.css:430:}
+  frontend\src\components\LoginPage.css:431:
+> frontend\src\components\LoginPage.css:432:.role-card-desc {
+  frontend\src\components\LoginPage.css:433:  font-size: 12px; color: #a0a8c0;
+  frontend\src\components\LoginPage.css:434:  line-height: 1.6; margin: 0;
+  frontend\src\components\LoginPage.css:435:}
+  frontend\src\components\LoginPage.css:436:
+  frontend\src\components\LoginPage.css:437:/* Feature list */
+> frontend\src\components\LoginPage.css:438:.role-card-features {
+  frontend\src\components\LoginPage.css:439:  list-style: none; padding: 0; margin: 0;
+  frontend\src\components\LoginPage.css:440:  display: flex; flex-direction: column; gap: 8px;
+  frontend\src\components\LoginPage.css:441:  flex: 1;
+  frontend\src\components\LoginPage.css:442:}
+  frontend\src\components\LoginPage.css:443:
+> frontend\src\components\LoginPage.css:444:.role-card-feature {
+  frontend\src\components\LoginPage.css:445:  display: flex; align-items: center; gap: 8px;
+  frontend\src\components\LoginPage.css:446:  font-size: 12px; color: #a0a8c0;
+  frontend\src\components\LoginPage.css:447:}
+> frontend\src\components\LoginPage.css:448:.role-card-feature-icon {
+  frontend\src\components\LoginPage.css:449:  font-size: 14px; flex-shrink: 0; width: 20px; text-align: center;
+  frontend\src\components\LoginPage.css:450:}
+> frontend\src\components\LoginPage.css:451:.role-card-feature-text { line-height: 1.4; }
+  frontend\src\components\LoginPage.css:452:
+  frontend\src\components\LoginPage.css:453:/* CTA button at bottom of card */
+> frontend\src\components\LoginPage.css:454:.role-card-btn {
+  frontend\src\components\LoginPage.css:455:  width: 100%; padding: 11px;
+  frontend\src\components\LoginPage.css:456:  color: #fff; border: none; border-radius: 10px;
+  frontend\src\components\LoginPage.css:457:  font-size: 13px; font-weight: 700; font-family: inherit;
+  frontend\src\components\LoginPage.css:458:  cursor: pointer; letter-spacing: .3px;
+  frontend\src\components\LoginPage.css:459:  transition: opacity .2s, transform .15s;
+  frontend\src\components\LoginPage.css:460:  margin-top: auto;
+  frontend\src\components\LoginPage.css:461:}
+> frontend\src\components\LoginPage.css:462:.role-card-btn:hover  { opacity: .88; transform: translateY(-1px); }
+> frontend\src\components\LoginPage.css:463:.role-card-btn:active { transform: translateY(0); }
+  frontend\src\components\LoginPage.css:464:
+  frontend\src\components\LoginPage.css:465:/* -- Footer --------------------------------------------------------------- */
+  frontend\src\components\LoginPage.css:466:.create-account-footer {
+  frontend\src\components\LoginPage.css:467:  display: flex; align-items: center; justify-content: center;
+  frontend\src\components\LoginPage.css:468:  gap: 8px; margin-top: 24px;
+  frontend\src\components\LoginPage.css:469:}
+  frontend\src\components\LoginPage.css:470:
+  frontend\src\components\LoginPage.css:471:.create-account-back {
+  frontend\src\components\LoginPage.css:475:.create-account-back:hover { color: #e8eaf2 !important; }
+  frontend\src\components\LoginPage.css:476:
+  frontend\src\components\LoginPage.css:477:/* -- Mobile --------------------------------------------------------------- */
+> frontend\src\components\LoginPage.css:478:@media (max-width: 640px) {
+  frontend\src\components\LoginPage.css:479:  .create-account-wrap { padding: 20px 12px 32px; }
+> frontend\src\components\LoginPage.css:480:  .role-cards-grid     { grid-template-columns: 1fr; }
+  frontend\src\components\LoginPage.css:481:  .new-here-strip      { flex-direction: column; gap: 6px; }
+  frontend\src\components\LoginPage.css:482:  .new-here-btn        { width: 100%; justify-content: center; }
+  frontend\src\components\LoginPage.css:483:}
+
+
+
+
+========== FIREBASE PACKAGE AND IGNORE RULES ==========
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+.vercel
+.env*
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Node
+node_modules/
+dist/
+dist-ssr/
+
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+
+# Logs and editor files
+*.log
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Generated caches
+.cache/
+
+# Large KAIST raw datasets (stored separately)
+KAIST/vibration.zip
+KAIST/current,temp.zip
+KAIST/inspection/0Nm_Normal.tdms
+
+# Local TLS certificates and private keys
+certs/
+*.key
+*.pem
+
+
+
+# Local Python environment
+Backend/.venv312/
+
+# Test coverage output
+.coverage

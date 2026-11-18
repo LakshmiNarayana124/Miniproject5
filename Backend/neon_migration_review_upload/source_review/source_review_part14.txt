@@ -1,0 +1,532 @@
+    def store_pattern_as_knowledge(
+        self,
+        pattern_id,
+        label
+    ):
+
+        if label not in ("normal", "abnormal"):
+            raise ValueError(
+                "Knowledge label must be normal or abnormal."
+            )
+
+        # Retrieve ALL observations for learning.
+        # The trend window is used for stability analysis,
+        # not for discarding older learning history.
+        with self.connect() as connection:
+
+            rows = connection.execute("""
+                SELECT features
+                FROM engine_observations
+                WHERE pattern_id = ?
+                ORDER BY observation_id ASC
+            """, (pattern_id,)).fetchall()
+
+        history = [
+            load_json(row["features"])
+            for row in rows
+        ]
+
+        if not history:
+            return
+
+        feature_names = list(
+            history[0].keys()
+        )
+
+        count = 0
+
+        means = {
+            key: 0.0
+            for key in feature_names
+        }
+
+        m2 = {
+            key: 0.0
+            for key in feature_names
+        }
+
+        minimums = {
+            key: float("inf")
+            for key in feature_names
+        }
+
+        maximums = {
+            key: float("-inf")
+            for key in feature_names
+        }
+
+        for features in history:
+
+            if set(features) != set(feature_names):
+                continue
+
+            (
+                count,
+                means,
+                m2,
+                minimums,
+                maximums
+            ) = self.update_statistics(
+                features,
+                count,
+                means,
+                m2,
+                minimums,
+                maximums
+            )
+
+        if count == 0:
+            return
+
+        now = current_timestamp()
+
+        with self.connect() as connection:
+
+            connection.execute("""
+                INSERT INTO knowledge_profiles (
+                    label,
+                    feature_names,
+                    sample_count,
+                    means,
+                    m2_values,
+                    minimums,
+                    maximums,
+                    created_at,
+                    updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                label,
+                safe_json(feature_names),
+                count,
+                safe_json(means),
+                safe_json(m2),
+                safe_json(minimums),
+                safe_json(maximums),
+                now,
+                now
+            ))
+
+            connection.execute("""
+                UPDATE unknown_patterns
+                SET status = ?
+                WHERE pattern_id = ?
+            """, (
+                f"learned_{label}",
+                pattern_id
+            ))
+
+        # Register individual sensor knowledge.
+        for feature_name in feature_names:
+
+            group = sensor_group(feature_name)
+
+            if group == "other":
+                continue
+
+            for features in history:
+
+                if feature_name not in features:
+                    continue
+
+                self.learn_sensor_feature(
+                    group,
+                    feature_name,
+                    features[feature_name],
+                    label
+                )
+
+    def update_unknown_status(
+        self,
+        pattern_id,
+        status
+    ):
+
+        with self.connect() as connection:
+
+            connection.execute("""
+                UPDATE unknown_patterns
+                SET status = ?
+                WHERE pattern_id = ?
+            """, (
+                status,
+                pattern_id
+            ))
+
+    # ========================================================
+    # 19. ANALYSIS EVENT HISTORY
+    # ========================================================
+
+    def save_analysis_event(
+        self,
+        pattern_id,
+        mode,
+        stability,
+        scenarios,
+        decision,
+        explanation,
+        manual_note=None
+    ):
+
+        with self.connect() as connection:
+
+            connection.execute("""
+                INSERT INTO analysis_events (
+                    pattern_id,
+                    timestamp,
+                    analysis_mode,
+                    stability_score,
+                    scenarios,
+                    decision,
+                    explanation,
+                    manual_note
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                pattern_id,
+                current_timestamp(),
+                mode,
+                stability["stability_score"],
+                safe_json(scenarios),
+                decision,
+                explanation,
+                manual_note
+            ))
+
+    # ========================================================
+    # 20. MANUAL REVIEW
+    # ========================================================
+
+    def add_manual_review_note(
+        self,
+        pattern_id,
+        reviewer,
+        note
+    ):
+
+        if not str(reviewer).strip():
+            raise ValueError(
+                "Reviewer identity required."
+            )
+
+        if not str(note).strip():
+            raise ValueError(
+                "Review note cannot be empty."
+            )
+
+        stability = self.analyse_stability(
+            pattern_id
+        )
+
+        scenarios = {
+            "review_type": "manual",
+            "human_observation": note,
+            "reviewer": reviewer
+        }
+
+        self.save_analysis_event(
+            pattern_id,
+            "manual",
+            stability,
+            scenarios,
+            "human_note_recorded",
+            "Manual note recorded without changing system findings.",
+            note
+        )
+
+        return {
+            "success": True,
+            "message": "Manual review recorded."
+        }
+
+    # ========================================================
+    # 21. UNIFIED SYSTEM STATUS
+    # ========================================================
+
+    def calculate_overall_status(
+        self,
+        sensor_statuses
+    ):
+
+        statuses = [
+            item["status"]
+            for item in sensor_statuses.values()
+        ]
+
+        if "CRITICAL" in statuses:
+
+            overall = "CRITICAL"
+
+        elif "WARNING" in statuses:
+
+            overall = "WARNING"
+
+        elif (
+            statuses
+            and all(
+                status == "NORMAL"
+                for status in statuses
+            )
+        ):
+
+            overall = "NORMAL"
+
+        else:
+
+            overall = "UNDER_OBSERVATION"
+
+        explanations = []
+
+        for sensor_name, result in sensor_statuses.items():
+
+            if result["status"] != "NORMAL":
+
+                explanations.append(
+                    f"{result['sensor']}: "
+                    f"{result['status']} - "
+                    f"{result['explanation']}"
+                )
+
+        explanation = (
+            "; ".join(explanations)
+            if explanations else
+            "All expected sensor assessments are normal."
+        )
+
+        return {
+            "status": overall,
+            "explanation": explanation
+        }
+
+    def save_system_status(
+        self,
+        overall,
+        sensor_statuses
+    ):
+
+        with self.connect() as connection:
+
+            connection.execute("""
+                INSERT INTO system_status_history (
+                    timestamp,
+                    overall_status,
+                    sensor_statuses,
+                    explanation
+                )
+                VALUES (?, ?, ?, ?)
+            """, (
+                current_timestamp(),
+                overall["status"],
+                safe_json(sensor_statuses),
+                overall["explanation"]
+            ))
+
+    # ========================================================
+    # 22. MAIN PROCESSING
+    # ========================================================
+
+    def process_readings(
+        self,
+        readings,
+        mode="automatic"
+    ):
+
+        mode = normalise_name(mode)
+
+        if mode not in ANALYSIS_MODES:
+            raise ValueError(
+                "Mode must be automatic or manual."
+            )
+
+        result = normalise_readings(
+            readings
+        )
+
+        features = result["features"]
+
+        # A. Analyse every feature independently.
+        feature_results = {}
+
+        for feature_name, value in features.items():
+
+            feature_results[feature_name] = (
+                self.analyse_sensor(
+                    feature_name,
+                    value
+                )
+            )
+
+        # B. Aggregate feature findings into physical
+        # sensor-level findings without overwriting data.
+        sensor_statuses = (
+            self.aggregate_sensor_results(
+                feature_results
+            )
+        )
+
+        # C. Explicitly represent missing physical sensors.
+        sensor_statuses = (
+            self.add_unavailable_sensors(
+                sensor_statuses
+            )
+        )
+
+        # D. Recognise the complete combined pattern.
+        known = self.recognise_known_pattern(
+            features
+        )
+
+        pattern_id = None
+        stability = None
+        scenarios = None
+
+        if known["matched"]:
+
+            combined_decision = {
+                "decision": "known_pattern",
+                "classification": known["label"],
+                "reason": (
+                    "Combined behaviour matches established knowledge."
+                )
+            }
+
+        else:
+
+            # E. Investigate unfamiliar combined behaviour.
+            pattern_id = self.store_unknown_observation(
+                result
+            )
+
+            stability = self.analyse_stability(
+                pattern_id
+            )
+
+            scenarios = self.predict_scenarios(
+                features,
+                stability
+            )
+
+            if mode == "manual":
+
+                combined_decision = {
+                    "decision": "awaiting_human_analysis",
+                    "reason": (
+                        "Manual analysis selected. "
+                        "Human review is required."
+                    )
+                }
+
+            else:
+
+                combined_decision = (
+                    self.make_automatic_decision(
+                        pattern_id,
+                        features,
+                        stability,
+                        scenarios
+                    )
+                )
+
+        # F. Calculate the unified system status.
+        overall = self.calculate_overall_status(
+            sensor_statuses
+        )
+
+        self.save_system_status(
+            overall,
+            sensor_statuses
+        )
+
+        if pattern_id is not None:
+
+            self.save_analysis_event(
+                pattern_id,
+                mode,
+                stability,
+                scenarios,
+                combined_decision["decision"],
+                combined_decision["reason"]
+            )
+
+        # G. Return the complete result.
+        return {
+            "timestamp": result["timestamp"],
+
+            "sensor_statuses": sensor_statuses,
+
+            "feature_results": feature_results,
+
+            "overall_system_status": overall,
+
+            "combined_pattern": {
+                "recognition": known,
+                "pattern_id": pattern_id,
+                "decision": combined_decision
+            },
+
+            "internal_analysis": {
+                "features": features,
+                "stability": stability,
+                "scenarios": scenarios,
+                "analysis_mode": mode,
+                "quality": result["quality"]
+            }
+        }
+
+    # ========================================================
+    # 23. LIVE SENSOR READER
+    # ========================================================
+
+    def process_live_cycle(
+        self,
+        mode="automatic"
+    ):
+
+        from sensor_reader import read_all_sensors
+
+        readings = read_all_sensors()
+
+        return self.process_readings(
+            readings,
+            mode
+        )
+
+    # ========================================================
+    # 24. OPERATING LIMITS
+    # ========================================================
+
+    def set_operating_limits(self, limits):
+
+        if not isinstance(limits, dict):
+            raise ValueError(
+                "Limits must be a dictionary."
+            )
+
+        self.operating_limits = limits
+
+    # ========================================================
+    # 25. KNOWLEDGE SUMMARY
+    # ========================================================
+
+    def get_knowledge_summary(self):
+
+        with self.connect() as connection:
+
+            normal_count = connection.execute("""
+                SELECT COUNT(*) FROM knowledge_profiles
+                WHERE label = 'normal'
+            """).fetchone()[0]
+
+            abnormal_count = connection.execute("""
+                SELECT COUNT(*) FROM knowledge_profiles
+                WHERE label = 'abnormal'
+            """).fetchone()[0]
+
+            unknown_count = connection.execute("""
+                SELECT COUNT(*) FROM unknown_patterns
+                WHERE status = 'investigating'
+            """).fetchone()[0]
+
+            removed_count = connection.execute("""
+                SELECT COUNT(*) FROM unknown_patterns
+                WHERE status = 'removed'

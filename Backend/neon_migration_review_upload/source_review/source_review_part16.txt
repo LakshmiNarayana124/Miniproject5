@@ -1,0 +1,385 @@
+        Returns ``True`` on success, ``False`` if all retries fail.  When a
+        deadline is set (e.g. 500 ms for SHUTDOWN) the retry loop respects it
+        so the latency budget is honored (Req 3.5).
+        """
+        deadline_s = (deadline_ms / 1000.0) if deadline_ms else None
+        start = time.monotonic()
+
+        for attempt in range(1, self.max_retries + 1):
+            # Respect deadline.
+            if deadline_s and (time.monotonic() - start) >= deadline_s:
+                break
+
+            try:
+                if self.iot_layer is not None:
+                    self.iot_layer.relay(intent)
+                return True
+            except Exception as exc:
+                logger.warning(
+                    "Control signal delivery attempt %d/%d failed: %s",
+                    attempt, self.max_retries, exc,
+                )
+                if attempt < self.max_retries:
+                    time.sleep(self.retry_delay_s)
+
+        return False
+
+    # --------------------------------------------------------
+    # ACKNOWLEDGEMENT  (Requirement 3.8, Property 14)
+    # --------------------------------------------------------
+    def on_ack(
+        self,
+        control_signal_id: int,
+        equipment_state: str = "",
+    ) -> bool:
+        """Record an equipment acknowledgement (Req 3.8, Property 14).
+
+        Persists the acknowledgement timestamp and resulting equipment state,
+        then removes the dispatch from the pending set.
+        """
+        ack_ts = _now_iso()
+        saved = database.save_control_ack(
+            control_signal_id=control_signal_id,
+            ack_timestamp=ack_ts,
+            resulting_equipment_state=equipment_state,
+        )
+        with self._lock:
+            self._pending_acks.pop(control_signal_id, None)
+        if saved:
+            self._record_audit(
+                category="control_ack",
+                actor="equipment",
+                target=str(control_signal_id),
+                detail={
+                    "control_signal_id": control_signal_id,
+                    "ack_timestamp": ack_ts,
+                    "equipment_state": equipment_state,
+                },
+            )
+        return saved
+
+    def check_ack_timeouts(self):
+        """Raise actuation-failure alerts for unacknowledged SHUTDOWNs (Req 3.9)."""
+        now = time.monotonic()
+        with self._lock:
+            expired = [
+                cid for cid, t in self._pending_acks.items()
+                if (now - t) >= self.ack_timeout_s
+            ]
+        for cid in expired:
+            self._raise_alert("actuation_failure", {
+                "control_signal_id": cid,
+                "reason": "no acknowledgement within timeout",
+            })
+            with self._lock:
+                self._pending_acks.pop(cid, None)
+
+    # --------------------------------------------------------
+    # PRIORITY DOMINANCE  (Requirement 3.6, Property 13)
+    # --------------------------------------------------------
+    def select_dominant(self, requests: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Select the highest-priority control signal from simultaneous requests.
+
+        SHUTDOWN dominates DE_RATE and RUN (Req 3.6, Property 13).
+        """
+        if not requests:
+            return {"intent": "RUN", "status": "NORMAL", "priority": PRIORITY_RUN}
+        return max(
+            requests,
+            key=lambda r: INTENT_PRIORITY.get(r.get("intent", "RUN"), 0),
+        )
+
+    # --------------------------------------------------------
+    # PERSISTENCE HELPERS
+    # --------------------------------------------------------
+    def _save_control_signal(
+        self,
+        intent: str,
+        status: str,
+        priority: int,
+        target_equipment: str,
+        triggering_params: Dict,
+        model_version: Optional[str],
+    ) -> int:
+        """Insert a control_signals row and return its id."""
+        conn = database.get_connection()
+        try:
+            cursor = conn.execute("""
+                INSERT INTO control_signals (
+                    timestamp, intent, system_status,
+                    target_equipment, priority,
+                    triggering_params_json, model_version
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (
+                _now_iso(),
+                intent,
+                status,
+                target_equipment,
+                priority,
+                json.dumps(triggering_params, default=str),
+                model_version,
+            ))
+            conn.commit()
+            control_id = cursor.lastrowid
+            # Track for ack-timeout checking.
+            with self._lock:
+                self._pending_acks[control_id] = time.monotonic()
+            return control_id
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+
+    def _record_audit(self, category: str, detail: Dict, actor: str = None, target: str = None):
+        """Record an immutable audit entry via ``database.record_audit_entry``."""
+        try:
+            database.record_audit_entry(
+                category=category,
+                detail_json=json.dumps(detail, default=str),
+                actor=actor,
+                target=target,
+            )
+        except Exception as exc:
+            logger.warning("Failed to record audit entry (%s): %s", category, exc)
+
+    def _record_rejected(self, intent: str, status: str, actor: str, target: str):
+        """Log a rejected dispatch attempt (Req 13.5)."""
+        logger.warning(
+            "Rejected %s dispatch by '%s' for '%s' (status=%s)",
+            intent, actor, target, status,
+        )
+
+    # --------------------------------------------------------
+    # LATCH INSPECTION (for testing)
+    # --------------------------------------------------------
+    @property
+    def latched_status(self) -> str:
+        with self._lock:
+            return self._latched_status
+
+    @property
+    def latched_intent(self) -> str:
+        with self._lock:
+            return self._latched_intent
+
+
+# ============================================================
+# HELPERS
+# ============================================================
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _trace_params(trace: Any) -> Dict[str, Any]:
+    """Extract the triggering Monitoring_Parameter values from a DetectionTrace."""
+    if trace is None:
+        return {}
+    inputs = getattr(trace, "inputs", None)
+    if inputs is None:
+        return {}
+    if isinstance(inputs, dict):
+        return inputs
+    return {"inputs": str(inputs)}
+
+
+def _trace_model_version(trace: Any) -> Optional[str]:
+    """Extract the model version from a DetectionTrace."""
+    if trace is None:
+        return None
+    return getattr(trace, "model_version", None)
+
+===== END FILE: equipment_controller.py =====
+===== FILE: iso_standards.py =====
+"""
+INTELLIWATCH - ISO STANDARDS AND THRESHOLDS
+Version: 1.0
+
+Purpose:
+1. Apply ISO 10816/20816 vibration severity zones to classify a vibration
+   Monitoring_Parameter into Normal, Warning, and Critical bands
+   (Requirement 7.1).
+2. Structure Monitoring_Parameter acquisition, analysis, and recommendation
+   following the ISO 17359 condition-monitoring guidance (Requirement 7.2).
+3. Document, for each Monitoring_Parameter threshold, the recognized standard
+   the threshold derives from, or flag it equipment-specific and inactive until
+   operator confirmation (Requirements 7.3, 7.4).
+4. Persist and load threshold definitions through the ``threshold_definitions``
+   database table.
+
+ISO 17359 workflow stages (documented guidance):
+    detection -> analysis -> diagnosis -> prognosis -> post-remedial
+
+The ``ConditionMonitoringWorkflow`` class exposes three phases that map onto
+those stages:
+
+    acquire(sensor_name, readings)    -> data acquisition  (detection)
+    analyze(readings, features)      -> analysis          (analysis + diagnosis)
+    recommend(status, causes)        -> recommendation    (prognosis + post-remedial)
+
+Dependencies:
+- ``database`` (``get_connection``, ``current_timestamp``) for threshold
+  persistence.
+- Python standard library only (``math``).
+
+NOTE:
+Threshold values follow ISO 10816-3:2009 velocity boundaries for typical
+industrial machines (Group 2) as specified for this implementation:
+    Zone A (Normal)   : 0     to 1.4 mm/s
+    Zone B (Warning)   : 1.4   to 2.8 mm/s
+    Zone C/D (Critical): above  2.8 mm/s
+Acceleration thresholds follow ISO 20816-1:2016 guidance. Equipment-specific
+thresholds that cannot be mapped to a recognized standard are flagged
+``equipment_specific`` and remain inactive until an operator confirms them
+(Requirement 7.4).
+"""
+
+import math
+from typing import Any, Dict, List, Optional
+
+from database import get_connection, current_timestamp
+
+
+# ============================================================
+# 1. ISO 10816 / ISO 20816 VIBRATION SEVERITY ZONES
+# ============================================================
+
+# Severity-zone label mapping (ISO 10816 / ISO 20816 zone letters).
+# Zones C and D both map to the Critical system status.
+SEVERITY_ZONES: Dict[str, str] = {
+    "A": "normal",
+    "B": "warning",
+    "C": "critical",
+    "D": "critical",
+}
+
+# Valid system-status strings returned by the classifiers.
+SEVERITY_STATUSES = ("normal", "warning", "critical")
+
+# Default ISO 10816-3 velocity thresholds (mm/s RMS).
+# These are the Group 2 (15-300 kW) representative boundaries used by the
+# default classifier, matching the values specified for this implementation.
+ISO_10816_3_DEFAULT = {
+    "normal_max": 1.4,            # Zone A upper bound (mm/s RMS)
+    "warning_max": 2.8,           # Zone B upper bound (mm/s RMS)
+    "source_standard": "ISO 10816-3:2009",
+}
+
+# ISO 10816-3 machine-group reference (documentation of the group basis).
+# Group selection is based on rated power and mounting. The default classifier
+# uses Group 2 representative boundaries; Group 1 (large machines) tolerates
+# higher velocity magnitudes.
+ISO_10816_3_GROUPS: Dict[int, Dict[str, Any]] = {
+    1: {
+        "description": "Large machines (rated power > 300 kW, 150-15000 r/min)",
+        "normal_max": 2.8,
+        "warning_max": 4.5,
+        "source_standard": "ISO 10816-3:2009",
+    },
+    2: {
+        "description": "Medium machines (15-300 kW, 150-15000 r/min)",
+        "normal_max": 1.4,
+        "warning_max": 2.8,
+        "source_standard": "ISO 10816-3:2009",
+    },
+    3: {
+        "description": "Small machines with separate drives (< 15 kW)",
+        "normal_max": 1.4,
+        "warning_max": 2.8,
+        "source_standard": "ISO 10816-3:2009",
+    },
+    4: {
+        "description": "Small machines with integrated drives (< 15 kW)",
+        "normal_max": 1.4,
+        "warning_max": 2.8,
+        "source_standard": "ISO 10816-3:2009",
+    },
+}
+
+# ISO 20816 acceleration thresholds (g RMS).
+# ISO 20816-1:2016 generalizes machine vibration evaluation; these acceleration
+# boundaries are used for high-frequency / bearing-condition monitoring where
+# acceleration magnitude is the appropriate evaluation quantity.
+ISO_20816_ACCELERATION = {
+    "normal_max": 1.0,            # Zone A upper bound (g RMS)
+    "warning_max": 2.0,           # Zone B upper bound (g RMS)
+    "source_standard": "ISO 20816-1:2016",
+}
+
+
+def _validate_vibration_value(value: float, name: str) -> float:
+    """Validate a vibration magnitude value before classification.
+
+    Returns the value as a float, or raises ``ValueError`` when the value is
+    ``None``, non-finite (``NaN``/``inf``), or negative (an invalid magnitude).
+    """
+    if value is None:
+        raise ValueError(f"{name} must be a finite number, got None.")
+
+    try:
+        value = float(value)
+    except (TypeError, ValueError) as error:
+        raise ValueError(f"{name} must be a finite number, got {value!r}.") \
+            from error
+
+    if not math.isfinite(value):
+        raise ValueError(f"{name} must be finite, got {value!r}.")
+
+    if value < 0:
+        raise ValueError(f"{name} must be non-negative, got {value!r}.")
+
+    return value
+
+
+def _classify_by_thresholds(
+    value: float,
+    normal_max: float,
+    warning_max: float
+) -> str:
+    """Classify a magnitude into Normal/Warning/Critical using two boundaries.
+
+    - ``value < normal_max``        -> ``"normal"``
+    - ``normal_max <= value < warning_max`` -> ``"warning"``
+    - ``value >= warning_max``      -> ``"critical"``
+    """
+    if value < normal_max:
+        return "normal"
+    if value < warning_max:
+        return "warning"
+    return "critical"
+
+
+def classify_vibration_severity(rms_velocity_mm_s: float) -> str:
+    """Classify a vibration velocity RMS value into an ISO 10816/20816 zone.
+
+    Uses the default ISO 10816-3:2009 boundaries (Group 2 representative):
+    Normal ends at 1.4 mm/s (Zone A), Warning spans 1.4-2.8 mm/s (Zone B),
+    and Critical begins above 2.8 mm/s (Zones C/D).
+
+    Parameters
+    ----------
+    rms_velocity_mm_s : float
+        Vibration velocity RMS in mm/s (non-negative finite number).
+
+    Returns
+    -------
+    str
+        One of ``"normal"``, ``"warning"``, or ``"critical"``.
+
+    Raises
+    ------
+    ValueError
+        If the value is ``None``, non-finite, or negative.
+    """
+    value = _validate_vibration_value(rms_velocity_mm_s, "rms_velocity_mm_s")
+    return _classify_by_thresholds(
+        value,
+        ISO_10816_3_DEFAULT["normal_max"],
+        ISO_10816_3_DEFAULT["warning_max"],
+    )
+
+
+def classify_vibration_severity_for_group(
+    rms_velocity_mm_s: float,

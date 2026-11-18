@@ -1,0 +1,1208 @@
+=== COMPLETE SQLITE SCHEMA ===
+
+[index] idx_analytics_sensor_window
+CREATE INDEX idx_analytics_sensor_window
+            ON sensor_analytics(sensor_name, window_end)
+        
+
+[index] idx_anomaly_severity_timestamp
+CREATE INDEX idx_anomaly_severity_timestamp
+            ON anomaly_events(severity, timestamp)
+        
+
+[index] idx_assessment_timestamp
+CREATE INDEX idx_assessment_timestamp
+            ON machine_assessments(timestamp)
+        
+
+[index] idx_audit_category_ts
+CREATE INDEX idx_audit_category_ts
+            ON audit_entries(category, timestamp)
+        
+
+[index] idx_auth_rate_blocked
+CREATE INDEX idx_auth_rate_blocked
+            ON auth_rate_limits(blocked_until)
+        
+
+[index] idx_auth_tokens_type_expiry
+CREATE INDEX idx_auth_tokens_type_expiry
+            ON auth_security_tokens(token_type, expires_at)
+        
+
+[index] idx_auth_tokens_user
+CREATE INDEX idx_auth_tokens_user
+            ON auth_security_tokens(user_id)
+        
+
+[index] idx_control_intent_ts
+CREATE INDEX idx_control_intent_ts
+            ON control_signals(intent, timestamp)
+        
+
+[index] idx_edge_status
+CREATE INDEX idx_edge_status
+            ON edge_devices(status)
+        
+
+[index] idx_explorer_ts
+CREATE INDEX idx_explorer_ts
+            ON explorer_history(timestamp)
+        
+
+[index] idx_ml_models_active
+CREATE INDEX idx_ml_models_active
+            ON ml_models(family, is_active)
+        
+
+[index] idx_one_pending_account_recovery
+CREATE UNIQUE INDEX idx_one_pending_account_recovery
+            ON account_recovery_requests(user_id)
+            WHERE status = 'PENDING'
+        
+
+[index] idx_one_pending_admin_promotion
+CREATE UNIQUE INDEX idx_one_pending_admin_promotion
+            ON admin_promotion_requests(user_id)
+            WHERE status = 'PENDING'
+        
+
+[index] idx_queue_device_delivered
+CREATE INDEX idx_queue_device_delivered
+            ON control_signal_queue(device_id, delivered_at)
+        
+
+[index] idx_recommendation_assessment
+CREATE INDEX idx_recommendation_assessment
+            ON recommendations(assessment_id)
+        
+
+[index] idx_sensor_name_timestamp
+CREATE INDEX idx_sensor_name_timestamp
+            ON sensor_readings(sensor_name, timestamp)
+        
+
+[index] idx_sensor_timestamp
+CREATE INDEX idx_sensor_timestamp
+            ON sensor_readings(timestamp)
+        
+
+[index] idx_trend_model_time
+CREATE INDEX idx_trend_model_time
+            ON accuracy_trend(model_id, measured_at)
+        
+
+[index] idx_user_permissions_user_id
+CREATE INDEX idx_user_permissions_user_id
+            ON user_permissions(user_id)
+        
+
+[index] idx_users_deleted_active
+CREATE INDEX idx_users_deleted_active
+            ON users(is_deleted, is_active)
+        
+
+[index] idx_users_role_active
+CREATE INDEX idx_users_role_active
+            ON users(role, is_active)
+        
+
+[index] idx_verified_model_ts
+CREATE INDEX idx_verified_model_ts
+            ON verified_labels(model_version, verified_at)
+        
+
+[table] account_recovery_requests
+CREATE TABLE account_recovery_requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                recovery_reason TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'PENDING'
+                    CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
+                reviewed_by INTEGER,
+                review_remarks TEXT,
+                requested_at TEXT NOT NULL,
+                reviewed_at TEXT,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
+            )
+
+[table] accuracy_trend
+CREATE TABLE accuracy_trend (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                model_id INTEGER NOT NULL,
+                f1_score REAL NOT NULL,
+                measured_at TEXT NOT NULL,
+                FOREIGN KEY (model_id)
+                    REFERENCES ml_models(id)
+            )
+
+[table] admin_promotion_requests
+CREATE TABLE admin_promotion_requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                request_reason TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'PENDING'
+                    CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
+                reviewed_by INTEGER,
+                review_remarks TEXT,
+                requested_at TEXT NOT NULL,
+                reviewed_at TEXT,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
+            )
+
+[table] analysis_events
+CREATE TABLE analysis_events (
+                    event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    pattern_id INTEGER,
+                    timestamp TEXT NOT NULL,
+                    analysis_mode TEXT NOT NULL,
+                    stability_score REAL,
+                    scenarios TEXT,
+                    decision TEXT,
+                    explanation TEXT,
+                    manual_note TEXT
+                )
+
+[table] anomaly_events
+CREATE TABLE anomaly_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                timestamp TEXT NOT NULL,
+
+                sensor_name TEXT NOT NULL,
+
+                severity TEXT NOT NULL,
+
+                observed_value REAL,
+                expected_min REAL,
+                expected_max REAL,
+
+                deviation REAL,
+
+                probable_cause TEXT,
+
+                description TEXT,
+
+                assessment_id INTEGER,
+
+                FOREIGN KEY (assessment_id)
+                    REFERENCES machine_assessments(id)
+            )
+
+[table] audit_entries
+CREATE TABLE audit_entries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                category TEXT NOT NULL,
+                actor TEXT,
+                target TEXT,
+                detail_json TEXT NOT NULL,
+                hash TEXT NOT NULL
+            )
+
+[table] auth_rate_limits
+CREATE TABLE auth_rate_limits (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                scope TEXT NOT NULL,
+                subject_hash TEXT NOT NULL,
+                window_started_at TEXT NOT NULL,
+                attempts INTEGER NOT NULL DEFAULT 0
+                    CHECK (attempts >= 0),
+                blocked_until TEXT,
+                updated_at TEXT NOT NULL,
+                UNIQUE (scope, subject_hash)
+            )
+
+[table] auth_security_tokens
+CREATE TABLE auth_security_tokens (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                token_hash TEXT NOT NULL UNIQUE,
+                token_type TEXT NOT NULL
+                    CHECK (
+                        token_type IN (
+                            'PASSWORD_RESET',
+                            'ADMIN_INVITE'
+                        )
+                    ),
+                user_id INTEGER,
+                created_by_user_id INTEGER,
+                created_at TEXT NOT NULL,
+                expires_at TEXT NOT NULL,
+                consumed_at TEXT,
+                revoked_at TEXT,
+                metadata_json TEXT,
+                FOREIGN KEY (user_id)
+                    REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (created_by_user_id)
+                    REFERENCES users(id) ON DELETE SET NULL
+            )
+
+[table] control_signal_queue
+CREATE TABLE control_signal_queue (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                device_id TEXT NOT NULL,
+                intent TEXT NOT NULL,
+                priority INTEGER NOT NULL,
+                queued_at TEXT NOT NULL,
+                delivered_at TEXT,
+                FOREIGN KEY (device_id)
+                    REFERENCES edge_devices(device_id)
+            )
+
+[table] control_signals
+CREATE TABLE control_signals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp TEXT NOT NULL,
+        intent TEXT NOT NULL,
+        system_status TEXT NOT NULL,
+        target_equipment TEXT,
+        priority INTEGER NOT NULL,
+        triggering_params_json TEXT,
+        model_version TEXT,
+        ack_timestamp TEXT,
+        resulting_equipment_state TEXT
+    )
+
+[table] edge_devices
+CREATE TABLE edge_devices (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                device_id TEXT NOT NULL UNIQUE,
+                protocol TEXT NOT NULL,
+                capabilities_json TEXT,
+                status TEXT NOT NULL DEFAULT 'offline',
+                last_known_state_json TEXT,
+                last_heartbeat TEXT,
+                registered_at TEXT NOT NULL
+            )
+
+[table] engine_observations
+CREATE TABLE engine_observations (
+                    observation_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    pattern_id INTEGER,
+                    timestamp TEXT NOT NULL,
+                    features TEXT NOT NULL,
+                    quality TEXT,
+                    FOREIGN KEY(pattern_id)
+                    REFERENCES unknown_patterns(pattern_id)
+                )
+
+[table] explorer_history
+CREATE TABLE explorer_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                entry_type TEXT NOT NULL,
+                active_user TEXT,
+                arrangement_json TEXT,
+                classification_label TEXT,
+                confidence REAL,
+                model_version TEXT,
+                UNIQUE(timestamp, entry_type)
+            )
+
+[table] knowledge_profiles
+CREATE TABLE knowledge_profiles (
+                    profile_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    label TEXT NOT NULL,
+                    feature_names TEXT NOT NULL,
+                    sample_count INTEGER NOT NULL,
+                    means TEXT NOT NULL,
+                    m2_values TEXT NOT NULL,
+                    minimums TEXT NOT NULL,
+                    maximums TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+
+[table] machine_assessments
+CREATE TABLE machine_assessments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                timestamp TEXT NOT NULL,
+
+                overall_status TEXT NOT NULL,
+
+                confidence_score REAL,
+                anomaly_rate REAL,
+                health_score REAL,
+
+                probable_causes_json TEXT,
+                sensor_summary_json TEXT,
+
+                assessment_notes TEXT
+            )
+
+[table] machine_config
+CREATE TABLE machine_config (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                parameter_name TEXT NOT NULL UNIQUE,
+
+                parameter_value TEXT NOT NULL,
+
+                unit TEXT,
+
+                description TEXT,
+
+                updated_at TEXT NOT NULL
+            )
+
+[table] ml_models
+CREATE TABLE ml_models (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                family TEXT NOT NULL,
+                model_name TEXT NOT NULL,
+                version TEXT NOT NULL,
+                is_active INTEGER NOT NULL DEFAULT 0
+                    CHECK (is_active IN (0, 1)),
+                training_timestamp TEXT NOT NULL,
+                dataset_hash TEXT NOT NULL,
+                artifact_path TEXT NOT NULL,
+                metrics_json TEXT,
+                schema_version TEXT DEFAULT '1.0',
+                UNIQUE(family, version)
+            )
+
+[table] recommendations
+CREATE TABLE recommendations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                timestamp TEXT NOT NULL,
+
+                assessment_id INTEGER,
+
+                category TEXT NOT NULL,
+
+                priority TEXT NOT NULL,
+
+                recommendation TEXT NOT NULL,
+
+                reason TEXT,
+
+                sensor_name TEXT,
+
+                action_status TEXT DEFAULT 'PENDING',
+
+                FOREIGN KEY (assessment_id)
+                    REFERENCES machine_assessments(id)
+            )
+
+[table] sensor_analytics
+CREATE TABLE sensor_analytics (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                sensor_name TEXT NOT NULL,
+
+                window_start TEXT NOT NULL,
+                window_end TEXT NOT NULL,
+
+                sample_count INTEGER DEFAULT 0,
+
+                minimum REAL,
+                maximum REAL,
+                average REAL,
+
+                rms REAL,
+                standard_deviation REAL,
+
+                anomaly_count INTEGER DEFAULT 0,
+                anomaly_rate REAL DEFAULT 0,
+
+                trend TEXT,
+                status TEXT,
+
+                created_at TEXT NOT NULL
+            )
+
+[table] sensor_knowledge_profiles
+CREATE TABLE sensor_knowledge_profiles (
+                    sensor_profile_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    sensor_name TEXT NOT NULL,
+                    feature_name TEXT NOT NULL,
+                    label TEXT NOT NULL,
+                    sample_count INTEGER NOT NULL,
+                    mean_value REAL NOT NULL,
+                    m2_value REAL NOT NULL,
+                    minimum_value REAL NOT NULL,
+                    maximum_value REAL NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+
+[table] sensor_readings
+CREATE TABLE sensor_readings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                timestamp TEXT NOT NULL,
+                sensor_name TEXT NOT NULL,
+
+                value REAL NOT NULL,
+                unit TEXT NOT NULL,
+
+                axis TEXT,
+
+                quality TEXT DEFAULT 'VALID',
+
+                metadata_json TEXT
+            )
+
+[table] sensor_status_history
+CREATE TABLE sensor_status_history (
+                    history_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp TEXT NOT NULL,
+                    sensor_name TEXT NOT NULL,
+                    feature_name TEXT NOT NULL,
+                    sensor_value REAL NOT NULL,
+                    status TEXT NOT NULL,
+                    classification TEXT,
+                    explanation TEXT
+                )
+
+[table] sqlite_sequence
+CREATE TABLE sqlite_sequence(name,seq)
+
+[table] system_status_history
+CREATE TABLE system_status_history (
+                    history_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp TEXT NOT NULL,
+                    overall_status TEXT NOT NULL,
+                    sensor_statuses TEXT NOT NULL,
+                    explanation TEXT
+                )
+
+[table] threshold_definitions
+CREATE TABLE threshold_definitions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                parameter_name TEXT NOT NULL,
+                normal_max REAL NOT NULL,
+                warning_max REAL NOT NULL,
+                source_standard TEXT,
+                equipment_specific INTEGER NOT NULL DEFAULT 0
+                    CHECK (equipment_specific IN (0, 1)),
+                confirmed_by TEXT,
+                confirmed_at TEXT,
+                active INTEGER NOT NULL DEFAULT 0
+            )
+
+[table] unknown_patterns
+CREATE TABLE unknown_patterns (
+                    pattern_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    feature_names TEXT NOT NULL,
+                    sample_count INTEGER NOT NULL,
+                    means TEXT NOT NULL,
+                    m2_values TEXT NOT NULL,
+                    minimums TEXT NOT NULL,
+                    maximums TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    first_seen TEXT NOT NULL,
+                    last_seen TEXT NOT NULL
+                )
+
+[table] user_permissions
+CREATE TABLE user_permissions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                permission_key TEXT NOT NULL,
+                is_granted INTEGER NOT NULL
+                    CHECK (is_granted IN (0, 1)),
+                updated_by INTEGER,
+                updated_at TEXT NOT NULL,
+
+                FOREIGN KEY (user_id)
+                    REFERENCES users(id)
+                    ON DELETE CASCADE,
+
+                FOREIGN KEY (updated_by)
+                    REFERENCES users(id)
+                    ON DELETE SET NULL,
+
+                UNIQUE (user_id, permission_key)
+            )
+
+[table] users
+CREATE TABLE users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                username TEXT NOT NULL COLLATE NOCASE UNIQUE,
+                full_name TEXT NOT NULL,
+
+                password_hash TEXT NOT NULL,
+
+                role TEXT NOT NULL CHECK (
+                    role IN (
+                        'ADMIN',
+                        'OPERATOR',
+                        'MAINTENANCE_ENGINEER'
+                    )
+                ),
+
+                is_active INTEGER NOT NULL DEFAULT 1
+                    CHECK (is_active IN (0, 1)),
+
+                created_at TEXT NOT NULL,
+                last_login TEXT
+            , is_deleted INTEGER NOT NULL DEFAULT 0 CHECK (is_deleted IN (0, 1)), deleted_at TEXT, deleted_by TEXT, deletion_reason TEXT, deleted_was_active INTEGER NOT NULL DEFAULT 1 CHECK (deleted_was_active IN (0, 1)), session_version INTEGER NOT NULL DEFAULT 0
+                    CHECK (session_version >= 0))
+
+[table] verified_labels
+CREATE TABLE verified_labels (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER,
+                label TEXT NOT NULL,
+                feature_vector_json TEXT NOT NULL,
+                model_version TEXT NOT NULL,
+                verified_by TEXT NOT NULL,
+                verified_at TEXT NOT NULL,
+                FOREIGN KEY (event_id)
+                    REFERENCES anomaly_events(id)
+            )
+
+=== TABLE COUNTS ===
+account_recovery_requests: 0
+accuracy_trend: 0
+admin_promotion_requests: 0
+analysis_events: 633
+anomaly_events: 0
+audit_entries: 158
+auth_rate_limits: 1
+auth_security_tokens: 0
+control_signal_queue: 0
+control_signals: 105
+edge_devices: 0
+engine_observations: 633
+explorer_history: 500
+knowledge_profiles: 9
+machine_assessments: 0
+machine_config: 0
+ml_models: 76
+recommendations: 84
+sensor_analytics: 0
+sensor_knowledge_profiles: 6
+sensor_readings: 15
+sensor_status_history: 169
+system_status_history: 741
+threshold_definitions: 3
+unknown_patterns: 353
+user_permissions: 0
+users: 3
+verified_labels: 0
+
+=== SQLITE REFERENCES IN PYTHON FILES ===
+
+--- Backend\auth.py:187 ---
+185: def _begin_transaction():
+186:     connection = get_connection()
+187:     connection.execute("BEGIN IMMEDIATE")
+188:     return connection
+189: 
+190: 
+191: def _audit_transaction(connection, category, actor, target, details):
+
+--- Backend\auth.py:231 ---
+229:     ))
+230: 
+231:     return cursor.lastrowid
+232: 
+233: 
+234: def _admin_in_transaction(connection, admin_id):
+235:     admin = connection.execute("""
+
+--- Backend\auth.py:1012 ---
+1010: 
+1011:         connection.commit()
+1012:         return cursor.lastrowid
+1013: 
+1014:     except Exception:
+1015:         connection.rollback()
+1016:         raise
+
+--- Backend\auth.py:1162 ---
+1160: 
+1161:         connection.commit()
+1162:         return cursor.lastrowid
+1163: 
+1164:     except sqlite3.IntegrityError:
+1165:         connection.rollback()
+1166:         return False
+
+--- Backend\auth_security_store.py:9 ---
+7: 
+8: BASE_DIR = Path(__file__).resolve().parent
+9: DATABASE_PATH = BASE_DIR / "database" / "intelliwatch.db"
+10: 
+11: TOKEN_TYPES = {"PASSWORD_RESET", "ADMIN_INVITE"}
+12: 
+13: 
+
+--- Backend\auth_security_store.py:60 ---
+58: 
+59: def _connect():
+60:     connection = sqlite3.connect(
+61:         DATABASE_PATH,
+62:         timeout=30,
+63:         isolation_level=None,
+64:     )
+
+--- Backend\auth_security_store.py:61 ---
+59: def _connect():
+60:     connection = sqlite3.connect(
+61:         DATABASE_PATH,
+62:         timeout=30,
+63:         isolation_level=None,
+64:     )
+65: 
+
+--- Backend\auth_security_store.py:66 ---
+64:     )
+65: 
+66:     connection.row_factory = sqlite3.Row
+67:     connection.execute("PRAGMA foreign_keys = ON")
+68:     connection.execute("PRAGMA busy_timeout = 30000")
+69: 
+70:     return connection
+
+--- Backend\auth_security_store.py:67 ---
+65: 
+66:     connection.row_factory = sqlite3.Row
+67:     connection.execute("PRAGMA foreign_keys = ON")
+68:     connection.execute("PRAGMA busy_timeout = 30000")
+69: 
+70:     return connection
+71: 
+
+--- Backend\auth_security_store.py:68 ---
+66:     connection.row_factory = sqlite3.Row
+67:     connection.execute("PRAGMA foreign_keys = ON")
+68:     connection.execute("PRAGMA busy_timeout = 30000")
+69: 
+70:     return connection
+71: 
+72: 
+
+--- Backend\auth_security_store.py:81 ---
+79: 
+80:     try:
+81:         connection.execute("BEGIN IMMEDIATE")
+82: 
+83:         connection.execute("""
+84:             CREATE TABLE IF NOT EXISTS auth_security_tokens (
+85:                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+--- Backend\auth_security_store.py:125 ---
+123:             row["name"]
+124:             for row in connection.execute(
+125:                 "PRAGMA table_info(users)"
+126:             ).fetchall()
+127:         }
+128: 
+129:         if "session_version" not in columns:
+
+--- Backend\auth_security_store.py:184 ---
+182: 
+183:     try:
+184:         connection.execute("BEGIN IMMEDIATE")
+185: 
+186:         cursor = connection.execute("""
+187:             INSERT INTO auth_security_tokens (
+188:                 token_hash,
+
+--- Backend\auth_security_store.py:208 ---
+206: 
+207:         connection.commit()
+208:         return cursor.lastrowid
+209: 
+210:     except Exception:
+211:         connection.rollback()
+212:         raise
+
+--- Backend\auth_security_store.py:227 ---
+225: 
+226:     try:
+227:         connection.execute("BEGIN IMMEDIATE")
+228: 
+229:         row = connection.execute("""
+230:             SELECT *
+231:             FROM auth_security_tokens
+
+--- Backend\auth_security_store.py:283 ---
+281: 
+282:     try:
+283:         connection.execute("BEGIN IMMEDIATE")
+284: 
+285:         cursor = connection.execute("""
+286:             UPDATE auth_security_tokens
+287:             SET revoked_at = ?
+
+--- Backend\auth_security_store.py:316 ---
+314: 
+315:     try:
+316:         connection.execute("BEGIN IMMEDIATE")
+317: 
+318:         if token_type is None:
+319:             cursor = connection.execute("""
+320:                 UPDATE auth_security_tokens
+
+--- Backend\auth_security_store.py:362 ---
+360: 
+361:     try:
+362:         connection.execute("BEGIN IMMEDIATE")
+363: 
+364:         cursor = connection.execute("""
+365:             UPDATE users
+366:             SET session_version = session_version + 1
+
+--- Backend\auth_security_store.py:438 ---
+436: 
+437:     try:
+438:         connection.execute("BEGIN IMMEDIATE")
+439: 
+440:         row = connection.execute("""
+441:             SELECT *
+442:             FROM auth_rate_limits
+
+--- Backend\auth_security_store.py:580 ---
+578: 
+579:     try:
+580:         connection.execute("BEGIN IMMEDIATE")
+581: 
+582:         row = connection.execute("""
+583:             SELECT *
+584:             FROM auth_rate_limits
+
+--- Backend\auth_security_store.py:666 ---
+664: 
+665:     try:
+666:         connection.execute("BEGIN IMMEDIATE")
+667: 
+668:         cursor = connection.execute("""
+669:             DELETE FROM auth_rate_limits
+670:             WHERE scope = ?
+
+--- Backend\auth_security_store.py:701 ---
+699: 
+700:     try:
+701:         connection.execute("BEGIN IMMEDIATE")
+702: 
+703:         token_cursor = connection.execute("""
+704:             DELETE FROM auth_security_tokens
+705:             WHERE expires_at < ?
+
+--- Backend\database.py:16 ---
+14: BASE_DIR = Path(__file__).resolve().parent
+15: DATABASE_DIR = BASE_DIR / "database"
+16: DATABASE_PATH = DATABASE_DIR / "intelliwatch.db"
+17: 
+18: DATABASE_DIR.mkdir(parents=True, exist_ok=True)
+19: 
+20: VALID_ROLES = {
+
+--- Backend\database.py:31 ---
+29: 
+30: def get_connection():
+31:     connection = sqlite3.connect(DATABASE_PATH, timeout=30)
+32:     connection.row_factory = sqlite3.Row
+33:     connection.execute("PRAGMA foreign_keys = ON")
+34:     connection.execute("PRAGMA busy_timeout = 30000")
+35:     return connection
+
+--- Backend\database.py:32 ---
+30: def get_connection():
+31:     connection = sqlite3.connect(DATABASE_PATH, timeout=30)
+32:     connection.row_factory = sqlite3.Row
+33:     connection.execute("PRAGMA foreign_keys = ON")
+34:     connection.execute("PRAGMA busy_timeout = 30000")
+35:     return connection
+36: 
+
+--- Backend\database.py:33 ---
+31:     connection = sqlite3.connect(DATABASE_PATH, timeout=30)
+32:     connection.row_factory = sqlite3.Row
+33:     connection.execute("PRAGMA foreign_keys = ON")
+34:     connection.execute("PRAGMA busy_timeout = 30000")
+35:     return connection
+36: 
+37: 
+
+--- Backend\database.py:34 ---
+32:     connection.row_factory = sqlite3.Row
+33:     connection.execute("PRAGMA foreign_keys = ON")
+34:     connection.execute("PRAGMA busy_timeout = 30000")
+35:     return connection
+36: 
+37: 
+38: def current_timestamp():
+
+--- Backend\database.py:43 ---
+41: 
+42: def _begin_transaction(connection):
+43:     connection.execute("BEGIN IMMEDIATE")
+44: 
+45: 
+46: def _insert_audit_entry(
+47:     connection,
+
+--- Backend\database.py:100 ---
+98:     ))
+99: 
+100:     return cursor.lastrowid
+101: 
+102: 
+103: def _audit_details(connection, category, actor, target, details):
+104:     return _insert_audit_entry(
+
+--- Backend\database.py:121 ---
+119: 
+120:     try:
+121:         connection.execute("PRAGMA journal_mode = WAL")
+122:         connection.execute("PRAGMA synchronous = NORMAL")
+123: 
+124:         cursor = connection.cursor()
+125: 
+
+--- Backend\database.py:122 ---
+120:     try:
+121:         connection.execute("PRAGMA journal_mode = WAL")
+122:         connection.execute("PRAGMA synchronous = NORMAL")
+123: 
+124:         cursor = connection.cursor()
+125: 
+126:         # 1. RAW SENSOR READINGS
+
+--- Backend\database.py:463 ---
+461:             column["name"]
+462:             for column in cursor.execute(
+463:                 "PRAGMA table_info(users)"
+464:             ).fetchall()
+465:         }
+466: 
+467:         lifecycle_columns = {
+
+--- Backend\database.py:653 ---
+651: 
+652:         connection.commit()
+653:         return cursor.lastrowid
+654: 
+655:     except Exception:
+656:         connection.rollback()
+657:         raise
+
+--- Backend\database.py:690 ---
+688: 
+689:         connection.commit()
+690:         return cursor.lastrowid
+691: 
+692:     except Exception:
+693:         connection.rollback()
+694:         raise
+
+--- Backend\database.py:726 ---
+724: 
+725:         connection.commit()
+726:         return cursor.lastrowid
+727: 
+728:     except Exception:
+729:         connection.rollback()
+730:         raise
+
+--- Backend\database.py:930 ---
+928: 
+929:         connection.commit()
+930:         return cursor.lastrowid
+931: 
+932:     except Exception:
+933:         connection.rollback()
+934:         raise
+
+--- Backend\database.py:1380 ---
+1378: 
+1379:         connection.commit()
+1380:         return cursor.lastrowid
+1381: 
+1382:     except Exception:
+1383:         connection.rollback()
+1384:         raise
+
+--- Backend\database.py:1406 ---
+1404: 
+1405:         connection.commit()
+1406:         return cursor.lastrowid
+1407: 
+1408:     except Exception:
+1409:         connection.rollback()
+1410:         raise
+
+--- Backend\database.py:1463 ---
+1461: 
+1462:         connection.commit()
+1463:         return cursor.lastrowid
+1464: 
+1465:     except Exception:
+1466:         connection.rollback()
+1467:         raise
+
+--- Backend\database.py:1647 ---
+1645: 
+1646:         connection.commit()
+1647:         return cursor.lastrowid
+1648: 
+1649:     except Exception:
+1650:         connection.rollback()
+1651:         raise
+
+--- Backend\database.py:1801 ---
+1799: if __name__ == "__main__":
+1800:     initialize_database()
+1801:     print(f"Database location: {DATABASE_PATH}")
+
+--- Backend\equipment_controller.py:426 ---
+424:             ))
+425:             conn.commit()
+426:             control_id = cursor.lastrowid
+427:             # Track for ack-timeout checking.
+428:             with self._lock:
+429:                 self._pending_acks[control_id] = time.monotonic()
+430:             return control_id
+
+--- Backend\intelliwatch_engine.py:39 ---
+37: # ============================================================
+38: 
+39: DATABASE_PATH = (
+40:     Path(__file__).resolve().parent
+41:     / "database"
+42:     / "intelliwatch.db"
+43: )
+
+--- Backend\intelliwatch_engine.py:250 ---
+248: 
+249:         self.database_path = Path(
+250:             database_path or DATABASE_PATH
+251:         )
+252: 
+253:         self.database_path.parent.mkdir(
+254:             parents=True,
+
+--- Backend\intelliwatch_engine.py:269 ---
+267:     def connect(self):
+268: 
+269:         connection = sqlite3.connect(
+270:             self.database_path,
+271:             timeout=30
+272:         )
+273: 
+
+--- Backend\intelliwatch_engine.py:274 ---
+272:         )
+273: 
+274:         connection.row_factory = sqlite3.Row
+275: 
+276:         try:
+277:             yield connection
+278:             connection.commit()
+
+--- Backend\intelliwatch_engine.py:1261 ---
+1259:                     timestamp,
+1260:                     timestamp
+1261:                 )).lastrowid
+1262: 
+1263:             connection.execute("""
+1264:                 INSERT INTO engine_observations (
+1265:                     pattern_id,
+
+--- Backend\iso_standards.py:674 ---
+672: 
+673:         connection.commit()
+674:         return cursor.lastrowid
+675: 
+676:     except Exception:
+677:         connection.rollback()
+678:         raise
+
+--- Backend\tests\test_database_helpers.py:9 ---
+7: 
+8: Uses an isolated temporary SQLite database by redirecting the module
+9: level DATABASE_PATH, mirroring the style of test_engine.py.
+10: """
+11: 
+12: import unittest
+13: import tempfile
+
+--- Backend\tests\test_database_helpers.py:35 ---
+33: 
+34:         # Redirect the module-level database path to the temp file.
+35:         self._original_db_path = database.DATABASE_PATH
+36:         database.DATABASE_PATH = self.db_path
+37: 
+38:         database.initialize_database()
+39: 
+
+--- Backend\tests\test_database_helpers.py:36 ---
+34:         # Redirect the module-level database path to the temp file.
+35:         self._original_db_path = database.DATABASE_PATH
+36:         database.DATABASE_PATH = self.db_path
+37: 
+38:         database.initialize_database()
+39: 
+40:     def tearDown(self):
+
+--- Backend\tests\test_database_helpers.py:41 ---
+39: 
+40:     def tearDown(self):
+41:         database.DATABASE_PATH = self._original_db_path
+42:         self.temp_dir.cleanup()
+43: 
+44:     # -----------------------------------------
+45:     # Helper: run raw SQL against the temp db
+
+--- Backend\tests\test_database_helpers.py:49 ---
+47: 
+48:     def fetch_one(self, query, params=()):
+49:         with closing(sqlite3.connect(self.db_path)) as conn:
+50:             conn.row_factory = sqlite3.Row
+51:             return conn.execute(query, params).fetchone()
+52: 
+53:     def fetch_all(self, query, params=()):
+
+--- Backend\tests\test_database_helpers.py:50 ---
+48:     def fetch_one(self, query, params=()):
+49:         with closing(sqlite3.connect(self.db_path)) as conn:
+50:             conn.row_factory = sqlite3.Row
+51:             return conn.execute(query, params).fetchone()
+52: 
+53:     def fetch_all(self, query, params=()):
+54:         with closing(sqlite3.connect(self.db_path)) as conn:
+
+--- Backend\tests\test_database_helpers.py:54 ---
+52: 
+53:     def fetch_all(self, query, params=()):
+54:         with closing(sqlite3.connect(self.db_path)) as conn:
+55:             conn.row_factory = sqlite3.Row
+56:             return conn.execute(query, params).fetchall()
+57: 
+58:     def insert_control_signal(self, intent="SHUTDOWN", priority=10):
+
+--- Backend\tests\test_database_helpers.py:55 ---
+53:     def fetch_all(self, query, params=()):
+54:         with closing(sqlite3.connect(self.db_path)) as conn:
+55:             conn.row_factory = sqlite3.Row
+56:             return conn.execute(query, params).fetchall()
+57: 
+58:     def insert_control_signal(self, intent="SHUTDOWN", priority=10):
+59:         with closing(sqlite3.connect(self.db_path)) as conn:
+
+--- Backend\tests\test_database_helpers.py:59 ---
+57: 
+58:     def insert_control_signal(self, intent="SHUTDOWN", priority=10):
+59:         with closing(sqlite3.connect(self.db_path)) as conn:
+60:             cursor = conn.execute("""
+61:                 INSERT INTO control_signals (
+62:                     timestamp, intent, system_status, priority
+63:                 )
+
+--- Backend\tests\test_database_helpers.py:72 ---
+70:             ))
+71:             conn.commit()
+72:             return cursor.lastrowid
+73: 
+74:     def insert_anomaly_event(self):
+75:         with closing(sqlite3.connect(self.db_path)) as conn:
+76:             cursor = conn.execute("""
+
+--- Backend\tests\test_database_helpers.py:75 ---
+73: 
+74:     def insert_anomaly_event(self):
+75:         with closing(sqlite3.connect(self.db_path)) as conn:
+76:             cursor = conn.execute("""
+77:                 INSERT INTO anomaly_events (
+78:                     timestamp, sensor_name, severity
+79:                 )
+
+--- Backend\tests\test_database_helpers.py:87 ---
+85:             ))
+86:             conn.commit()
+87:             return cursor.lastrowid
+88: 
+89:     def insert_ml_model(self, version="v1"):
+90:         with closing(sqlite3.connect(self.db_path)) as conn:
+91:             cursor = conn.execute("""
+
+--- Backend\tests\test_database_helpers.py:90 ---
+88: 
+89:     def insert_ml_model(self, version="v1"):
+90:         with closing(sqlite3.connect(self.db_path)) as conn:
+91:             cursor = conn.execute("""
+92:                 INSERT INTO ml_models (
+93:                     family, model_name, version, training_timestamp,
+94:                     dataset_hash, artifact_path
+
+--- Backend\tests\test_database_helpers.py:102 ---
+100:             ))
+101:             conn.commit()
+102:             return cursor.lastrowid
+103: 
+104:     # -----------------------------------------
+105:     # save_control_ack
+106:     # -----------------------------------------
+
+--- Backend\tests\test_engine.py:40 ---
+38: 
+39:     def get_database_value(self, query):
+40:         with closing(sqlite3.connect(self.db_path)) as conn:
+41:             return conn.execute(query).fetchone()[0]
+42: 
+43:     # -----------------------------------------
+44:     # Helper: Generate sensor readings
+
+--- Backend\tests\test_engine.py:339 ---
+337: 
+338:     def test_database_integrity(self):
+339:         with closing(sqlite3.connect(self.db_path)) as conn:
+340:             result = conn.execute(
+341:                 "PRAGMA integrity_check"
+342:             ).fetchone()[0]
+343: 
+
+--- Backend\tests\test_engine.py:341 ---
+339:         with closing(sqlite3.connect(self.db_path)) as conn:
+340:             result = conn.execute(
+341:                 "PRAGMA integrity_check"
+342:             ).fetchone()[0]
+343: 
+344:         self.assertEqual(result, "ok")
+345: 
+
+--- Backend\tests\properties\test_property_22.py:25 ---
+23: 
+24: def _init_temp_db(tmp_dir, name="test.db"):
+25:     """Patch database.DATABASE_PATH to a fresh temp file and initialise the schema."""
+26:     db_path = Path(tmp_dir) / name
+27:     original = database.DATABASE_PATH
+28:     database.DATABASE_PATH = db_path
+29:     database.initialize_database()
+
+--- Backend\tests\properties\test_property_22.py:27 ---
+25:     """Patch database.DATABASE_PATH to a fresh temp file and initialise the schema."""
+26:     db_path = Path(tmp_dir) / name
+27:     original = database.DATABASE_PATH
+28:     database.DATABASE_PATH = db_path
+29:     database.initialize_database()
+30:     return original
+31: 
+
+--- Backend\tests\properties\test_property_22.py:28 ---
+26:     db_path = Path(tmp_dir) / name
+27:     original = database.DATABASE_PATH
+28:     database.DATABASE_PATH = db_path
+29:     database.initialize_database()
+30:     return original
+31: 
+32: 
+
+--- Backend\tests\properties\test_property_22.py:34 ---
+32: 
+33: def _restore_db(original):
+34:     database.DATABASE_PATH = original
+35: 
+36: 
+37: @pytest.mark.skipif(not _HAS_DATABASE, reason="database module not available")
+38: def test_explorer_history_eviction_at_501():

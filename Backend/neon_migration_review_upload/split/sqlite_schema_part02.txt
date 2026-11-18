@@ -1,0 +1,61 @@
+                permission_key TEXT NOT NULL,
+                is_granted INTEGER NOT NULL
+                    CHECK (is_granted IN (0, 1)),
+                updated_by INTEGER,
+                updated_at TEXT NOT NULL,
+
+                FOREIGN KEY (user_id)
+                    REFERENCES users(id)
+                    ON DELETE CASCADE,
+
+                FOREIGN KEY (updated_by)
+                    REFERENCES users(id)
+                    ON DELETE SET NULL,
+
+                UNIQUE (user_id, permission_key)
+            )
+FOREIGN KEY: (0, 0, 'users', 'updated_by', 'id', 'NO ACTION', 'SET NULL', 'NONE')
+FOREIGN KEY: (1, 0, 'users', 'user_id', 'id', 'NO ACTION', 'CASCADE', 'NONE')
+
+TYPE: table
+NAME: users
+TABLE: users
+SQL: CREATE TABLE users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                username TEXT NOT NULL COLLATE NOCASE UNIQUE,
+                full_name TEXT NOT NULL,
+
+                password_hash TEXT NOT NULL,
+
+                role TEXT NOT NULL CHECK (
+                    role IN (
+                        'ADMIN',
+                        'OPERATOR',
+                        'MAINTENANCE_ENGINEER'
+                    )
+                ),
+
+                is_active INTEGER NOT NULL DEFAULT 1
+                    CHECK (is_active IN (0, 1)),
+
+                created_at TEXT NOT NULL,
+                last_login TEXT
+            , is_deleted INTEGER NOT NULL DEFAULT 0 CHECK (is_deleted IN (0, 1)), deleted_at TEXT, deleted_by TEXT, deletion_reason TEXT, deleted_was_active INTEGER NOT NULL DEFAULT 1 CHECK (deleted_was_active IN (0, 1)), session_version INTEGER NOT NULL DEFAULT 0
+                    CHECK (session_version >= 0))
+
+TYPE: table
+NAME: verified_labels
+TABLE: verified_labels
+SQL: CREATE TABLE verified_labels (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER,
+                label TEXT NOT NULL,
+                feature_vector_json TEXT NOT NULL,
+                model_version TEXT NOT NULL,
+                verified_by TEXT NOT NULL,
+                verified_at TEXT NOT NULL,
+                FOREIGN KEY (event_id)
+                    REFERENCES anomaly_events(id)
+            )
+FOREIGN KEY: (0, 0, 'anomaly_events', 'event_id', 'id', 'NO ACTION', 'NO ACTION', 'NONE')

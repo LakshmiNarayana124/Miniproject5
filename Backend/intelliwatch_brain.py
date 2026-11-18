@@ -1,4 +1,3 @@
-
 """
 INTELLIWATCH BRAIN
 Version: 2.1
@@ -11,9 +10,11 @@ Coordinates:
 5. SQLite persistence
 6. Calibration restoration and validation
 
-Task 15.1:
-ML inference is attempted first. The Welford engine remains
-the fallback and provides sensor-level assessments.
+IoT-first operation:
+- Hardware calibration is restored separately.
+- Automatic startup calibration is disabled by default.
+- Missing hardware readings remain UNAVAILABLE.
+- Synthetic readings are rejected by the backend Brain.
 """
 
 from datetime import datetime, timezone
@@ -69,6 +70,12 @@ EXPECTED_SENSORS = (
     "current",
 )
 
+SENSOR_LABELS = {
+    "vibration": "Vibration",
+    "temperature": "Temperature",
+    "current": "Electrical Current",
+}
+
 
 def current_timestamp():
     """Return timezone-aware UTC timestamp."""
@@ -87,6 +94,88 @@ def _get_overall_status(overall):
     return "UNDER_OBSERVATION"
 
 
+def _contains_simulated_readings(readings):
+    """
+    Identify explicitly labelled synthetic sensor readings.
+
+    Synthetic observations must not enter the backend's
+    operational equipment history or knowledge engine.
+    """
+
+    if not isinstance(readings, dict):
+        return False
+
+    for reading in readings.values():
+
+        if not isinstance(reading, dict):
+            continue
+
+        metadata = reading.get("metadata") or {}
+
+        if not isinstance(metadata, dict):
+            continue
+
+        measurement_type = str(
+            metadata.get("measurement_type", "")
+        ).lower()
+
+        source = str(
+            metadata.get("source", "")
+        ).lower()
+
+        if (
+            "simulated" in measurement_type
+            or source == "simulation"
+        ):
+            return True
+
+    return False
+
+
+def _unavailable_sensor_statuses(readings=None):
+    """Build explicit unavailable statuses for expected sensors."""
+
+    readings = readings if isinstance(readings, dict) else {}
+
+    result = {}
+
+    for sensor in EXPECTED_SENSORS:
+
+        reading = readings.get(sensor)
+
+        value = (
+            reading.get("value")
+            if isinstance(reading, dict)
+            else None
+        )
+
+        error = (
+            reading.get("error")
+            if isinstance(reading, dict)
+            else None
+        )
+
+        explanation = (
+            str(error)
+            if error
+            else "Awaiting a valid hardware sensor reading."
+        )
+
+        result[sensor] = {
+            "sensor": SENSOR_LABELS[sensor],
+            "sensor_key": sensor,
+            "status": "UNAVAILABLE",
+            "classification": "UNKNOWN",
+            "value": value,
+            "representative_feature": None,
+            "feature_count": 0,
+            "feature_results": [],
+            "explanation": explanation,
+        }
+
+    return result
+
+
 # ============================================================
 # INTELLIWATCH BRAIN
 # ============================================================
@@ -95,23 +184,26 @@ class IntelliWatchBrain:
 
     def __init__(
         self,
-        auto_calibrate: bool = True,
+        auto_calibrate: bool = False,
         calibration_samples: int = 30
     ):
 
-        initialize_database()
-
         self.engine = IntelliWatchEngine()
         self._calibrated = False
+        self._calibration_source = "hardware"
 
         # ----------------------------------------------------
-        # Restore previous calibration
+        # Restore hardware calibration only.
+        # Legacy records without source metadata are ignored.
         # ----------------------------------------------------
 
         if _HAS_CALIBRATION:
 
             try:
-                previous = load_calibration()
+
+                previous = load_calibration(
+                    source=self._calibration_source
+                )
 
                 if previous and previous.get("thresholds"):
 
@@ -123,17 +215,21 @@ class IntelliWatchBrain:
                     self._calibrated = True
 
                     print(
-                        "[Brain] Restored calibration from "
+                        "[Brain] Hardware calibration restored from "
                         f"{previous.get('calibrated_at', '?')}"
                     )
 
             except Exception as exc:
+
                 print(
-                    f"[Brain] Calibration restoration skipped: {exc}"
+                    f"[Brain] Hardware calibration restoration skipped: {exc}"
                 )
 
         # ----------------------------------------------------
-        # First-startup automatic calibration
+        # Optional explicit startup calibration.
+        #
+        # Disabled by default because hardware integration
+        # and stable equipment baseline are not yet available.
         # ----------------------------------------------------
 
         if (
@@ -146,7 +242,9 @@ class IntelliWatchBrain:
 
                 result = run_calibration(
                     self.engine,
-                    n=calibration_samples
+                    n=calibration_samples,
+                    reader=read_all_sensors,
+                    source="hardware",
                 )
 
                 self._calibrated = result.get(
@@ -155,11 +253,17 @@ class IntelliWatchBrain:
                 )
 
                 if self._calibrated:
-                    print("[Brain] Auto-calibration complete.")
+                    print("[Brain] Hardware auto-calibration complete.")
+                else:
+                    print(
+                        "[Brain] Hardware auto-calibration skipped: "
+                        f"{result.get('reason', 'valid readings unavailable')}"
+                    )
 
             except Exception as exc:
+
                 print(
-                    f"[Brain] Auto-calibration skipped: {exc}"
+                    f"[Brain] Hardware auto-calibration skipped: {exc}"
                 )
 
     # ========================================================
@@ -167,7 +271,7 @@ class IntelliWatchBrain:
     # ========================================================
 
     def recalibrate(self, n: int = 30) -> dict:
-        """Re-derive operating thresholds from a fresh baseline."""
+        """Explicitly recalibrate using hardware readings."""
 
         if not _HAS_CALIBRATION:
 
@@ -180,7 +284,9 @@ class IntelliWatchBrain:
 
             result = run_calibration(
                 self.engine,
-                n=n
+                n=n,
+                reader=read_all_sensors,
+                source="hardware",
             )
 
             self._calibrated = result.get(
@@ -218,13 +324,41 @@ class IntelliWatchBrain:
             if value is None:
                 continue
 
+            metadata = reading.get("metadata") or {}
+
+            if not isinstance(metadata, dict):
+                metadata = {}
+
+            measurement_type = str(
+                metadata.get("measurement_type", "")
+            ).lower()
+
+            source = str(
+                metadata.get("source", "")
+            ).lower()
+
+            # Additional persistence guard.
+            if (
+                "simulated" in measurement_type
+                or source == "simulation"
+            ):
+                continue
+
+            try:
+                numeric_value = float(value)
+            except (TypeError, ValueError):
+                continue
+
+            if not __import__("math").isfinite(numeric_value):
+                continue
+
             records.append({
                 "sensor_name": reading.get(
                     "sensor_name",
                     sensor_key
                 ),
 
-                "value": value,
+                "value": numeric_value,
 
                 "unit": reading.get(
                     "unit",
@@ -242,10 +376,7 @@ class IntelliWatchBrain:
                     else "ERROR"
                 ),
 
-                "metadata": reading.get(
-                    "metadata",
-                    {}
-                ),
+                "metadata": metadata,
             })
 
         if records:
@@ -356,8 +487,6 @@ class IntelliWatchBrain:
         if not isinstance(sensor_recommendations, dict):
             sensor_recommendations = {}
 
-        # Keep unavailable sensors visible.
-
         for sensor_key in EXPECTED_SENSORS:
 
             sensor_data = sensor_statuses.get(
@@ -393,8 +522,6 @@ class IntelliWatchBrain:
         result["sensor_recommendations"] = (
             sensor_recommendations
         )
-
-        # Engine overall status remains authoritative.
 
         overall = result.get(
             "overall_recommendation",
@@ -535,8 +662,7 @@ class IntelliWatchBrain:
 
         # ----------------------------------------------------
         # Acquire readings only when not supplied.
-        # This allows the server to share one sensor snapshot
-        # between acquisition and assessment.
+        # The server should supply its shared hardware snapshot.
         # ----------------------------------------------------
 
         if readings is None:
@@ -549,11 +675,77 @@ class IntelliWatchBrain:
                 "timestamp": timestamp,
                 "message": "Invalid sensor readings format.",
                 "sensor_readings_saved": 0,
+                "sensor_statuses": _unavailable_sensor_statuses(),
                 "overall_system_status": "UNAVAILABLE",
             }
 
         # ----------------------------------------------------
-        # Save raw readings
+        # Reject explicitly marked simulated readings.
+        # Simulation is intended to remain outside the
+        # backend operational history and knowledge engine.
+        # ----------------------------------------------------
+
+        if _contains_simulated_readings(readings):
+
+            return {
+                "success": False,
+                "timestamp": timestamp,
+                "message": (
+                    "Synthetic readings are not accepted by the "
+                    "backend operational Brain."
+                ),
+                "sensor_readings": {},
+                "sensor_readings_saved": 0,
+                "sensor_statuses": _unavailable_sensor_statuses(),
+                "overall_system_status": "UNAVAILABLE",
+            }
+
+        # ----------------------------------------------------
+        # Check whether any valid sensor values are available.
+        # Do not invoke ML or Welford with an empty snapshot.
+        # ----------------------------------------------------
+
+        valid_sensor_values = []
+
+        for sensor in EXPECTED_SENSORS:
+
+            reading = readings.get(sensor)
+
+            if not isinstance(reading, dict):
+                continue
+
+            value = reading.get("value")
+
+            if value is None:
+                continue
+
+            try:
+                numeric_value = float(value)
+            except (TypeError, ValueError):
+                continue
+
+            if __import__("math").isfinite(numeric_value):
+                valid_sensor_values.append(numeric_value)
+
+        if not valid_sensor_values:
+
+            return {
+                "success": False,
+                "timestamp": timestamp,
+                "message": (
+                    "Awaiting valid hardware sensor readings. "
+                    "No synthetic values were substituted."
+                ),
+                "sensor_readings": readings,
+                "sensor_readings_saved": 0,
+                "sensor_statuses": _unavailable_sensor_statuses(
+                    readings
+                ),
+                "overall_system_status": "UNAVAILABLE",
+            }
+
+        # ----------------------------------------------------
+        # Save valid raw sensor readings.
         # ----------------------------------------------------
 
         saved_readings = self.store_raw_readings(
@@ -561,7 +753,7 @@ class IntelliWatchBrain:
         )
 
         # ----------------------------------------------------
-        # Validate readings
+        # Validate readings.
         # ----------------------------------------------------
 
         validation = None
@@ -585,7 +777,7 @@ class IntelliWatchBrain:
 
                     print(
                         "[Brain] Validation warning - "
-                        f"implausible sensors: {bad}"
+                        f"implausible or unavailable sensors: {bad}"
                     )
 
             except Exception as exc:
@@ -595,7 +787,7 @@ class IntelliWatchBrain:
                 )
 
         # ----------------------------------------------------
-        # ML inference with Welford fallback
+        # ML inference with Welford fallback.
         # ----------------------------------------------------
 
         try:
@@ -620,8 +812,6 @@ class IntelliWatchBrain:
                         )
                     )
 
-                    # Welford still performs sensor-level analysis.
-
                     engine_result = self.engine.process_readings(
                         readings,
                         mode=mode
@@ -640,8 +830,6 @@ class IntelliWatchBrain:
                         ml_status,
                         engine_overall
                     )
-
-                    # Support both dictionary and string formats.
 
                     overall_result = engine_result.get(
                         "overall_system_status"
@@ -684,7 +872,7 @@ class IntelliWatchBrain:
                     engine_result = None
 
             # ------------------------------------------------
-            # Welford fallback
+            # Welford fallback.
             # ------------------------------------------------
 
             if engine_result is None:
@@ -708,6 +896,10 @@ class IntelliWatchBrain:
 
                 "sensor_readings_saved": saved_readings,
 
+                "sensor_statuses": _unavailable_sensor_statuses(
+                    readings
+                ),
+
                 "overall_system_status": "UNAVAILABLE",
             }
 
@@ -729,11 +921,15 @@ class IntelliWatchBrain:
 
                 "sensor_readings_saved": saved_readings,
 
+                "sensor_statuses": _unavailable_sensor_statuses(
+                    readings
+                ),
+
                 "overall_system_status": "UNAVAILABLE",
             }
 
         # ----------------------------------------------------
-        # Extract engine assessments
+        # Extract engine assessments.
         # ----------------------------------------------------
 
         sensor_statuses = engine_result.get(
@@ -751,7 +947,7 @@ class IntelliWatchBrain:
         )
 
         # ----------------------------------------------------
-        # Generate recommendations
+        # Generate recommendations.
         # ----------------------------------------------------
 
         recommendation_result = self.create_recommendations(
@@ -760,7 +956,7 @@ class IntelliWatchBrain:
         )
 
         # ----------------------------------------------------
-        # Persist recommendations
+        # Persist recommendations.
         # ----------------------------------------------------
 
         saved_recommendations = self.store_recommendations(
@@ -768,7 +964,7 @@ class IntelliWatchBrain:
         )
 
         # ----------------------------------------------------
-        # Final result
+        # Final result.
         # ----------------------------------------------------
 
         return {
@@ -827,6 +1023,12 @@ def _build_feature_vector_from_readings(readings):
 
             numeric_value = float(value)
 
+            if not __import__("math").isfinite(numeric_value):
+                continue
+
+            if reading.get("quality", "GOOD") != "GOOD":
+                continue
+
             values.append(numeric_value)
             names.append(key)
 
@@ -842,7 +1044,11 @@ def _build_feature_vector_from_readings(readings):
 
 if __name__ == "__main__":
 
-    brain = IntelliWatchBrain()
+    initialize_database()
+
+    brain = IntelliWatchBrain(
+        auto_calibrate=False
+    )
 
     result = brain.run_cycle(
         mode="automatic"
@@ -889,3 +1095,18 @@ if __name__ == "__main__":
             "\nMessage:",
             result.get("message")
         )
+
+        print("\nSensor Statuses:")
+
+        for sensor, data in result.get(
+            "sensor_statuses",
+            {}
+        ).items():
+
+            print(
+                sensor,
+                "->",
+                data.get("status")
+            )
+
+    print("\nIntelliWatch Brain Test Finished.")

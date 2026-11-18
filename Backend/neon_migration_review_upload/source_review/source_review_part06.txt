@@ -1,0 +1,484 @@
+            raise ValueError("User not found or temporarily deleted.")
+
+        if target["role"] == "ADMIN" and not is_active:
+            if _active_admin_count(connection) <= 1:
+                raise ValueError(
+                    "The last active administrator cannot be deactivated."
+                )
+
+        connection.execute("""
+            UPDATE users
+            SET is_active = ?,
+                session_version = COALESCE(session_version, 0) + 1
+            WHERE id = ?
+        """, (int(is_active), user_id))
+
+        _audit_transaction(
+            connection,
+            "USER_UNLOCKED" if is_active else "USER_LOCKED",
+            admin["username"],
+            user_id,
+            {
+                "username": target["username"],
+                "role": target["role"],
+                "is_active": bool(is_active),
+            },
+        )
+
+        connection.commit()
+        return True
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+def _change_user_role(user_id, new_role, admin_id):
+    connection = _begin_transaction()
+
+    try:
+        admin = _admin_in_transaction(connection, admin_id)
+        target = _account_in_transaction(connection, user_id)
+
+        if not target or target["is_deleted"]:
+            raise ValueError("User not found or temporarily deleted.")
+
+        if new_role == "ADMIN":
+            raise ValueError(
+                "Admin promotion requires an approved promotion request."
+            )
+
+        if new_role not in {"OPERATOR", "MAINTENANCE_ENGINEER"}:
+            raise ValueError("Invalid role.")
+
+        if target["role"] == "ADMIN" and target["is_active"]:
+            if _active_admin_count(connection) <= 1:
+                raise ValueError(
+                    "Cannot demote the last active administrator."
+                )
+
+        old_role = target["role"]
+
+        connection.execute("""
+            UPDATE users
+            SET role = ?,
+                session_version = COALESCE(session_version, 0) + 1
+            WHERE id = ?
+        """, (new_role, user_id))
+
+        _audit_transaction(
+            connection,
+            "USER_ROLE_CHANGED",
+            admin["username"],
+            user_id,
+            {
+                "username": target["username"],
+                "old_role": old_role,
+                "new_role": new_role,
+            },
+        )
+
+        connection.commit()
+        return True
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+def _soft_delete_account(user_id, admin_id, reason=None):
+    connection = _begin_transaction()
+
+    try:
+        admin = _admin_in_transaction(connection, admin_id)
+        target = _account_in_transaction(connection, user_id)
+
+        if not target:
+            raise ValueError("User not found.")
+
+        if target["is_deleted"]:
+            raise ValueError("Account is already temporarily deleted.")
+
+        if target["role"] == "ADMIN":
+            raise ValueError(
+                "Administrator accounts cannot be temporarily deleted."
+            )
+
+        connection.execute("""
+            UPDATE users
+            SET is_deleted = 1,
+                deleted_at = ?,
+                deleted_by = ?,
+                deletion_reason = ?,
+                deleted_was_active = is_active,
+                is_active = 0,
+                session_version = COALESCE(session_version, 0) + 1
+            WHERE id = ?
+        """, (
+            _now(),
+            admin["username"],
+            reason,
+            user_id,
+        ))
+
+        _audit_transaction(
+            connection,
+            "USER_TEMPORARILY_DELETED",
+            admin["username"],
+            user_id,
+            {
+                "username": target["username"],
+                "role": target["role"],
+                "reason": reason,
+                "previously_active": bool(target["is_active"]),
+            },
+        )
+
+        connection.commit()
+        return True
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+def _permanently_delete_account(user_id, admin_id):
+    connection = _begin_transaction()
+
+    try:
+        admin = _admin_in_transaction(connection, admin_id)
+        target = _account_in_transaction(connection, user_id)
+
+        if not target:
+            raise ValueError("User not found.")
+
+        if not target["is_deleted"]:
+            raise ValueError(
+                "Temporarily delete the account before permanent deletion."
+            )
+
+        if target["role"] == "ADMIN":
+            raise ValueError(
+                "Administrator accounts cannot be permanently deleted."
+            )
+
+        _audit_transaction(
+            connection,
+            "USER_PERMANENTLY_DELETED",
+            admin["username"],
+            user_id,
+            {
+                "username": target["username"],
+                "full_name": target["full_name"],
+                "role": target["role"],
+                "deleted_at": target["deleted_at"],
+                "permanently_deleted_at": _now(),
+            },
+        )
+
+        connection.execute(
+            "DELETE FROM users WHERE id = ?",
+            (user_id,),
+        )
+
+        connection.commit()
+        return True
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+# =========================================================
+# PROMOTION REQUESTS
+# =========================================================
+
+def _create_promotion_request(user_id, reason):
+    connection = _begin_transaction()
+
+    try:
+        user = _account_in_transaction(connection, user_id)
+
+        if not user or not user["is_active"] or user["is_deleted"]:
+            raise ValueError("An active account is required.")
+
+        if user["role"] == "ADMIN":
+            raise ValueError("This account is already an administrator.")
+
+        cursor = connection.execute("""
+            INSERT INTO admin_promotion_requests (
+                user_id, request_reason, requested_at
+            )
+            VALUES (?, ?, ?)
+        """, (user_id, reason, _now()))
+
+        _audit_transaction(
+            connection,
+            "ADMIN_PROMOTION_REQUESTED",
+            user["username"],
+            user_id,
+            {"reason": reason},
+        )
+
+        connection.commit()
+        return cursor.lastrowid
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+def _get_promotion_requests(status_filter="PENDING"):
+    status_filter = _validate_request_status(status_filter)
+    connection = get_connection()
+
+    try:
+        query = """
+            SELECT
+                r.id, r.user_id, r.request_reason, r.status,
+                r.reviewed_by, r.review_remarks,
+                r.requested_at, r.reviewed_at,
+                u.username, u.full_name, u.role, u.is_active
+            FROM admin_promotion_requests r
+            JOIN users u ON u.id = r.user_id
+        """
+
+        params = ()
+
+        if status_filter != "ALL":
+            query += " WHERE r.status = ?"
+            params = (status_filter,)
+
+        query += " ORDER BY r.requested_at DESC"
+
+        return [
+            dict(row)
+            for row in connection.execute(query, params).fetchall()
+        ]
+
+    finally:
+        connection.close()
+
+
+def _review_promotion_request(request_id, admin_id, approve, remarks=None):
+    connection = _begin_transaction()
+
+    try:
+        admin = _admin_in_transaction(connection, admin_id)
+
+        request = connection.execute("""
+            SELECT r.*, u.username, u.role, u.is_active, u.is_deleted
+            FROM admin_promotion_requests r
+            JOIN users u ON u.id = r.user_id
+            WHERE r.id = ?
+        """, (request_id,)).fetchone()
+
+        if not request:
+            raise ValueError("Promotion request not found.")
+
+        if request["status"] != "PENDING":
+            raise ValueError("This request has already been reviewed.")
+
+        if request["user_id"] == admin_id:
+            raise ValueError("You cannot approve your own promotion request.")
+
+        if approve:
+            if not request["is_active"] or request["is_deleted"]:
+                raise ValueError(
+                    "The requesting account is inactive or deleted."
+                )
+
+            connection.execute("""
+                UPDATE users
+                SET role = 'ADMIN',
+                    session_version = COALESCE(session_version, 0) + 1
+                WHERE id = ?
+            """, (request["user_id"],))
+
+        new_status = "APPROVED" if approve else "REJECTED"
+
+        connection.execute("""
+            UPDATE admin_promotion_requests
+            SET status = ?,
+                reviewed_by = ?,
+                review_remarks = ?,
+                reviewed_at = ?
+            WHERE id = ?
+        """, (new_status, admin_id, remarks, _now(), request_id))
+
+        _audit_transaction(
+            connection,
+            "ADMIN_PROMOTION_" + new_status,
+            admin["username"],
+            request["user_id"],
+            {
+                "request_id": request_id,
+                "username": request["username"],
+                "remarks": remarks,
+            },
+        )
+
+        connection.commit()
+
+        return {
+            "request_id": request_id,
+            "user_id": request["user_id"],
+            "status": new_status,
+        }
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+# =========================================================
+# ACCOUNT RECOVERY REQUESTS
+# =========================================================
+
+def _create_recovery_request(username, reason):
+    connection = _begin_transaction()
+
+    try:
+        user = connection.execute("""
+            SELECT id, username, is_deleted
+            FROM users
+            WHERE username = ?
+        """, (username.strip(),)).fetchone()
+
+        if not user or not user["is_deleted"]:
+            connection.rollback()
+            return False
+
+        cursor = connection.execute("""
+            INSERT INTO account_recovery_requests (
+                user_id, recovery_reason, requested_at
+            )
+            VALUES (?, ?, ?)
+        """, (user["id"], reason, _now()))
+
+        _audit_transaction(
+            connection,
+            "ACCOUNT_RECOVERY_REQUESTED",
+            user["username"],
+            user["id"],
+            {"reason": reason},
+        )
+
+        connection.commit()
+        return cursor.lastrowid
+
+    except sqlite3.IntegrityError:
+        connection.rollback()
+        return False
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+def _get_recovery_requests(status_filter="PENDING"):
+    status_filter = _validate_request_status(status_filter)
+    connection = get_connection()
+
+    try:
+        query = """
+            SELECT
+                r.id, r.user_id, r.recovery_reason, r.status,
+                r.reviewed_by, r.review_remarks,
+                r.requested_at, r.reviewed_at,
+                u.username, u.full_name, u.role
+            FROM account_recovery_requests r
+            JOIN users u ON u.id = r.user_id
+        """
+
+        params = ()
+
+        if status_filter != "ALL":
+            query += " WHERE r.status = ?"
+            params = (status_filter,)
+
+        query += " ORDER BY r.requested_at DESC"
+
+        return [
+            dict(row)
+            for row in connection.execute(query, params).fetchall()
+        ]
+
+    finally:
+        connection.close()
+
+
+def _review_recovery_request(request_id, admin_id, approve, remarks=None):
+    connection = _begin_transaction()
+
+    try:
+        admin = _admin_in_transaction(connection, admin_id)
+
+        request = connection.execute("""
+            SELECT r.*, u.username, u.is_deleted, u.deleted_was_active
+            FROM account_recovery_requests r
+            JOIN users u ON u.id = r.user_id
+            WHERE r.id = ?
+        """, (request_id,)).fetchone()
+
+        if not request:
+            raise ValueError("Recovery request not found.")
+
+        if request["status"] != "PENDING":
+            raise ValueError("This request has already been reviewed.")
+
+        if approve:
+            if not request["is_deleted"]:
+                raise ValueError("This account is no longer deleted.")
+
+            connection.execute("""
+                UPDATE users
+                SET is_deleted = 0,
+                    is_active = deleted_was_active,
+                    deleted_at = NULL,
+                    deleted_by = NULL,
+                    deletion_reason = NULL,
+                    deleted_was_active = 1,
+                    session_version = COALESCE(session_version, 0) + 1
+                WHERE id = ?
+            """, (request["user_id"],))
+
+        new_status = "APPROVED" if approve else "REJECTED"
+
+        connection.execute("""
+            UPDATE account_recovery_requests
+            SET status = ?,
+                reviewed_by = ?,
+                review_remarks = ?,
+                reviewed_at = ?
+            WHERE id = ?
+        """, (new_status, admin_id, remarks, _now(), request_id))
+
+        _audit_transaction(
+            connection,
+            "ACCOUNT_RECOVERY_" + new_status,
+            admin["username"],
+            request["user_id"],
+            {
+                "request_id": request_id,

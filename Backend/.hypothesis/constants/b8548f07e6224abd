@@ -1,0 +1,4 @@
+# file: C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\inference.py
+# hypothesis_version: 6.131.10
+
+['CRITICAL', 'GOOD', 'NORMAL', 'UNAVAILABLE', 'UNDER_OBSERVATION', 'UNKNOWN', 'WARNING', 'abnormal', 'acceleration', 'anomaly', 'automatic', 'caution', 'classes_', 'cold_start', 'critical', 'current', 'de_rate', 'ensemble', 'model', 'other', 'parameter', 'quality', 'rms', 'rms_g', 'rms_mm_s', 'sensor_type', 'shutdown', 'status', 'temperature', 'unknown', 'value', 'velocity', 'version', 'vibration', 'warning']

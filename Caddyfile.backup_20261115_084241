@@ -1,0 +1,24 @@
+﻿https://192.168.1.9:8443 {
+	tls C:/Users/Dell/Downloads/IntelliWatch_PC_Ready/certs/intelliwatch-wifi.crt C:/Users/Dell/Downloads/IntelliWatch_PC_Ready/certs/intelliwatch-wifi.key
+
+	encode zstd gzip
+
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	@backend path /auth/* /chatbot/* /vision/* /health /sensors/* /control/* /models/* /learning/* /explorer/* /iot/* /calibration/* /audit/* /feedback /leaderboard /stream/*
+
+	handle @backend {
+		reverse_proxy 127.0.0.1:8000
+	}
+
+	handle {
+		root * C:/Users/Dell/Downloads/IntelliWatch_PC_Ready/frontend/dist
+		try_files {path} /index.html
+		file_server
+	}
+}

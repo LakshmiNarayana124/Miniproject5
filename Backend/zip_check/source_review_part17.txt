@@ -1,0 +1,379 @@
+    machine_group: int = 2
+) -> str:
+    """Classify velocity RMS using ISO 10816-3 thresholds for a machine group.
+
+    Parameters
+    ----------
+    rms_velocity_mm_s : float
+        Vibration velocity RMS in mm/s (non-negative finite number).
+    machine_group : int
+        ISO 10816-3 machine group (1-4). Defaults to 2.
+
+    Returns
+    -------
+    str
+        One of ``"normal"``, ``"warning"``, or ``"critical"``.
+    """
+    if machine_group not in ISO_10816_3_GROUPS:
+        raise ValueError(
+            f"Unknown ISO 10816-3 machine group: {machine_group!r}. "
+            f"Valid groups: {sorted(ISO_10816_3_GROUPS)}."
+        )
+    value = _validate_vibration_value(rms_velocity_mm_s, "rms_velocity_mm_s")
+    group = ISO_10816_3_GROUPS[machine_group]
+    return _classify_by_thresholds(
+        value, group["normal_max"], group["warning_max"]
+    )
+
+
+def classify_vibration_severity_acceleration(
+    rms_acceleration_g: float
+) -> str:
+    """Classify a vibration acceleration RMS value (ISO 20816) into a zone.
+
+    Uses ISO 20816-1:2016 acceleration boundaries:
+    Normal ends at 1.0 g (Zone A), Warning spans 1.0-2.0 g (Zone B), and
+    Critical begins above 2.0 g (Zones C/D).
+
+    Parameters
+    ----------
+    rms_acceleration_g : float
+        Vibration acceleration RMS in g (non-negative finite number).
+
+    Returns
+    -------
+    str
+        One of ``"normal"``, ``"warning"``, or ``"critical"``.
+
+    Raises
+    ------
+    ValueError
+        If the value is ``None``, non-finite, or negative.
+    """
+    value = _validate_vibration_value(rms_acceleration_g, "rms_acceleration_g")
+    return _classify_by_thresholds(
+        value,
+        ISO_20816_ACCELERATION["normal_max"],
+        ISO_20816_ACCELERATION["warning_max"],
+    )
+
+
+def classify_vibration_zone(rms_velocity_mm_s: float) -> str:
+    """Return the ISO 10816/20816 zone letter for a velocity value.
+
+    Returns one of ``"A"``, ``"B"``, ``"C"``, ``"D"`` where Zone D is the
+    region above the Group 1 critical boundary (4.5 mm/s) and Zone C spans the
+    2.8-4.5 mm/s band.
+    """
+    value = _validate_vibration_value(rms_velocity_mm_s, "rms_velocity_mm_s")
+    if value < ISO_10816_3_DEFAULT["normal_max"]:
+        return "A"
+    if value < ISO_10816_3_DEFAULT["warning_max"]:
+        return "B"
+    if value < ISO_10816_3_GROUPS[1]["warning_max"]:
+        return "C"
+    return "D"
+
+
+# ============================================================
+# 2. THRESHOLD SOURCE DOCUMENTATION
+# ============================================================
+
+# Every defined threshold carries a non-empty ``source_standard`` documenting
+# the recognized standard it derives from (Requirement 7.3). Thresholds that
+# cannot be mapped to a standard are flagged ``equipment_specific`` and kept
+# inactive until operator confirmation (Requirement 7.4).
+THRESHOLDS: Dict[str, Dict[str, Any]] = {
+    "vibration_velocity_rms": {
+        "unit": "mm/s",
+        "normal_max": ISO_10816_3_DEFAULT["normal_max"],
+        "warning_max": ISO_10816_3_DEFAULT["warning_max"],
+        "source_standard": ISO_10816_3_DEFAULT["source_standard"],
+        "equipment_specific": False,
+        "zones": {
+            "A": {"label": "normal", "range": "0 to 1.4 mm/s"},
+            "B": {"label": "warning", "range": "1.4 to 2.8 mm/s"},
+            "C": {"label": "critical", "range": "2.8 to 4.5 mm/s"},
+            "D": {"label": "critical", "range": "above 4.5 mm/s"},
+        },
+    },
+    "vibration_acceleration_rms": {
+        "unit": "g",
+        "normal_max": ISO_20816_ACCELERATION["normal_max"],
+        "warning_max": ISO_20816_ACCELERATION["warning_max"],
+        "source_standard": ISO_20816_ACCELERATION["source_standard"],
+        "equipment_specific": False,
+        "zones": {
+            "A": {"label": "normal", "range": "0 to 1.0 g"},
+            "B": {"label": "warning", "range": "1.0 to 2.0 g"},
+            "C": {"label": "critical", "range": "2.0 to 3.0 g"},
+            "D": {"label": "critical", "range": "above 3.0 g"},
+        },
+    },
+}
+
+
+def get_threshold(parameter_name: str) -> Optional[Dict[str, Any]]:
+    """Return a documented threshold definition by parameter name, or None."""
+    return THRESHOLDS.get(parameter_name)
+
+
+def threshold_source_standard(parameter_name: str) -> Optional[str]:
+    """Return the documented source standard for a threshold (Requirement 7.3).
+
+    Returns ``None`` when the parameter has no documented threshold, which
+    callers should treat as an equipment-specific threshold requiring
+    confirmation before activation (Requirement 7.4).
+    """
+    threshold = THRESHOLDS.get(parameter_name)
+    if threshold is None:
+        return None
+    return threshold.get("source_standard")
+
+
+def is_equipment_specific(parameter_name: str) -> bool:
+    """Whether a threshold is equipment-specific (not standard-sourced)."""
+    threshold = THRESHOLDS.get(parameter_name)
+    if threshold is None:
+        return True
+    source = threshold.get("source_standard")
+    return not (source and source.strip())
+
+
+# ============================================================
+# 3. ISO 17359 CONDITION MONITORING WORKFLOW
+# ============================================================
+
+# ISO 17359 condition-monitoring guidance stages, in order.
+ISO_17359_STAGES = (
+    "detection",       # data acquisition and initial detection
+    "analysis",        # signal analysis and feature extraction
+    "diagnosis",       # identify the fault / probable cause
+    "prognosis",       # estimate remaining useful life / trend
+    "post-remedial",   # verify the outcome after corrective action
+)
+
+# Mapping of the workflow phases onto the ISO 17359 stages.
+ISO_17359_PHASE_MAPPING = {
+    "acquire": ("detection",),
+    "analyze": ("analysis", "diagnosis"),
+    "recommend": ("prognosis", "post-remedial"),
+}
+
+# Status to remedial-action intent, mirroring the equipment-control mapping.
+STATUS_TO_REMEDIAL = {
+    "normal": "RUN",
+    "warning": "DE_RATE",
+    "critical": "SHUTDOWN",
+}
+
+
+def _finite_values(values: List[float]) -> List[float]:
+    """Return only the finite, non-None elements of a numeric window."""
+    return [v for v in values if v is not None and math.isfinite(v)]
+
+
+class ConditionMonitoringWorkflow:
+    """Structure monitoring data per ISO 17359 guidance (Requirement 7.2).
+
+    The workflow runs three phases that map onto the ISO 17359 stages
+    (detection -> analysis -> diagnosis -> prognosis -> post-remedial):
+
+    - ``acquire(sensor_name, readings)``  : data acquisition (detection)
+    - ``analyze(readings, features)``      : analysis + diagnosis
+    - ``recommend(status, causes)``         : prognosis + post-remedial
+
+    Each phase returns a record describing what was produced and appends the
+    corresponding ISO 17359 stages to the workflow lifecycle.
+    """
+
+    def __init__(self) -> None:
+        self.last_acquisition: Optional[Dict[str, Any]] = None
+        self.last_analysis: Optional[Dict[str, Any]] = None
+        self.stages_executed: List[str] = []
+
+    # --------------------------------------------------------
+    # PHASE 1: data acquisition (detection)
+    # --------------------------------------------------------
+    def acquire(
+        self,
+        sensor_name: str,
+        readings: List[float]
+    ) -> Dict[str, Any]:
+        """Data acquisition phase.
+
+        Records the source sensor and the raw readings for downstream
+        analysis. Maps onto the ISO 17359 ``detection`` stage.
+
+        Parameters
+        ----------
+        sensor_name : str
+            Identifier of the sensor / channel that produced the readings.
+        readings : list of float
+            Raw sensor window samples.
+
+        Returns
+        -------
+        dict
+            Acquisition record carrying the sensor name, sample count, and a
+            timestamp.
+        """
+        if not sensor_name:
+            raise ValueError("sensor_name is required.")
+        if readings is None:
+            readings = []
+
+        record = {
+            "stage": "acquisition",
+            "iso_stage": "detection",
+            "sensor_name": sensor_name,
+            "sample_count": len(readings),
+            "available_samples": len(_finite_values(readings)),
+            "timestamp": current_timestamp(),
+        }
+        self.last_acquisition = record
+        self.stages_executed.append("detection")
+        return record
+
+    # --------------------------------------------------------
+    # PHASE 2: analysis + diagnosis
+    # --------------------------------------------------------
+    def analyze(
+        self,
+        readings: List[float],
+        features: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Analysis phase: feature extraction + severity classification.
+
+        Uses precomputed ``features`` when provided; otherwise derives an
+        acceleration RMS from the raw readings (assumed to be in g) and
+        classifies it against the ISO 20816 acceleration thresholds. Maps onto
+        the ISO 17359 ``analysis`` and ``diagnosis`` stages.
+
+        Parameters
+        ----------
+        readings : list of float
+            Raw sensor window samples (used when features are absent).
+        features : dict, optional
+            Precomputed monitoring parameters. Recognized keys:
+            ``vibration_rms_mm_s`` (velocity, ISO 10816-3) and
+            ``vibration_rms_g`` (acceleration, ISO 20816).
+
+        Returns
+        -------
+        dict
+            Analysis record carrying the classified ``status``, the
+            classification method used, and the input features.
+        """
+        features = features or {}
+
+        velocity = features.get("vibration_rms_mm_s")
+        acceleration = features.get("vibration_rms_g")
+
+        if velocity is not None:
+            status = classify_vibration_severity(float(velocity))
+            method = "velocity RMS (ISO 10816-3:2009)"
+        elif acceleration is not None:
+            status = classify_vibration_severity_acceleration(float(acceleration))
+            method = "acceleration RMS (ISO 20816-1:2016)"
+        elif readings:
+            clean = _finite_values(readings)
+            if clean:
+                acc_rms = math.sqrt(
+                    sum(v * v for v in clean) / len(clean)
+                )
+                status = classify_vibration_severity_acceleration(acc_rms)
+                method = "derived acceleration RMS (ISO 20816-1:2016)"
+            else:
+                status = "normal"
+                method = "no usable samples"
+        else:
+            status = "normal"
+            method = "no data"
+
+        record = {
+            "stage": "analysis",
+            "iso_stage": "analysis/diagnosis",
+            "status": status,
+            "method": method,
+            "features": dict(features),
+            "timestamp": current_timestamp(),
+        }
+        self.last_analysis = record
+        self.stages_executed.extend(["analysis", "diagnosis"])
+        return record
+
+    # --------------------------------------------------------
+    # PHASE 3: recommendation (prognosis + post-remedial)
+    # --------------------------------------------------------
+    def recommend(
+        self,
+        status: str,
+        causes: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """Recommendation phase: prognosis and post-remedial guidance.
+
+        Produces a recommendation record mapping the analyzed status to a
+        remedial-action intent and listing probable causes. Maps onto the ISO
+        17359 ``prognosis`` and ``post-remedial`` stages.
+
+        Parameters
+        ----------
+        status : str
+            System status from the analysis phase (``"normal"``,
+            ``"warning"``, or ``"critical"``).
+        causes : list of str, optional
+            Probable causes identified during diagnosis.
+
+        Returns
+        -------
+        dict
+            Recommendation record carrying the remedial intent, probable
+            causes, and guidance.
+        """
+        status = (status or "normal").lower()
+        if status not in STATUS_TO_REMEDIAL:
+            raise ValueError(
+                f"Unknown status: {status!r}. "
+                f"Valid statuses: {sorted(STATUS_TO_REMEDIAL)}."
+            )
+        causes = list(causes or [])
+
+        guidance = {
+            "normal": (
+                "Continue routine monitoring; no intervention required."
+            ),
+            "warning": (
+                "Investigate probable causes and reduce operating intensity "
+                "to bring readings back within the normal band."
+            ),
+            "critical": (
+                "Shut down equipment promptly and perform corrective "
+                "maintenance before resuming operation."
+            ),
+        }
+
+        record = {
+            "stage": "recommendation",
+            "iso_stage": "prognosis/post-remedial",
+            "status": status,
+            "causes": causes,
+            "remedial_action": STATUS_TO_REMEDIAL[status],
+            "guidance": guidance[status],
+            "timestamp": current_timestamp(),
+        }
+        self.stages_executed.extend(["prognosis", "post-remedial"])
+        return record
+
+    # --------------------------------------------------------
+    # FULL WORKFLOW RUN
+    # --------------------------------------------------------
+    def run(
+        self,
+        sensor_name: str,
+        readings: List[float],
+        features: Optional[Dict[str, Any]] = None,
+        causes: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """Run the full ISO 17359 workflow end to end.
+

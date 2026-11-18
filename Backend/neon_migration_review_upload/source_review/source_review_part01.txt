@@ -1,0 +1,424 @@
+===== FILE: database.py =====
+
+import sqlite3
+import json
+import hashlib
+
+from pathlib import Path
+from datetime import datetime, timezone, timedelta
+
+
+# =====================================================
+# DATABASE CONFIGURATION
+# =====================================================
+
+BASE_DIR = Path(__file__).resolve().parent
+DATABASE_DIR = BASE_DIR / "database"
+DATABASE_PATH = DATABASE_DIR / "intelliwatch.db"
+
+DATABASE_DIR.mkdir(parents=True, exist_ok=True)
+
+VALID_ROLES = {
+    "ADMIN",
+    "OPERATOR",
+    "MAINTENANCE_ENGINEER",
+}
+
+EXPLORER_HISTORY_MAX_ROWS = 500
+DEFAULT_RETENTION_DAYS = 365
+
+
+def get_connection():
+    connection = sqlite3.connect(DATABASE_PATH, timeout=30)
+    connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA foreign_keys = ON")
+    connection.execute("PRAGMA busy_timeout = 30000")
+    return connection
+
+
+def current_timestamp():
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _begin_transaction(connection):
+    connection.execute("BEGIN IMMEDIATE")
+
+
+def _insert_audit_entry(
+    connection,
+    category,
+    detail_json,
+    actor=None,
+    target=None,
+    hash_value=None,
+):
+    """Insert an audit entry using the current transaction."""
+
+    timestamp = current_timestamp()
+
+    if hash_value is None:
+        previous = connection.execute("""
+            SELECT hash
+            FROM audit_entries
+            ORDER BY id DESC
+            LIMIT 1
+        """).fetchone()
+
+        previous_hash = previous["hash"] if previous else ""
+
+        chain_input = "|".join((
+            str(previous_hash),
+            timestamp,
+            str(category),
+            str(actor),
+            str(target),
+            str(detail_json),
+        ))
+
+        hash_value = hashlib.sha256(
+            chain_input.encode("utf-8")
+        ).hexdigest()
+
+    cursor = connection.execute("""
+        INSERT INTO audit_entries (
+            timestamp,
+            category,
+            actor,
+            target,
+            detail_json,
+            hash
+        )
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (
+        timestamp,
+        category,
+        actor,
+        str(target) if target is not None else None,
+        detail_json,
+        hash_value,
+    ))
+
+    return cursor.lastrowid
+
+
+def _audit_details(connection, category, actor, target, details):
+    return _insert_audit_entry(
+        connection,
+        category,
+        json.dumps(details or {}, default=str),
+        actor=actor,
+        target=target,
+    )
+
+
+# =====================================================
+# DATABASE INITIALIZATION
+# =====================================================
+
+def initialize_database():
+    connection = get_connection()
+
+    try:
+        connection.execute("PRAGMA journal_mode = WAL")
+        connection.execute("PRAGMA synchronous = NORMAL")
+
+        cursor = connection.cursor()
+
+        # 1. RAW SENSOR READINGS
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS sensor_readings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                sensor_name TEXT NOT NULL,
+                value REAL NOT NULL,
+                unit TEXT NOT NULL,
+                axis TEXT,
+                quality TEXT DEFAULT 'VALID',
+                metadata_json TEXT
+            )
+        """)
+
+        # 2. PROCESSED SENSOR ANALYTICS
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS sensor_analytics (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sensor_name TEXT NOT NULL,
+                window_start TEXT NOT NULL,
+                window_end TEXT NOT NULL,
+                sample_count INTEGER DEFAULT 0,
+                minimum REAL,
+                maximum REAL,
+                average REAL,
+                rms REAL,
+                standard_deviation REAL,
+                anomaly_count INTEGER DEFAULT 0,
+                anomaly_rate REAL DEFAULT 0,
+                trend TEXT,
+                status TEXT,
+                created_at TEXT NOT NULL
+            )
+        """)
+
+        # 3. MACHINE HEALTH ASSESSMENTS
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS machine_assessments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                overall_status TEXT NOT NULL,
+                confidence_score REAL,
+                anomaly_rate REAL,
+                health_score REAL,
+                probable_causes_json TEXT,
+                sensor_summary_json TEXT,
+                assessment_notes TEXT
+            )
+        """)
+
+        # 4. ANOMALY EVENTS
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS anomaly_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                sensor_name TEXT NOT NULL,
+                severity TEXT NOT NULL,
+                observed_value REAL,
+                expected_min REAL,
+                expected_max REAL,
+                deviation REAL,
+                probable_cause TEXT,
+                description TEXT,
+                assessment_id INTEGER,
+                FOREIGN KEY (assessment_id)
+                    REFERENCES machine_assessments(id)
+            )
+        """)
+
+        # 5. RECOMMENDATIONS
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS recommendations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                assessment_id INTEGER,
+                category TEXT NOT NULL,
+                priority TEXT NOT NULL,
+                recommendation TEXT NOT NULL,
+                reason TEXT,
+                sensor_name TEXT,
+                action_status TEXT DEFAULT 'PENDING',
+                FOREIGN KEY (assessment_id)
+                    REFERENCES machine_assessments(id)
+            )
+        """)
+
+        # 6. MACHINE CONFIGURATION
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS machine_config (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                parameter_name TEXT NOT NULL UNIQUE,
+                parameter_value TEXT NOT NULL,
+                unit TEXT,
+                description TEXT,
+                updated_at TEXT NOT NULL
+            )
+        """)
+
+        # 7. USER ACCOUNTS
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL COLLATE NOCASE UNIQUE,
+                full_name TEXT NOT NULL,
+                password_hash TEXT NOT NULL,
+                role TEXT NOT NULL CHECK (
+                    role IN (
+                        'ADMIN',
+                        'OPERATOR',
+                        'MAINTENANCE_ENGINEER'
+                    )
+                ),
+                is_active INTEGER NOT NULL DEFAULT 1
+                    CHECK (is_active IN (0, 1)),
+                created_at TEXT NOT NULL,
+                last_login TEXT,
+                is_deleted INTEGER NOT NULL DEFAULT 0
+                    CHECK (is_deleted IN (0, 1)),
+                deleted_at TEXT,
+                deleted_by TEXT,
+                deletion_reason TEXT,
+                deleted_was_active INTEGER NOT NULL DEFAULT 1
+                    CHECK (deleted_was_active IN (0, 1))
+            )
+        """)
+
+        # 7A. USER PERMISSIONS
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS user_permissions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                permission_key TEXT NOT NULL,
+                is_granted INTEGER NOT NULL
+                    CHECK (is_granted IN (0, 1)),
+                updated_by INTEGER,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (user_id)
+                    REFERENCES users(id)
+                    ON DELETE CASCADE,
+                FOREIGN KEY (updated_by)
+                    REFERENCES users(id)
+                    ON DELETE SET NULL,
+                UNIQUE (user_id, permission_key)
+            )
+        """)
+
+        # 8. ML MODELS REGISTRY
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS ml_models (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                family TEXT NOT NULL,
+                model_name TEXT NOT NULL,
+                version TEXT NOT NULL,
+                is_active INTEGER NOT NULL DEFAULT 0
+                    CHECK (is_active IN (0, 1)),
+                training_timestamp TEXT NOT NULL,
+                dataset_hash TEXT NOT NULL,
+                artifact_path TEXT NOT NULL,
+                metrics_json TEXT,
+                schema_version TEXT DEFAULT '1.0',
+                UNIQUE(family, version)
+            )
+        """)
+
+        # 9. VERIFIED LABELS
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS verified_labels (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER,
+                label TEXT NOT NULL,
+                feature_vector_json TEXT NOT NULL,
+                model_version TEXT NOT NULL,
+                verified_by TEXT NOT NULL,
+                verified_at TEXT NOT NULL,
+                FOREIGN KEY (event_id)
+                    REFERENCES anomaly_events(id)
+            )
+        """)
+
+        # 10. ACCURACY TREND
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS accuracy_trend (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                model_id INTEGER NOT NULL,
+                f1_score REAL NOT NULL,
+                measured_at TEXT NOT NULL,
+                FOREIGN KEY (model_id)
+                    REFERENCES ml_models(id)
+            )
+        """)
+
+        # 11. CONTROL SIGNALS
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS control_signals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                intent TEXT NOT NULL,
+                system_status TEXT NOT NULL,
+                target_equipment TEXT,
+                priority INTEGER NOT NULL,
+                triggering_params_json TEXT,
+                model_version TEXT,
+                ack_timestamp TEXT,
+                resulting_equipment_state TEXT
+            )
+        """)
+
+        # 12. AUDIT ENTRIES
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS audit_entries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                category TEXT NOT NULL,
+                actor TEXT,
+                target TEXT,
+                detail_json TEXT NOT NULL,
+                hash TEXT NOT NULL
+            )
+        """)
+
+        # 13. EDGE DEVICES
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS edge_devices (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                device_id TEXT NOT NULL UNIQUE,
+                protocol TEXT NOT NULL,
+                capabilities_json TEXT,
+                status TEXT NOT NULL DEFAULT 'offline',
+                last_known_state_json TEXT,
+                last_heartbeat TEXT,
+                registered_at TEXT NOT NULL
+            )
+        """)
+
+        # 14. CONTROL SIGNAL QUEUE
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS control_signal_queue (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                device_id TEXT NOT NULL,
+                intent TEXT NOT NULL,
+                priority INTEGER NOT NULL,
+                queued_at TEXT NOT NULL,
+                delivered_at TEXT,
+                FOREIGN KEY (device_id)
+                    REFERENCES edge_devices(device_id)
+            )
+        """)
+
+        # 15. EXPLORER HISTORY
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS explorer_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                entry_type TEXT NOT NULL,
+                active_user TEXT,
+                arrangement_json TEXT,
+                classification_label TEXT,
+                confidence REAL,
+                model_version TEXT,
+                UNIQUE(timestamp, entry_type)
+            )
+        """)
+
+        # 16. THRESHOLD DEFINITIONS
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS threshold_definitions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                parameter_name TEXT NOT NULL,
+                normal_max REAL NOT NULL,
+                warning_max REAL NOT NULL,
+                source_standard TEXT,
+                equipment_specific INTEGER NOT NULL DEFAULT 0
+                    CHECK (equipment_specific IN (0, 1)),
+                confirmed_by TEXT,
+                confirmed_at TEXT,
+                active INTEGER NOT NULL DEFAULT 0
+            )
+        """)
+
+        # 17. ADMIN PROMOTION REQUESTS
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS admin_promotion_requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                request_reason TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'PENDING'
+                    CHECK (
+                        status IN (
+                            'PENDING',
+                            'APPROVED',
+                            'REJECTED'
+                        )
+                    ),
+                reviewed_by INTEGER,
+                review_remarks TEXT,
+                requested_at TEXT NOT NULL,
+                reviewed_at TEXT,
+                FOREIGN KEY (user_id)

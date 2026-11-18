@@ -1,0 +1,478 @@
+                    REFERENCES users(id)
+                    ON DELETE CASCADE,
+                FOREIGN KEY (reviewed_by)
+                    REFERENCES users(id)
+                    ON DELETE SET NULL
+            )
+        """)
+
+        # 18. ACCOUNT RECOVERY REQUESTS
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS account_recovery_requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                recovery_reason TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'PENDING'
+                    CHECK (
+                        status IN (
+                            'PENDING',
+                            'APPROVED',
+                            'REJECTED'
+                        )
+                    ),
+                reviewed_by INTEGER,
+                review_remarks TEXT,
+                requested_at TEXT NOT NULL,
+                reviewed_at TEXT,
+                FOREIGN KEY (user_id)
+                    REFERENCES users(id)
+                    ON DELETE CASCADE,
+                FOREIGN KEY (reviewed_by)
+                    REFERENCES users(id)
+                    ON DELETE SET NULL
+            )
+        """)
+
+        # MIGRATE EXISTING DATABASES
+        user_columns = {
+            column["name"]
+            for column in cursor.execute(
+                "PRAGMA table_info(users)"
+            ).fetchall()
+        }
+
+        lifecycle_columns = {
+            "is_deleted": (
+                "INTEGER NOT NULL DEFAULT 0 "
+                "CHECK (is_deleted IN (0, 1))"
+            ),
+            "deleted_at": "TEXT",
+            "deleted_by": "TEXT",
+            "deletion_reason": "TEXT",
+            "deleted_was_active": (
+                "INTEGER NOT NULL DEFAULT 1 "
+                "CHECK (deleted_was_active IN (0, 1))"
+            ),
+        }
+
+        for name, definition in lifecycle_columns.items():
+            if name not in user_columns:
+                cursor.execute(
+                    f"ALTER TABLE users ADD COLUMN {name} {definition}"
+                )
+
+        # PERFORMANCE INDEXES
+        indexes = (
+            ("idx_sensor_timestamp", "sensor_readings(timestamp)"),
+            (
+                "idx_sensor_name_timestamp",
+                "sensor_readings(sensor_name, timestamp)",
+            ),
+            (
+                "idx_analytics_sensor_window",
+                "sensor_analytics(sensor_name, window_end)",
+            ),
+            (
+                "idx_assessment_timestamp",
+                "machine_assessments(timestamp)",
+            ),
+            (
+                "idx_anomaly_severity_timestamp",
+                "anomaly_events(severity, timestamp)",
+            ),
+            (
+                "idx_recommendation_assessment",
+                "recommendations(assessment_id)",
+            ),
+            ("idx_users_role_active", "users(role, is_active)"),
+            (
+                "idx_user_permissions_user_id",
+                "user_permissions(user_id)",
+            ),
+            ("idx_ml_models_active", "ml_models(family, is_active)"),
+            (
+                "idx_verified_model_ts",
+                "verified_labels(model_version, verified_at)",
+            ),
+            (
+                "idx_trend_model_time",
+                "accuracy_trend(model_id, measured_at)",
+            ),
+            (
+                "idx_control_intent_ts",
+                "control_signals(intent, timestamp)",
+            ),
+            (
+                "idx_audit_category_ts",
+                "audit_entries(category, timestamp)",
+            ),
+            ("idx_edge_status", "edge_devices(status)"),
+            (
+                "idx_queue_device_delivered",
+                "control_signal_queue(device_id, delivered_at)",
+            ),
+            ("idx_explorer_ts", "explorer_history(timestamp)"),
+            (
+                "idx_users_deleted_active",
+                "users(is_deleted, is_active)",
+            ),
+        )
+
+        for index_name, expression in indexes:
+            cursor.execute(
+                f"CREATE INDEX IF NOT EXISTS {index_name} ON {expression}"
+            )
+
+        # ONE PENDING REQUEST PER USER
+        cursor.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS
+            idx_one_pending_admin_promotion
+            ON admin_promotion_requests(user_id)
+            WHERE status = 'PENDING'
+        """)
+
+        cursor.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS
+            idx_one_pending_account_recovery
+            ON account_recovery_requests(user_id)
+            WHERE status = 'PENDING'
+        """)
+
+        connection.commit()
+
+        print(
+            "IntelliWatch SQLite database initialized successfully!"
+        )
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+# =====================================================
+# 8. SENSOR READINGS AND ANALYTICS
+# =====================================================
+
+def save_sensor_readings(readings):
+    if not readings:
+        return 0
+
+    timestamp = current_timestamp()
+
+    records = [
+        (
+            item.get("timestamp", timestamp),
+            item["sensor_name"],
+            item["value"],
+            item["unit"],
+            item.get("axis"),
+            item.get("quality", "VALID"),
+            json.dumps(item.get("metadata", {})),
+        )
+        for item in readings
+    ]
+
+    connection = get_connection()
+
+    try:
+        connection.executemany("""
+            INSERT INTO sensor_readings (
+                timestamp, sensor_name, value, unit,
+                axis, quality, metadata_json
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, records)
+
+        connection.commit()
+        return len(records)
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+def save_sensor_analytics(analytics):
+    connection = get_connection()
+
+    try:
+        cursor = connection.execute("""
+            INSERT INTO sensor_analytics (
+                sensor_name, window_start, window_end,
+                sample_count, minimum, maximum, average,
+                rms, standard_deviation, anomaly_count,
+                anomaly_rate, trend, status, created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            analytics["sensor_name"],
+            analytics["window_start"],
+            analytics["window_end"],
+            analytics.get("sample_count", 0),
+            analytics.get("minimum"),
+            analytics.get("maximum"),
+            analytics.get("average"),
+            analytics.get("rms"),
+            analytics.get("standard_deviation"),
+            analytics.get("anomaly_count", 0),
+            analytics.get("anomaly_rate", 0),
+            analytics.get("trend"),
+            analytics.get("status"),
+            current_timestamp(),
+        ))
+
+        connection.commit()
+        return cursor.lastrowid
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+# =====================================================
+# 9. MACHINE HEALTH AND ANOMALIES
+# =====================================================
+
+def save_machine_assessment(assessment):
+    connection = get_connection()
+
+    try:
+        cursor = connection.execute("""
+            INSERT INTO machine_assessments (
+                timestamp, overall_status, confidence_score,
+                anomaly_rate, health_score, probable_causes_json,
+                sensor_summary_json, assessment_notes
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            assessment.get("timestamp", current_timestamp()),
+            assessment["overall_status"],
+            assessment.get("confidence_score"),
+            assessment.get("anomaly_rate"),
+            assessment.get("health_score"),
+            json.dumps(assessment.get("probable_causes", [])),
+            json.dumps(assessment.get("sensor_summary", {})),
+            assessment.get("assessment_notes"),
+        ))
+
+        connection.commit()
+        return cursor.lastrowid
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+def save_anomaly_event(event):
+    connection = get_connection()
+
+    try:
+        cursor = connection.execute("""
+            INSERT INTO anomaly_events (
+                timestamp, sensor_name, severity,
+                observed_value, expected_min, expected_max,
+                deviation, probable_cause, description,
+                assessment_id
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            event.get("timestamp", current_timestamp()),
+            event["sensor_name"],
+            event["severity"],
+            event.get("observed_value"),
+            event.get("expected_min"),
+            event.get("expected_max"),
+            event.get("deviation"),
+            event.get("probable_cause"),
+            event.get("description"),
+            event.get("assessment_id"),
+        ))
+
+        connection.commit()
+        return cursor.lastrowid
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+def save_recommendations(recommendations):
+    if not recommendations:
+        return 0
+
+    timestamp = current_timestamp()
+
+    records = [
+        (
+            item.get("timestamp", timestamp),
+            item.get("assessment_id"),
+            item["category"],
+            item["priority"],
+            item["recommendation"],
+            item.get("reason"),
+            item.get("sensor_name"),
+            item.get("action_status", "PENDING"),
+        )
+        for item in recommendations
+    ]
+
+    connection = get_connection()
+
+    try:
+        connection.executemany("""
+            INSERT INTO recommendations (
+                timestamp, assessment_id, category,
+                priority, recommendation, reason,
+                sensor_name, action_status
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, records)
+
+        connection.commit()
+        return len(records)
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+# =====================================================
+# 10. MACHINE CONFIGURATION
+# =====================================================
+
+def set_machine_config(name, value, unit=None, description=None):
+    connection = get_connection()
+
+    try:
+        connection.execute("""
+            INSERT INTO machine_config (
+                parameter_name, parameter_value,
+                unit, description, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(parameter_name)
+            DO UPDATE SET
+                parameter_value = excluded.parameter_value,
+                unit = excluded.unit,
+                description = excluded.description,
+                updated_at = excluded.updated_at
+        """, (
+            name,
+            str(value),
+            unit,
+            description,
+            current_timestamp(),
+        ))
+
+        connection.commit()
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+def get_machine_config(name):
+    connection = get_connection()
+
+    try:
+        row = connection.execute("""
+            SELECT parameter_value
+            FROM machine_config
+            WHERE parameter_name = ?
+        """, (name,)).fetchone()
+
+        return row["parameter_value"] if row else None
+
+    finally:
+        connection.close()
+
+
+# =====================================================
+# 11. HISTORICAL DATA RETRIEVAL
+# =====================================================
+
+def get_recent_sensor_readings(sensor_name, limit=100):
+    limit = max(1, min(int(limit), 10000))
+    connection = get_connection()
+
+    try:
+        rows = connection.execute("""
+            SELECT *
+            FROM sensor_readings
+            WHERE sensor_name = ?
+            ORDER BY timestamp DESC, id DESC
+            LIMIT ?
+        """, (sensor_name, limit)).fetchall()
+
+        return [dict(row) for row in rows]
+
+    finally:
+        connection.close()
+
+
+def get_recent_assessments(limit=50):
+    limit = max(1, min(int(limit), 10000))
+    connection = get_connection()
+
+    try:
+        rows = connection.execute("""
+            SELECT *
+            FROM machine_assessments
+            ORDER BY timestamp DESC, id DESC
+            LIMIT ?
+        """, (limit,)).fetchall()
+
+        return [dict(row) for row in rows]
+
+    finally:
+        connection.close()
+
+
+def get_recent_anomalies(limit=50):
+    limit = max(1, min(int(limit), 10000))
+    connection = get_connection()
+
+    try:
+        rows = connection.execute("""
+            SELECT *
+            FROM anomaly_events
+            ORDER BY timestamp DESC, id DESC
+            LIMIT ?
+        """, (limit,)).fetchall()
+
+        return [dict(row) for row in rows]
+
+    finally:
+        connection.close()
+
+
+# =====================================================
+# 12. USER ACCOUNT MANAGEMENT
+# =====================================================
+
+def create_user(username, full_name, password_hash, role):
+    if not all(isinstance(value, str) for value in (
+        username, full_name, password_hash, role
+    )):
+        raise ValueError("All user details must be strings.")
+

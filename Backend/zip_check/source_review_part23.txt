@@ -1,0 +1,583 @@
+    row_id = _learning_system.submit_label(
+        event_id=req.event_id,
+        label=req.label,
+        feature_vector=req.feature_vector,
+        model_version=req.model_version,
+        verified_by=user["username"],
+    )
+
+    obs_service.log_event(
+        "feedback_ingestion",
+        "label_submitted",
+        {"row_id": row_id},
+    )
+
+    return {
+        "success": True,
+        "label_id": row_id,
+    }
+
+
+@app.post(
+    "/learning/recalibrate",
+    tags=["Learning"],
+    dependencies=[Depends(admin_access)],
+)
+async def trigger_recalibrate(req: RecalibrateRequest):
+    if _learning_system is None:
+        raise HTTPException(
+            503,
+            "Learning system not initialized",
+        )
+
+    result = _learning_system.recalibrate(
+        family=req.family,
+    )
+
+    obs_service.log_event(
+        "recalibration",
+        "completed",
+        result,
+    )
+
+    return result
+
+
+# ============================================================
+# TASK 12.3 — 3D EXPLORER ENDPOINTS
+# ============================================================
+
+class ExplorerClassifyRequest(BaseModel):
+    arrangement: list = Field(default_factory=list)
+    readings: dict = Field(default_factory=dict)
+
+
+class ExplorerHistoryRequest(BaseModel):
+    entry_type: str
+    active_user: Optional[str] = None
+    arrangement: Optional[list] = None
+    classification_label: Optional[str] = None
+    confidence: Optional[float] = None
+    model_version: Optional[str] = None
+
+
+@app.post(
+    "/explorer/classify",
+    tags=["Explorer"],
+    dependencies=[Depends(sensor_access)],
+)
+async def explorer_classify(req: ExplorerClassifyRequest):
+    from explorer_ml import classify
+
+    return classify(
+        req.arrangement,
+        req.readings,
+    )
+
+
+@app.post(
+    "/explorer/history",
+    tags=["Explorer"],
+    dependencies=[Depends(sensor_access)],
+)
+async def add_explorer_history(req: ExplorerHistoryRequest):
+    arr_json = (
+        json.dumps(req.arrangement)
+        if req.arrangement is not None
+        else None
+    )
+
+    row_id = database.save_explorer_history_entry(
+        entry_type=req.entry_type,
+        active_user=req.active_user,
+        arrangement_json=arr_json,
+        classification_label=req.classification_label,
+        confidence=req.confidence,
+        model_version=req.model_version,
+    )
+
+    return {
+        "success": True,
+        "id": row_id,
+    }
+
+
+@app.get(
+    "/explorer/history",
+    tags=["Explorer"],
+    dependencies=[Depends(sensor_access)],
+)
+async def list_explorer_history(limit: int = 50):
+    return database.get_explorer_history(limit)
+
+
+@app.get(
+    "/explorer/history/{entry_id}",
+    tags=["Explorer"],
+    dependencies=[Depends(sensor_access)],
+)
+async def get_explorer_history_entry(entry_id: int):
+    entry = database.get_explorer_history_entry(
+        entry_id
+    )
+
+    if not entry:
+        raise HTTPException(
+            404,
+            "History entry not found",
+        )
+
+    return entry
+
+
+# ============================================================
+# TASK 12.4 — IOT ENDPOINTS
+# ============================================================
+
+class DeviceRegisterRequest(BaseModel):
+    device_id: str = Field(
+        min_length=1,
+        max_length=128,
+    )
+
+    protocol: str = "HTTP"
+
+    capabilities: List[str] = Field(
+        default_factory=list,
+    )
+
+    base_url: Optional[str] = None
+    broker_host: Optional[str] = None
+
+    credential: Optional[str] = Field(
+        default=None,
+        min_length=32,
+        max_length=256,
+    )
+
+
+@app.post(
+    "/iot/devices",
+    tags=["IoT"],
+    dependencies=[Depends(admin_access)],
+)
+async def register_iot_device(req: DeviceRegisterRequest):
+    if _iot_layer is None:
+        raise HTTPException(
+            503,
+            "IoT layer not initialized",
+        )
+
+    from iot_layer import (
+        HTTPAdapter,
+        MQTTAdapter,
+    )
+
+    protocol = req.protocol.upper()
+    capabilities = set(req.capabilities)
+
+    if protocol == "MQTT":
+        if not req.broker_host:
+            raise HTTPException(
+                400,
+                "broker_host is required for MQTT registration.",
+            )
+
+        device = MQTTAdapter(
+            req.device_id,
+            req.broker_host,
+            capabilities=capabilities,
+        )
+
+    elif protocol == "HTTP":
+        if not req.base_url:
+            raise HTTPException(
+                400,
+                "base_url is required for HTTP registration.",
+            )
+
+        device = HTTPAdapter(
+            req.device_id,
+            req.base_url,
+            capabilities=capabilities,
+        )
+
+    else:
+        raise HTTPException(
+            400,
+            "Unsupported IoT protocol. Use HTTP or MQTT.",
+        )
+
+    result = _iot_layer.register_device(
+        device,
+        credential=req.credential,
+    )
+
+    if not result.success:
+        raise HTTPException(
+            400,
+            detail=result.reason or "Device registration failed.",
+        )
+
+    return {
+        "success": True,
+        "device_id": result.device_id,
+        "protocol": result.protocol,
+        "capabilities": sorted(result.capabilities),
+        "credential_configured": bool(
+            result.device_credential
+        ),
+        "device_credential": result.device_credential,
+        "credential_note": (
+            "Store this credential securely on the edge device. "
+            "The server keeps its active copy in memory; after a "
+            "server restart, register and provision the device again."
+        ),
+    }
+
+
+@app.get(
+    "/iot/devices",
+    tags=["IoT"],
+    dependencies=[Depends(sensor_access)],
+)
+async def list_iot_devices():
+    if _iot_layer is None:
+        return []
+
+    return _iot_layer.list_devices()
+
+
+@app.post(
+    "/iot/data/{device_id}",
+    tags=["IoT"],
+)
+async def ingest_device_data(
+    device_id: str,
+    payload: dict,
+    device_credential: Optional[str] = Header(
+        default=None,
+        alias="X-Device-Credential",
+    ),
+):
+    if _iot_layer is None:
+        raise HTTPException(
+            503,
+            "IoT layer not initialized",
+        )
+
+    if not device_credential:
+        raise HTTPException(
+            401,
+            "X-Device-Credential header is required.",
+        )
+
+    try:
+        raw_payload = json.dumps(
+            payload,
+            allow_nan=False,
+        ).encode("utf-8")
+
+    except (TypeError, ValueError):
+        raise HTTPException(
+            400,
+            "Payload must contain valid JSON-compatible values.",
+        )
+
+    if len(raw_payload) > 64 * 1024:
+        raise HTTPException(
+            413,
+            "Sensor payload exceeds the 64 KB limit.",
+        )
+
+    ok = _iot_layer.on_data(
+        device_id,
+        raw_payload,
+        credential=device_credential,
+    )
+
+    if not ok:
+        raise HTTPException(
+            401,
+            "Device authentication failed or sensor payload was rejected.",
+        )
+
+    return {
+        "success": True,
+        "device_id": device_id,
+        "source": "hardware",
+        "message": "Validated hardware readings accepted.",
+    }
+
+
+@app.delete(
+    "/iot/devices/{device_id}",
+    tags=["IoT"],
+    dependencies=[Depends(admin_access)],
+)
+async def disconnect_device(device_id: str):
+    if _iot_layer is None:
+        raise HTTPException(
+            503,
+            "IoT layer not initialized",
+        )
+
+    _iot_layer.on_disconnect(device_id)
+
+    return {
+        "success": True,
+        "device_id": device_id,
+    }
+
+
+# ============================================================
+# CALIBRATION HELPERS
+# ============================================================
+
+def _make_iot_calibration_reader():
+    """
+    Create a reader that waits for a new hardware snapshot.
+    """
+
+    last_timestamp = [None]
+
+    def reader():
+        deadline = (
+            time.monotonic()
+            + max(10.0, SENSOR_STALE_SECONDS * 2)
+        )
+
+        while time.monotonic() < deadline:
+            snapshot = _get_hardware_snapshot()
+
+            if snapshot:
+                sample_timestamp = snapshot.get(
+                    "timestamp"
+                )
+
+                if (
+                    sample_timestamp is not None
+                    and sample_timestamp != last_timestamp[0]
+                ):
+                    last_timestamp[0] = sample_timestamp
+
+                    readings = {}
+
+                    for sensor_key in EXPECTED_SENSORS:
+                        record = snapshot.get(sensor_key)
+
+                        if isinstance(record, dict):
+                            readings[sensor_key] = deepcopy(record)
+
+                    return readings
+
+            time.sleep(0.1)
+
+        raise RuntimeError(
+            "Timed out waiting for a new hardware sensor snapshot."
+        )
+
+    return reader
+
+
+# ============================================================
+# CALIBRATION ENDPOINTS
+# ============================================================
+
+@app.post(
+    "/calibration/run",
+    tags=["Calibration"],
+    dependencies=[Depends(admin_access)],
+)
+async def run_calibration_endpoint(
+    n: int = Query(default=30, ge=30, le=500),
+):
+    import calibration as cal
+
+    if _brain is None:
+        raise HTTPException(
+            503,
+            "Brain not initialized — calibration unavailable.",
+        )
+
+    if _get_hardware_snapshot() is None:
+        raise HTTPException(
+            503,
+            "No recent hardware readings are available. "
+            "Connect the IoT device before calibration.",
+        )
+
+    reader = _make_iot_calibration_reader()
+
+    try:
+        result = await asyncio.to_thread(
+            cal.run_calibration,
+            _brain.engine,
+            n=n,
+            reader=reader,
+        )
+
+    except RuntimeError as error:
+        raise HTTPException(
+            503,
+            f"Hardware calibration could not collect fresh samples: {error}",
+        )
+
+    except Exception:
+        raise HTTPException(
+            500,
+            "Hardware calibration failed.",
+        )
+
+    if not result.get("success"):
+        raise HTTPException(
+            500,
+            f"Calibration failed: {result.get('reason', 'unknown')}",
+        )
+
+    fresh = _get_hardware_snapshot()
+
+    if fresh is None:
+        validation = {
+            "passed": False,
+            "message": "No recent hardware readings available for validation.",
+        }
+
+    else:
+        readings = {
+            key: deepcopy(fresh[key])
+            for key in EXPECTED_SENSORS
+            if isinstance(fresh.get(key), dict)
+        }
+
+        validation = cal.validate_readings(
+            readings
+        )
+
+    return {
+        "success": True,
+        "source": "hardware",
+        "thresholds": result["thresholds"],
+        "validation": validation,
+    }
+
+
+@app.get(
+    "/calibration/status",
+    tags=["Calibration"],
+    dependencies=[Depends(sensor_access)],
+)
+async def get_calibration_status():
+    import calibration as cal
+
+    last = cal.load_calibration(
+        source="hardware"
+    )
+
+    return last or {
+        "message": "No hardware calibration performed yet.",
+        "source": "hardware",
+    }
+
+
+@app.post(
+    "/calibration/validate",
+    tags=["Calibration"],
+    dependencies=[Depends(sensor_access)],
+)
+async def validate_calibration():
+    import calibration as cal
+
+    snapshot = _get_hardware_snapshot()
+
+    if snapshot is None:
+        raise HTTPException(
+            503,
+            "No recent hardware readings are available.",
+        )
+
+    readings = {
+        key: deepcopy(snapshot[key])
+        for key in EXPECTED_SENSORS
+        if isinstance(snapshot.get(key), dict)
+    }
+
+    return cal.validate_readings(
+        readings
+    )
+
+
+# ============================================================
+# TASK 12.5 — AUDIT ENDPOINTS
+# ============================================================
+
+@app.get(
+    "/audit/control",
+    tags=["Audit"],
+    dependencies=[Depends(admin_access)],
+)
+async def get_control_audit(limit: int = 100):
+    limit = max(1, min(limit, 1000))
+
+    conn = database.get_connection()
+
+    try:
+        rows = conn.execute(
+            """
+            SELECT * FROM audit_entries
+            WHERE category IN (
+                'control_dispatch',
+                'rejected_attempt',
+                'control_ack'
+            )
+            ORDER BY timestamp DESC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+
+        return [
+            dict(row)
+            for row in rows
+        ]
+
+    finally:
+        conn.close()
+
+
+@app.get(
+    "/audit/models",
+    tags=["Audit"],
+    dependencies=[Depends(admin_access)],
+)
+async def get_model_audit(limit: int = 100):
+    limit = max(1, min(limit, 1000))
+
+    conn = database.get_connection()
+
+    try:
+        rows = conn.execute(
+            """
+            SELECT * FROM audit_entries
+            WHERE category IN (
+                'model_promotion',
+                'recalibration',
+                'feedback_ingestion'
+            )
+            ORDER BY timestamp DESC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+
+        return [
+            dict(row)
+            for row in rows
+        ]
+
+    finally:
+        conn.close()
+
+
+# ============================================================
+# FEEDBACK ENDPOINT

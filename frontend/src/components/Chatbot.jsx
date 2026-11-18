@@ -1,140 +1,289 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import './Chatbot.css'
+import useLang from '../useLang'
+import { setLang as setGlobalLang } from '../i18n'
 
 // ==================================================
 // MULTI-LANGUAGE CHATBOT — IntelliWatch Assistant
-// Features: text chat, multilingual, photo/doc
-//           attachments, voice input (Web Speech API),
-//           voice output (TTS), quick chips.
+// Features:
+//   - Dify Chatflow integration for authenticated users
+//   - Local responses for Offline Demo
+//   - Multilingual interface
+//   - Photo/document attachment previews
+//   - Voice input (Web Speech API)
+//   - Voice output (TTS)
+//   - Quick prompts
+//   - Conversation memory through Dify conversation_id
 // ==================================================
+
+const API_BASE = (
+  import.meta.env.VITE_API_URL || 'http://localhost:8000'
+).replace(/\/+$/, '')
 
 const LANGUAGES = [
-  { code: 'en', label: 'EN', name: 'English',  flag: '🇬🇧' },
-  { code: 'hi', label: 'HI', name: 'हिन्दी',    flag: '🇮🇳' },
-  { code: 'kn', label: 'KN', name: 'ಕನ್ನಡ',     flag: '🇮🇳' },
-  { code: 'ta', label: 'TA', name: 'தமிழ்',     flag: '🇮🇳' },
-  { code: 'te', label: 'TE', name: 'తెలుగు',    flag: '🇮🇳' },
+  { code: 'en', label: 'EN', name: 'English', flag: '🇬🇧' },
+  { code: 'hi', label: 'HI', name: 'हिन्दी', flag: '🇮🇳' },
+  { code: 'kn', label: 'KN', name: 'ಕನ್ನಡ', flag: '🇮🇳' },
+  { code: 'ta', label: 'TA', name: 'தமிழ்', flag: '🇮🇳' },
+  { code: 'te', label: 'TE', name: 'తెలుగు', flag: '🇮🇳' },
 ]
 
-// Speech-recognition locale codes
-const LANG_LOCALE = { en: 'en-IN', hi: 'hi-IN', kn: 'kn-IN', ta: 'ta-IN', te: 'te-IN' }
+const LANG_LOCALE = {
+  en: 'en-IN',
+  hi: 'hi-IN',
+  kn: 'kn-IN',
+  ta: 'ta-IN',
+  te: 'te-IN',
+}
+
+const LANGUAGE_NAMES = {
+  en: 'English',
+  hi: 'Hindi',
+  kn: 'Kannada',
+  ta: 'Tamil',
+  te: 'Telugu',
+}
 
 // ==================================================
-// MULTILINGUAL KNOWLEDGE BASE
+// MULTILINGUAL LOCAL KNOWLEDGE BASE
+// Used only by Offline Demo.
+// Authenticated sessions use the Dify Chatflow.
 // ==================================================
 
 const KB = {
   en: {
-    greeting: "Hello! I'm Bolt ⚡ — your IntelliWatch assistant. I can answer questions about vibration, temperature, current monitoring, anomaly detection, and system health. How can I help?",
-    fallback: "I'm not sure about that specific question. I specialise in IntelliWatch topics like sensor monitoring, anomaly detection, thresholds, and maintenance recommendations. Could you rephrase?",
-    about: "IntelliWatch is a real-time anomaly detection and decision support system. It monitors vibration, temperature, and current sensors from industrial machinery and uses machine learning to identify faults early.",
-    vibration: "The vibration sensor (ADXL345) measures RMS velocity in mm/s (ISO 10816-3, Group 2, rigid mount). Normal: ≤ 4.5 mm/s. Warning: 4.5–7.1 mm/s (Unsatisfactory). Critical: > 7.1 mm/s (Unacceptable — stop equipment). Anomalies indicate bearing faults (BPFI/BPFO), misalignment, or rotor unbalance.",
-    temperature: "The temperature sensor (DS18B20) uses 1-Wire protocol. Per IEC 60034-1 Class F insulation (40 °C ambient): Normal 20–80 °C. Warning 80–100 °C (elevated — inspect lubrication). Critical > 100 °C (risk of insulation breakdown — stop immediately).",
-    current: "The current sensor (ACS712) uses the Hall effect. Per IEC 60947-4-1 for a 7.5 kW / 415 V motor (rated 15 A): Normal ≤ 16.5 A (110 % rated). Warning 16.5–18.75 A (110–125 %). Critical > 18.75 A (thermal overload relay trip threshold).",
-    iot: "IntelliWatch uses a Raspberry Pi as the central processing unit. Sensors connect via GPIO, I²C, SPI, and 1-Wire protocols. Data is pushed to the dashboard over WebSocket or MQTT in real time.",
-    alert: "Alerts are generated when sensor readings cross warning or critical thresholds. The Alert Log on every page records each event with a timestamp, severity, and the sensor that triggered it.",
-    roles: "IntelliWatch supports three roles: ADMIN (full access, can manage users), OPERATOR (can view dashboards), and MAINTENANCE ENGINEER (can view data and run diagnostics).",
-    ml: "IntelliWatch uses KAIST bearing fault dataset features to train classifiers that detect BPFI, BPFO, misalignment, and unbalance faults. The model runs on the Raspberry Pi via the IntelliWatch Brain engine.",
-    status: "System status is derived from all sensor states. It shows Normal (green), Warning (amber), Critical (red with pulsing animation), or Awaiting IoT Signal (grey) when no data is connected yet.",
-    explorer: "The 3D Explorer lets you virtually assemble the IntelliWatch hardware on a workbench. You can place, move, rotate, and remove components with full undo/redo support.",
-    leaderboard: "The TenderWatch Leaderboard shows which organisations are leading in adopting IntelliWatch-style predictive maintenance systems. Rankings are based on monitored assets, uptime scores, and anomaly response time.",
-    attachment_ack: "Thanks for sharing that! I can see you've attached a file. As an on-device assistant I can't process file contents directly, but if you describe what you see or ask a specific question about it, I'll do my best to help.",
-    voice_ack: "I heard you! Processing your voice message now…",
+    greeting:
+      "Hello! I'm Bolt ⚡ — your IntelliWatch assistant. I can help with IntelliWatch, sensor monitoring, anomaly detection, and general questions. How can I help?",
+    fallback:
+      "I'm not sure about that specific question. Please try rephrasing it.",
+    about:
+      'IntelliWatch is a real-time anomaly detection and decision support system. It monitors vibration, temperature, and current sensors from industrial machinery and uses machine learning to identify faults early.',
+    vibration:
+      'The vibration sensor (ADXL345) measures vibration. The project uses ISO 10816-3 as a reference for vibration severity. Actual limits depend on the machine class, installation and measurement method. Anomalies can indicate bearing faults, misalignment or rotor unbalance.',
+    temperature:
+      'The DS18B20 temperature sensor uses the 1-Wire protocol. Temperature limits depend on the motor, insulation class, sensor placement and operating conditions. Do not treat a generic threshold as a universal industrial limit.',
+    current:
+      'The ACS712 current sensor uses the Hall effect. Current interpretation depends on the motor rating, supply, load and sensor calibration. The configured equipment limits should be used for actual decisions.',
+    iot:
+      'IntelliWatch is designed to connect sensors through a Raspberry Pi. The hardware integration uses sensor interfaces such as GPIO, I²C and 1-Wire, with data transferred to the backend and dashboard.',
+    alert:
+      'Alerts are generated when sensor readings cross configured warning or critical limits. The Alert Log records events with timestamps and severity.',
+    roles:
+      'IntelliWatch supports ADMIN, OPERATOR and MAINTENANCE ENGINEER roles, with access controlled by role-based permissions.',
+    ml:
+      'IntelliWatch uses machine-learning techniques and bearing-fault dataset features to support fault detection, including bearing faults, misalignment and unbalance.',
+    status:
+      'System status is derived from sensor availability and assessment. When physical IoT data is not connected, the hardware mode should show Awaiting IoT Signal rather than fabricated readings.',
+    explorer:
+      'The 3D Explorer lets you virtually assemble IntelliWatch hardware on a workbench. It supports component placement and manipulation.',
+    leaderboard:
+      'The TenderWatch Leaderboard presents organisation rankings and related indicators.',
+    attachment_ack:
+      "I can see the attached file preview, but Offline Demo cannot send its contents to an AI service. Please describe the relevant content or use a signed-in session with file processing enabled.",
+    voice_ack:
+      'I received your voice input. Please send the transcribed text when you are ready.',
   },
+
   hi: {
-    greeting: "नमस्ते! मैं Bolt ⚡ हूँ — आपका IntelliWatch सहायक। मैं कंपन, तापमान, करंट मॉनिटरिंग और anomaly detection के बारे में सवालों के जवाब दे सकता हूँ। बताइए कैसे मदद करूँ?",
-    fallback: "इस सवाल का सटीक जवाब मुझे नहीं पता। IntelliWatch के sensor monitoring और maintenance से जुड़े सवाल दोबारा पूछ सकते हैं?",
-    about: "IntelliWatch एक real-time anomaly detection और decision support system है।",
-    vibration: "कंपन sensor (ADXL345) ISO 10816-3: सामान्य ≤ 4.5 mm/s, चेतावनी 4.5–7.1 mm/s, critical > 7.1 mm/s।",
-    temperature: "तापमान sensor (DS18B20) IEC 60034-1 Class F: सामान्य 20–80°C, चेतावनी 80–100°C, critical > 100°C।",
-    current: "करंट sensor (ACS712) IEC 60947-4-1: सामान्य ≤ 16.5 A, चेतावनी 16.5–18.75 A, critical > 18.75 A।",
-    iot: "Raspberry Pi मुख्य processing unit है। Data WebSocket या MQTT से dashboard तक पहुँचता है।",
-    alert: "Alert Log हर event को समय, गंभीरता और sensor के साथ record करता है।",
-    roles: "ADMIN (पूर्ण access), OPERATOR (dashboard), MAINTENANCE ENGINEER (diagnostics)।",
-    ml: "KAIST dataset से BPFI, BPFO, misalignment और unbalance detect होती है।",
-    status: "Normal (हरा), Warning (पीला), Critical (लाल), Awaiting IoT (ग्रे)।",
-    explorer: "3D Explorer में hardware virtual workbench पर assemble कर सकते हैं।",
-    leaderboard: "TenderWatch Leaderboard दिखाता है कि कौन से organizations आगे हैं।",
-    attachment_ack: "फ़ाइल शेयर करने के लिए धन्यवाद! मैं फ़ाइल की content सीधे process नहीं कर सकता, लेकिन अगर आप describe करें तो मैं help कर सकता हूँ।",
-    voice_ack: "आपकी आवाज़ सुन ली! अभी process कर रहा हूँ…",
+    greeting:
+      'नमस्ते! मैं Bolt ⚡ हूँ — आपका IntelliWatch सहायक। मैं IntelliWatch, सेंसर मॉनिटरिंग, anomaly detection और सामान्य सवालों में मदद कर सकता हूँ। बताइए, कैसे मदद करूँ?',
+    fallback:
+      'मुझे इस सवाल का निश्चित उत्तर नहीं पता। कृपया इसे दूसरे तरीके से पूछें।',
+    about:
+      'IntelliWatch एक real-time anomaly detection और decision support system है। यह औद्योगिक मशीनों के vibration, temperature और current sensors की निगरानी करता है।',
+    vibration:
+      'ADXL345 vibration sensor कंपन मापता है। ISO 10816-3 को vibration severity के reference के रूप में उपयोग किया जाता है। वास्तविक सीमा मशीन की श्रेणी, स्थापना और मापन पद्धति पर निर्भर करती है।',
+    temperature:
+      'DS18B20 temperature sensor 1-Wire protocol का उपयोग करता है। तापमान सीमा मोटर, insulation class, sensor placement और operating conditions पर निर्भर करती है।',
+    current:
+      'ACS712 current sensor Hall effect का उपयोग करता है। Current की सही व्याख्या motor rating, supply, load और calibration पर निर्भर करती है।',
+    iot:
+      'IntelliWatch Raspberry Pi के माध्यम से sensors जोड़ने के लिए बनाया गया है। इसमें GPIO, I²C और 1-Wire जैसे interfaces उपयोग किए जा सकते हैं।',
+    alert:
+      'जब sensor readings configured warning या critical limits पार करती हैं, तब alerts बनते हैं। Alert Log घटनाओं को timestamp और severity के साथ रिकॉर्ड करता है।',
+    roles:
+      'IntelliWatch में ADMIN, OPERATOR और MAINTENANCE ENGINEER roles हैं। इनके permissions अलग-अलग हैं।',
+    ml:
+      'IntelliWatch fault detection के लिए machine-learning techniques और bearing-fault dataset features का उपयोग करता है।',
+    status:
+      'System status sensor availability और assessment पर निर्भर करता है। Physical IoT data उपलब्ध न होने पर hardware mode में Awaiting IoT Signal दिखना चाहिए।',
+    explorer:
+      '3D Explorer में IntelliWatch hardware को virtual workbench पर assemble और व्यवस्थित कर सकते हैं।',
+    leaderboard:
+      'TenderWatch Leaderboard organisations की rankings और संबंधित indicators दिखाता है।',
+    attachment_ack:
+      'मैं attached file का preview देख सकता हूँ, लेकिन Offline Demo उसकी सामग्री को AI service तक नहीं भेज सकता। कृपया जरूरी सामग्री का वर्णन करें।',
+    voice_ack:
+      'आपकी voice input प्राप्त हुई। तैयार होने पर transcribed text भेजें।',
   },
+
   kn: {
-    greeting: "ನಮಸ್ಕಾರ! ನಾನು Bolt ⚡ — ನಿಮ್ಮ IntelliWatch ಸಹಾಯಕ. ಕಂಪನ, ತಾಪಮಾನ, ಮತ್ತು anomaly detection ಬಗ್ಗೆ ಸಹಾಯ ಮಾಡಬಲ್ಲೆ.",
-    fallback: "ಆ ಪ್ರಶ್ನೆಗೆ ನನಗೆ ಖಚಿತ ಉತ್ತರ ತಿಳಿದಿಲ್ಲ. ಮರು ಕೇಳಬಹುದೇ?",
-    about: "IntelliWatch ಒಂದು real-time anomaly detection ಮತ್ತು decision support system.",
-    vibration: "ADXL345 ISO 10816-3: ಸಾಮಾನ್ಯ ≤ 4.5 mm/s, ಎಚ್ಚರಿಕೆ 4.5–7.1 mm/s, critical > 7.1 mm/s.",
-    temperature: "DS18B20 IEC 60034-1 Class F: ಸಾಮಾನ್ಯ 20–80°C, ಎಚ್ಚರಿಕೆ 80–100°C, critical > 100°C.",
-    current: "ACS712 IEC 60947-4-1: ಸಾಮಾನ್ಯ ≤ 16.5 A, ಎಚ್ಚರಿಕೆ 16.5–18.75 A, critical > 18.75 A.",
-    iot: "Raspberry Pi ಮೂಲಕ sensors GPIO, I²C ಮೂಲಕ ಸಂಪರ್ಕ.",
-    alert: "Alert Log ಪ್ರತಿ event ಅನ್ನು timestamp ಮತ್ತು severity ಸಹಿತ ದಾಖಲಿಸುತ್ತದೆ.",
-    roles: "ADMIN, OPERATOR, MAINTENANCE ENGINEER.",
-    ml: "KAIST dataset: BPFI, BPFO, misalignment, unbalance.",
-    status: "Normal (ಹಸಿರು), Warning (ಹಳದಿ), Critical (ಕೆಂಪು), Awaiting IoT (ಬೂದು).",
-    explorer: "3D Explorer ನಲ್ಲಿ hardware virtual workbench ಮೇಲೆ assemble ಮಾಡಬಹುದು.",
-    leaderboard: "TenderWatch Leaderboard ಯಾವ organizations ಮುಂದಿದ್ದಾರೆ ಎಂದು ತೋರಿಸುತ್ತದೆ.",
-    attachment_ack: "ಫೈಲ್ ಶೇರ್ ಮಾಡಿದ್ದಕ್ಕೆ ಧನ್ಯವಾದ! ನೇರವಾಗಿ process ಮಾಡಲಾಗದು, ಆದರೆ describe ಮಾಡಿದರೆ ಸಹಾಯ ಮಾಡಬಲ್ಲೆ.",
-    voice_ack: "ಧ್ವನಿ ಸ್ವೀಕರಿಸಲಾಗಿದೆ! Process ಮಾಡಲಾಗುತ್ತಿದೆ…",
+    greeting:
+      'ನಮಸ್ಕಾರ! ನಾನು Bolt ⚡ — ನಿಮ್ಮ IntelliWatch ಸಹಾಯಕ. IntelliWatch, sensor monitoring, anomaly detection ಮತ್ತು ಸಾಮಾನ್ಯ ಪ್ರಶ್ನೆಗಳಲ್ಲಿ ಸಹಾಯ ಮಾಡಬಲ್ಲೆ.',
+    fallback:
+      'ಈ ಪ್ರಶ್ನೆಗೆ ನನಗೆ ಖಚಿತ ಉತ್ತರ ತಿಳಿದಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೊಮ್ಮೆ ಬೇರೆ ರೀತಿಯಲ್ಲಿ ಕೇಳಿ.',
+    about:
+      'IntelliWatch ಒಂದು real-time anomaly detection ಮತ್ತು decision support system. ಇದು ಕೈಗಾರಿಕಾ ಯಂತ್ರಗಳ vibration, temperature ಮತ್ತು current sensors ಅನ್ನು ಮೇಲ್ವಿಚಾರಣೆ ಮಾಡುತ್ತದೆ.',
+    vibration:
+      'ADXL345 vibration sensor ಕಂಪನವನ್ನು ಅಳೆಯುತ್ತದೆ. ISO 10816-3 ಅನ್ನು vibration severity reference ಆಗಿ ಬಳಸಲಾಗುತ್ತದೆ. ನಿಜವಾದ ಮಿತಿಗಳು ಯಂತ್ರದ ವರ್ಗ ಮತ್ತು measurement ವಿಧಾನವನ್ನು ಅವಲಂಬಿಸಿರುತ್ತವೆ.',
+    temperature:
+      'DS18B20 temperature sensor 1-Wire protocol ಬಳಸುತ್ತದೆ. ತಾಪಮಾನದ ಮಿತಿಗಳು motor, insulation class ಮತ್ತು sensor placement ಮೇಲೆ ಅವಲಂಬಿತವಾಗಿವೆ.',
+    current:
+      'ACS712 current sensor Hall effect ಬಳಸುತ್ತದೆ. Current ಅರ್ಥೈಸುವಿಕೆ motor rating, supply, load ಮತ್ತು calibration ಮೇಲೆ ಅವಲಂಬಿತವಾಗಿದೆ.',
+    iot:
+      'IntelliWatch Raspberry Pi ಮೂಲಕ sensors ಸಂಪರ್ಕಿಸಲು ವಿನ್ಯಾಸಗೊಳಿಸಲಾಗಿದೆ. GPIO, I²C ಮತ್ತು 1-Wire interfaces ಬಳಸಬಹುದು.',
+    alert:
+      'Sensor readings configured warning ಅಥವಾ critical limits ದಾಟಿದಾಗ alerts ರಚನೆಯಾಗುತ್ತವೆ. Alert Log ಘಟನೆಗಳನ್ನು timestamp ಮತ್ತು severity ಜೊತೆಗೆ ದಾಖಲಿಸುತ್ತದೆ.',
+    roles:
+      'IntelliWatch ನಲ್ಲಿ ADMIN, OPERATOR ಮತ್ತು MAINTENANCE ENGINEER roles ಇವೆ. ಪ್ರತಿಯೊಂದಕ್ಕೂ ವಿಭಿನ್ನ permissions ಇರುತ್ತವೆ.',
+    ml:
+      'IntelliWatch fault detection ಗಾಗಿ machine-learning techniques ಮತ್ತು bearing-fault dataset features ಬಳಸುತ್ತದೆ.',
+    status:
+      'System status sensor availability ಮತ್ತು assessment ಆಧರಿಸಿದೆ. Physical IoT data ಇಲ್ಲದಿದ್ದರೆ hardware mode Awaiting IoT Signal ತೋರಿಸಬೇಕು.',
+    explorer:
+      '3D Explorer ನಲ್ಲಿ IntelliWatch hardware ಅನ್ನು virtual workbench ಮೇಲೆ assemble ಮಾಡಬಹುದು.',
+    leaderboard:
+      'TenderWatch Leaderboard organisations rankings ಮತ್ತು ಸಂಬಂಧಿತ indicators ತೋರಿಸುತ್ತದೆ.',
+    attachment_ack:
+      'ನನಗೆ attached file preview ಕಾಣುತ್ತದೆ. ಆದರೆ Offline Demo ಅದರ ವಿಷಯವನ್ನು AI service ಗೆ ಕಳುಹಿಸುವುದಿಲ್ಲ. ದಯವಿಟ್ಟು ಮುಖ್ಯ ವಿಷಯವನ್ನು ವಿವರಿಸಿ.',
+    voice_ack:
+      'ನಿಮ್ಮ voice input ಸ್ವೀಕರಿಸಲಾಗಿದೆ. ಸಿದ್ಧವಾದಾಗ transcribed text ಕಳುಹಿಸಿ.',
   },
+
   ta: {
-    greeting: "வணக்கம்! நான் Bolt ⚡ — உங்கள் IntelliWatch உதவியாளர். அதிர்வு, வெப்பநிலை மற்றும் anomaly detection பற்றி சேவை செய்வேன்.",
-    fallback: "இந்த கேள்விக்கு எனக்கு சரியான பதில் தெரியவில்லை. மீண்டும் கேளுங்கள்.",
-    about: "IntelliWatch ஒரு real-time anomaly detection மற்றும் decision support system.",
-    vibration: "ADXL345 ISO 10816-3: சாதாரண ≤ 4.5 mm/s, எச்சரிக்கை 4.5–7.1 mm/s, critical > 7.1 mm/s.",
-    temperature: "DS18B20 IEC 60034-1 Class F: சாதாரண 20–80°C, எச்சரிக்கை 80–100°C, critical > 100°C.",
-    current: "ACS712 IEC 60947-4-1: சாதாரண ≤ 16.5 A, எச்சரிக்கை 16.5–18.75 A, critical > 18.75 A.",
-    iot: "Raspberry Pi GPIO, I²C மூலம் sensors இணைக்கப்படுகின்றன.",
-    alert: "Alert Log ஒவ்வொரு நிகழ்வையும் timestamp உடன் பதிவு செய்கிறது.",
-    roles: "ADMIN, OPERATOR, MAINTENANCE ENGINEER.",
-    ml: "KAIST dataset: BPFI, BPFO, misalignment, unbalance.",
-    status: "Normal (பச்சை), Warning (மஞ்சள்), Critical (சிவப்பு), Awaiting IoT (சாம்பல்).",
-    explorer: "3D Explorer இல் hardware virtual workbench மேல் assemble செய்யலாம்.",
-    leaderboard: "TenderWatch Leaderboard எந்த organizations முன்னிலையில் உள்ளன என்பதை காட்டுகிறது.",
-    attachment_ack: "கோப்பு பகிர்ந்தமைக்கு நன்றி! நேரடியாக process செய்ய இயலாது, ஆனால் describe செய்தால் உதவுவேன்.",
-    voice_ack: "குரல் கேட்டேன்! இப்போது process செய்கிறேன்…",
+    greeting:
+      'வணக்கம்! நான் Bolt ⚡ — உங்கள் IntelliWatch உதவியாளர். IntelliWatch, sensor monitoring, anomaly detection மற்றும் பொதுவான கேள்விகளில் உதவுவேன்.',
+    fallback:
+      'இந்தக் கேள்விக்கான சரியான பதில் எனக்குத் தெரியவில்லை. வேறு விதமாகக் கேளுங்கள்.',
+    about:
+      'IntelliWatch என்பது real-time anomaly detection மற்றும் decision support system. இது தொழில்துறை இயந்திரங்களின் vibration, temperature மற்றும் current sensors ஐ கண்காணிக்கிறது.',
+    vibration:
+      'ADXL345 vibration sensor அதிர்வை அளவிடுகிறது. ISO 10816-3 அதிர்வு severity க்கான reference ஆகப் பயன்படுத்தப்படுகிறது. உண்மையான வரம்புகள் இயந்திர வகை மற்றும் அளவீட்டு முறையைப் பொறுத்தது.',
+    temperature:
+      'DS18B20 temperature sensor 1-Wire protocol பயன்படுத்துகிறது. வெப்பநிலை வரம்புகள் motor, insulation class மற்றும் sensor placement ஆகியவற்றைப் பொறுத்தது.',
+    current:
+      'ACS712 current sensor Hall effect பயன்படுத்துகிறது. Current அளவீட்டின் விளக்கம் motor rating, supply, load மற்றும் calibration ஆகியவற்றைப் பொறுத்தது.',
+    iot:
+      'IntelliWatch Raspberry Pi மூலம் sensors இணைக்க வடிவமைக்கப்பட்டுள்ளது. GPIO, I²C மற்றும் 1-Wire interfaces பயன்படுத்தப்படலாம்.',
+    alert:
+      'Sensor readings configured warning அல்லது critical limits ஐ மீறும் போது alerts உருவாகின்றன. Alert Log timestamp மற்றும் severity உடன் நிகழ்வுகளைப் பதிவு செய்கிறது.',
+    roles:
+      'IntelliWatch இல் ADMIN, OPERATOR மற்றும் MAINTENANCE ENGINEER roles உள்ளன. ஒவ்வொன்றுக்கும் தனித்தனி permissions உள்ளன.',
+    ml:
+      'IntelliWatch fault detection க்கு machine-learning techniques மற்றும் bearing-fault dataset features பயன்படுத்துகிறது.',
+    status:
+      'System status sensor availability மற்றும் assessment அடிப்படையில் தீர்மானிக்கப்படுகிறது. Physical IoT data இல்லாதபோது hardware mode Awaiting IoT Signal காட்ட வேண்டும்.',
+    explorer:
+      '3D Explorer இல் IntelliWatch hardware ஐ virtual workbench இல் assemble செய்யலாம்.',
+    leaderboard:
+      'TenderWatch Leaderboard organisations rankings மற்றும் தொடர்புடைய indicators ஐக் காட்டுகிறது.',
+    attachment_ack:
+      'Attached file preview எனக்குத் தெரிகிறது. ஆனால் Offline Demo அதன் உள்ளடக்கத்தை AI service க்கு அனுப்பாது. முக்கியமான உள்ளடக்கத்தை விவரிக்கவும்.',
+    voice_ack:
+      'உங்கள் voice input கிடைத்தது. தயாரானதும் transcribed text அனுப்பவும்.',
   },
+
   te: {
-    greeting: "నమస్కారం! నేను Bolt ⚡ — మీ IntelliWatch సహాయకుడు. కంపనం, ఉష్ణోగ్రత మరియు anomaly detection గురించి సహాయం చేయగలను.",
-    fallback: "ఆ ప్రశ్నకు నాకు సరైన సమాధానం తెలియదు. మళ్ళీ అడగగలరా?",
-    about: "IntelliWatch అనేది real-time anomaly detection మరియు decision support system.",
-    vibration: "ADXL345 ISO 10816-3: సాధారణ ≤ 4.5 mm/s, హెచ్చరిక 4.5–7.1 mm/s, critical > 7.1 mm/s.",
-    temperature: "DS18B20 IEC 60034-1 Class F: సాధారణ 20–80°C, హెచ్చరిక 80–100°C, critical > 100°C.",
-    current: "ACS712 IEC 60947-4-1: సాధారణ ≤ 16.5 A, హెచ్చరిక 16.5–18.75 A, critical > 18.75 A.",
-    iot: "Raspberry Pi GPIO, I²C ద్వారా sensors అనుసంధానం.",
-    alert: "Alert Log ప్రతి సంఘటనను timestamp తో నమోదు చేస్తుంది.",
-    roles: "ADMIN, OPERATOR, MAINTENANCE ENGINEER.",
-    ml: "KAIST dataset: BPFI, BPFO, misalignment, unbalance.",
-    status: "Normal (ఆకుపచ్చ), Warning (పసుపు), Critical (ఎరుపు), Awaiting IoT (బూడిద).",
-    explorer: "3D Explorer లో hardware virtual workbench పై assemble చేయవచ్చు.",
-    leaderboard: "TenderWatch Leaderboard ఏ organizations ముందున్నాయో చూపిస్తుంది.",
-    attachment_ack: "ఫైల్ పంచుకున్నందుకు ధన్యవాదాలు! నేరుగా process చేయలేను, కానీ describe చేస్తే సహాయం చేస్తాను.",
-    voice_ack: "మీ స్వరం విన్నాను! ఇప్పుడు process చేస్తున్నాను…",
+    greeting:
+      'నమస్కారం! నేను Bolt ⚡ — మీ IntelliWatch సహాయకుడిని. IntelliWatch, sensor monitoring, anomaly detection మరియు సాధారణ ప్రశ్నలలో సహాయం చేయగలను.',
+    fallback:
+      'ఆ ప్రశ్నకు నాకు ఖచ్చితమైన సమాధానం తెలియదు. దయచేసి మరో విధంగా అడగండి.',
+    about:
+      'IntelliWatch అనేది real-time anomaly detection మరియు decision support system. ఇది industrial machinery యొక్క vibration, temperature మరియు current sensors ను పర్యవేక్షిస్తుంది.',
+    vibration:
+      'ADXL345 vibration sensor కంపనాన్ని కొలుస్తుంది. ISO 10816-3 vibration severity reference గా ఉపయోగించబడుతుంది. నిజమైన పరిమితులు machine class మరియు measurement method పై ఆధారపడతాయి.',
+    temperature:
+      'DS18B20 temperature sensor 1-Wire protocol ఉపయోగిస్తుంది. ఉష్ణోగ్రత పరిమితులు motor, insulation class మరియు sensor placement పై ఆధారపడతాయి.',
+    current:
+      'ACS712 current sensor Hall effect ఉపయోగిస్తుంది. Current interpretation అనేది motor rating, supply, load మరియు calibration పై ఆధారపడి ఉంటుంది.',
+    iot:
+      'IntelliWatch Raspberry Pi ద్వారా sensors ను అనుసంధానించడానికి రూపొందించబడింది. GPIO, I²C మరియు 1-Wire interfaces ఉపయోగించవచ్చు.',
+    alert:
+      'Sensor readings configured warning లేదా critical limits దాటినప్పుడు alerts ఏర్పడతాయి. Alert Log timestamp మరియు severity తో events ను నమోదు చేస్తుంది.',
+    roles:
+      'IntelliWatch లో ADMIN, OPERATOR మరియు MAINTENANCE ENGINEER roles ఉన్నాయి. వాటి permissions వేర్వేరుగా ఉంటాయి.',
+    ml:
+      'IntelliWatch fault detection కోసం machine-learning techniques మరియు bearing-fault dataset features ఉపయోగిస్తుంది.',
+    status:
+      'System status sensor availability మరియు assessment ఆధారంగా ఉంటుంది. Physical IoT data లేకపోతే hardware mode Awaiting IoT Signal చూపాలి.',
+    explorer:
+      '3D Explorer లో IntelliWatch hardware ను virtual workbench పై assemble చేయవచ్చు.',
+    leaderboard:
+      'TenderWatch Leaderboard organisations rankings మరియు సంబంధిత indicators చూపిస్తుంది.',
+    attachment_ack:
+      'Attached file preview నాకు కనిపిస్తోంది. కానీ Offline Demo దాని content ను AI service కు పంపదు. దయచేసి ముఖ్యమైన విషయాన్ని వివరించండి.',
+    voice_ack:
+      'మీ voice input అందింది. సిద్ధమైనప్పుడు transcribed text పంపండి.',
   },
 }
 
 // ==================================================
-// KEYWORD MATCHING ENGINE
+// OFFLINE DEMO KEYWORD MATCHING
 // ==================================================
 
 function classifyMessage(text) {
   const t = text.toLowerCase()
-  if (/\b(hi|hello|hey|namaste|vanakkam|namaskara|namaskar|help|start)\b/.test(t)) return 'greeting'
-  if (/\b(what|about|intelliwatch|system|project|overview|explain)\b/.test(t)) return 'about'
-  if (/\b(vibrat|adxl|shake|oscillat|कंपन|ಕಂಪನ|అదురు|அதிர்)\b/.test(t)) return 'vibration'
-  if (/\b(temp|heat|ds18|thermal|celsius|degree|तापमान|ಉಷ್ಣ|வெப்ப|ఉష్ణ)\b/.test(t)) return 'temperature'
-  if (/\b(current|amp|acs|motor|power|करंट|ಮಿನ್ನ|மின்|విద్యుత్)\b/.test(t)) return 'current'
-  if (/\b(iot|raspberry|sensor|hardware|connect|wire|gpio|i2c|mqtt|websocket)\b/.test(t)) return 'iot'
-  if (/\b(alert|log|notif|alarm|warn|critical|threshold|event)\b/.test(t)) return 'alert'
-  if (/\b(role|admin|operator|engineer|user|access|login|auth|permission)\b/.test(t)) return 'roles'
-  if (/\b(ml|machine|learn|model|kaist|fault|bpfi|bpfo|misalign|unbalanc|predict|classif)\b/.test(t)) return 'ml'
-  if (/\b(status|health|system|online|offline|live|state)\b/.test(t)) return 'status'
-  if (/\b(3d|explorer|hardware|lab|workbench|place|component|drag)\b/.test(t)) return 'explorer'
-  if (/\b(leader|board|rank|tender|top|org|company|chart)\b/.test(t)) return 'leaderboard'
+
+  if (/\b(hi|hello|hey|namaste|vanakkam|namaskara|namaskar|help|start)\b/.test(t)) {
+    return 'greeting'
+  }
+
+  if (/\b(what|about|intelliwatch|system|project|overview|explain)\b/.test(t)) {
+    return 'about'
+  }
+
+  if (/\b(vibrat|adxl|shake|oscillat|कंपन|ಕಂಪನ|అదురు|அதிர்)\b/.test(t)) {
+    return 'vibration'
+  }
+
+  if (/\b(temp|heat|ds18|thermal|celsius|degree|तापमान|ಉಷ್ಣ|வெப்ப|ఉష్ణ)\b/.test(t)) {
+    return 'temperature'
+  }
+
+  if (/\b(current|amp|acs|motor|power|करंट|ಮಿನ್ನ|மின்|విద్యుత్)\b/.test(t)) {
+    return 'current'
+  }
+
+  if (/\b(iot|raspberry|sensor|hardware|connect|wire|gpio|i2c|mqtt|websocket)\b/.test(t)) {
+    return 'iot'
+  }
+
+  if (/\b(alert|log|notif|alarm|warn|critical|threshold|event)\b/.test(t)) {
+    return 'alert'
+  }
+
+  if (/\b(role|admin|operator|engineer|user|access|login|auth|permission)\b/.test(t)) {
+    return 'roles'
+  }
+
+  if (/\b(ml|machine|learn|model|kaist|fault|bpfi|bpfo|misalign|unbalanc|predict|classif)\b/.test(t)) {
+    return 'ml'
+  }
+
+  if (/\b(status|health|system|online|offline|live|state)\b/.test(t)) {
+    return 'status'
+  }
+
+  if (/\b(3d|explorer|hardware|lab|workbench|place|component|drag)\b/.test(t)) {
+    return 'explorer'
+  }
+
+  if (/\b(leader|board|rank|tender|top|org|company|chart)\b/.test(t)) {
+    return 'leaderboard'
+  }
+
   return 'fallback'
 }
 
-// File type helpers
-function isImage(file) { return file.type.startsWith('image/') }
+// ==================================================
+// FILE TYPE HELPERS
+// ==================================================
+
+function isImage(file) {
+  return file.type.startsWith('image/')
+}
+
 function fileIcon(file) {
   if (isImage(file)) return '🖼️'
   if (file.type === 'application/pdf') return '📄'
@@ -145,14 +294,48 @@ function fileIcon(file) {
 }
 
 // ==================================================
+// QUICK PROMPTS
+// ==================================================
+
+const QUICK_PROMPTS = [
+  {
+    label: '📡 Vibration',
+    key: 'vibration',
+    prompt:
+      'Explain vibration monitoring in IntelliWatch, including the ADXL345 sensor, how readings are interpreted, and important limitations.',
+  },
+  {
+    label: '🌡️ Temperature',
+    key: 'temperature',
+    prompt:
+      'Explain temperature monitoring in IntelliWatch, including the DS18B20 sensor and how temperature readings should be interpreted.',
+  },
+  {
+    label: '⚡ Current',
+    key: 'current',
+    prompt:
+      'Explain current monitoring in IntelliWatch, including the ACS712 sensor, calibration and interpretation of readings.',
+  },
+  {
+    label: '🔔 Alerts',
+    key: 'alert',
+    prompt:
+      'Explain how alerts, warning levels and critical events work in IntelliWatch.',
+  },
+]
+
+// ==================================================
 // ROBOT AVATAR SVG
 // ==================================================
 
 function RobotAvatar({ size = 56, glow = true, pulse = false }) {
   return (
     <svg
-      width={size} height={size} viewBox="0 0 100 100"
-      fill="none" xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 100 100"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
       className={`robot-avatar${glow ? ' robot-glow' : ''}${pulse ? ' robot-pulse' : ''}`}
     >
@@ -161,47 +344,85 @@ function RobotAvatar({ size = 56, glow = true, pulse = false }) {
           <stop offset="0%" stopColor="#1e40af" />
           <stop offset="100%" stopColor="#0a0f2e" />
         </radialGradient>
+
         <radialGradient id="bodyW" cx="38%" cy="30%" r="62%">
           <stop offset="0%" stopColor="#ffffff" />
           <stop offset="100%" stopColor="#c8d6e8" />
         </radialGradient>
+
         <radialGradient id="visor" cx="50%" cy="55%" r="55%">
           <stop offset="0%" stopColor="#1e2030" />
           <stop offset="100%" stopColor="#0a0c18" />
         </radialGradient>
+
         <radialGradient id="eyeL" cx="40%" cy="35%" r="60%">
           <stop offset="0%" stopColor="#a5f3fc" />
           <stop offset="100%" stopColor="#0891b2" />
         </radialGradient>
+
         <radialGradient id="eyeR" cx="40%" cy="35%" r="60%">
           <stop offset="0%" stopColor="#a5f3fc" />
           <stop offset="100%" stopColor="#0891b2" />
         </radialGradient>
+
         <radialGradient id="orbG" cx="40%" cy="35%" r="60%">
           <stop offset="0%" stopColor="#67e8f9" />
           <stop offset="100%" stopColor="#0e7490" />
         </radialGradient>
+
         <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
           <feGaussianBlur stdDeviation="1.8" result="g" />
-          <feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge>
+          <feMerge>
+            <feMergeNode in="g" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
         </filter>
+
         <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#000" floodOpacity="0.25"/>
+          <feDropShadow
+            dx="0"
+            dy="2"
+            stdDeviation="2"
+            floodColor="#000"
+            floodOpacity="0.25"
+          />
         </filter>
       </defs>
+
       <circle cx="50" cy="50" r="49" fill="url(#bgGrad)" />
-      <circle cx="50" cy="50" r="47" fill="none" stroke="#3b82f6" strokeWidth="1.5" strokeOpacity="0.7" />
-      <rect x="31" y="62" width="38" height="26" rx="10" fill="url(#bodyW)" filter="url(#softShadow)" />
+      <circle
+        cx="50"
+        cy="50"
+        r="47"
+        fill="none"
+        stroke="#3b82f6"
+        strokeWidth="1.5"
+        strokeOpacity="0.7"
+      />
+
+      <rect
+        x="31"
+        y="62"
+        width="38"
+        height="26"
+        rx="10"
+        fill="url(#bodyW)"
+        filter="url(#softShadow)"
+      />
+
       <circle cx="29" cy="66" r="5.5" fill="#d1dde8" stroke="#b0c0d0" strokeWidth="0.8" />
       <circle cx="71" cy="66" r="5.5" fill="#d1dde8" stroke="#b0c0d0" strokeWidth="0.8" />
+
       <rect x="40" y="68" width="20" height="16" rx="5" fill="#1e293b" />
       <circle cx="50" cy="76" r="5.5" fill="url(#orbG)" filter="url(#glow)" />
       <circle cx="50" cy="76" r="3" fill="#cffafe" fillOpacity="0.6" />
+
       <g transform="translate(12, 60) rotate(-15)">
         <rect x="0" y="0" width="11" height="16" rx="5" fill="url(#bodyW)" />
         <rect x="-1" y="14" width="13" height="12" rx="5" fill="url(#bodyW)" />
         <rect x="4" y="5" width="6" height="12" rx="3" fill="url(#bodyW)" />
       </g>
+
       <g transform="translate(65, 42)">
         <rect x="0" y="0" width="20" height="13" rx="5" fill="white" fillOpacity="0.92" />
         <polygon points="4,13 0,18 9,13" fill="white" fillOpacity="0.92" />
@@ -209,30 +430,83 @@ function RobotAvatar({ size = 56, glow = true, pulse = false }) {
         <circle cx="10" cy="6.5" r="1.8" fill="#3b82f6" />
         <circle cx="15" cy="6.5" r="1.8" fill="#3b82f6" />
       </g>
-      <rect x="24" y="18" width="52" height="46" rx="16" fill="url(#bodyW)" filter="url(#softShadow)" />
+
+      <rect
+        x="24"
+        y="18"
+        width="52"
+        height="46"
+        rx="16"
+        fill="url(#bodyW)"
+        filter="url(#softShadow)"
+      />
+
       <ellipse cx="38" cy="24" rx="8" ry="4" fill="white" fillOpacity="0.35" />
       <rect x="47" y="9" width="6" height="11" rx="3" fill="#d1dde8" />
       <rect x="43" y="6" width="14" height="5" rx="2.5" fill="#1e293b" />
       <rect x="46" y="7" width="8" height="2" rx="1" fill="#38bdf8" filter="url(#glow)" />
+
       <rect x="29" y="26" width="42" height="30" rx="12" fill="url(#visor)" />
       <ellipse cx="40" cy="31" rx="7" ry="3" fill="white" fillOpacity="0.1" />
-      <path d="M 35 42 Q 39 36 43 42" stroke="url(#eyeL)" strokeWidth="2.5" fill="none" strokeLinecap="round" filter="url(#glow)" />
-      <path d="M 47 42 Q 51 36 55 42" stroke="url(#eyeR)" strokeWidth="2.5" fill="none" strokeLinecap="round" filter="url(#glow)" />
+
+      <path
+        d="M 35 42 Q 39 36 43 42"
+        stroke="url(#eyeL)"
+        strokeWidth="2.5"
+        fill="none"
+        strokeLinecap="round"
+        filter="url(#glow)"
+      />
+
+      <path
+        d="M 47 42 Q 51 36 55 42"
+        stroke="url(#eyeR)"
+        strokeWidth="2.5"
+        fill="none"
+        strokeLinecap="round"
+        filter="url(#glow)"
+      />
+
       <circle cx="43" cy="40" r="1.2" fill="#a5f3fc" fillOpacity="0.9" />
       <circle cx="55" cy="40" r="1.2" fill="#a5f3fc" fillOpacity="0.9" />
+
       <ellipse cx="34" cy="46" rx="4.5" ry="2.5" fill="#f472b6" fillOpacity="0.35" />
       <ellipse cx="56" cy="46" rx="4.5" ry="2.5" fill="#f472b6" fillOpacity="0.35" />
-      <path d="M 38 50 Q 45 56 57 50" stroke="#f9a8d4" strokeWidth="1.8" fill="none" strokeLinecap="round" />
-      <path d="M 24 35 Q 50 8 76 35" stroke="#1e293b" strokeWidth="4" fill="none" strokeLinecap="round" />
+
+      <path
+        d="M 38 50 Q 45 56 57 50"
+        stroke="#f9a8d4"
+        strokeWidth="1.8"
+        fill="none"
+        strokeLinecap="round"
+      />
+
+      <path
+        d="M 24 35 Q 50 8 76 35"
+        stroke="#1e293b"
+        strokeWidth="4"
+        fill="none"
+        strokeLinecap="round"
+      />
+
       <rect x="18" y="32" width="12" height="16" rx="6" fill="#1e293b" />
       <rect x="20" y="34" width="8" height="12" rx="4" fill="#0f172a" />
       <circle cx="24" cy="40" r="4.5" fill="none" stroke="#38bdf8" strokeWidth="1.2" />
       <circle cx="24" cy="40" r="2" fill="#0891b2" fillOpacity="0.6" />
+
       <rect x="70" y="32" width="12" height="16" rx="6" fill="#1e293b" />
       <rect x="72" y="34" width="8" height="12" rx="4" fill="#0f172a" />
       <circle cx="76" cy="40" r="4.5" fill="none" stroke="#38bdf8" strokeWidth="1.2" />
       <circle cx="76" cy="40" r="2" fill="#0891b2" fillOpacity="0.6" />
-      <path d="M 22 48 Q 28 58 38 60" stroke="#374151" strokeWidth="2" fill="none" strokeLinecap="round" />
+
+      <path
+        d="M 22 48 Q 28 58 38 60"
+        stroke="#374151"
+        strokeWidth="2"
+        fill="none"
+        strokeLinecap="round"
+      />
+
       <rect x="35" y="57" width="9" height="6" rx="3" fill="#1e293b" />
       <rect x="36.5" y="58" width="6" height="4" rx="2" fill="#0891b2" fillOpacity="0.7" />
       <circle cx="40" cy="60" r="1.2" fill="#38bdf8" filter="url(#glow)" />
@@ -241,7 +515,7 @@ function RobotAvatar({ size = 56, glow = true, pulse = false }) {
 }
 
 // ==================================================
-// ATTACHMENT PREVIEW — shown inside a chat bubble
+// ATTACHMENT PREVIEW
 // ==================================================
 
 function AttachmentPreview({ file, dataUrl }) {
@@ -253,12 +527,15 @@ function AttachmentPreview({ file, dataUrl }) {
       </div>
     )
   }
+
   return (
     <div className="attach-file">
       <span className="attach-file-icon">{fileIcon(file)}</span>
       <div className="attach-file-info">
         <span className="attach-file-name">{file.name}</span>
-        <span className="attach-file-size">{(file.size / 1024).toFixed(1)} KB</span>
+        <span className="attach-file-size">
+          {(file.size / 1024).toFixed(1)} KB
+        </span>
       </div>
     </div>
   )
@@ -268,153 +545,457 @@ function AttachmentPreview({ file, dataUrl }) {
 // MAIN CHATBOT COMPONENT
 // ==================================================
 
-export default function Chatbot() {
-  const [open, setOpen]             = useState(false)
-  const [lang, setLang]             = useState('en')
-  const [input, setInput]           = useState('')
-  const [messages, setMessages]     = useState([])
-  const [typing, setTyping]         = useState(false)
-  const [showLang, setShowLang]     = useState(false)
+export default function Chatbot({
+  token,
+  isDemoSession = false,
+}) {
+  const [open, setOpen] = useState(false)
+  const globalLang = useLang()
+  const [lang, setLang] = useState(globalLang)
+
+  // Tracks the last global language so every language change
+  // is handled exactly once, regardless of where it originated.
+  const previousGlobalLangRef = useRef(globalLang)
+  const languageChangeVersionRef = useRef(0)
+
+  const [input, setInput] = useState('')
+  const [messages, setMessages] = useState([])
+  const [typing, setTyping] = useState(false)
+  const [showLang, setShowLang] = useState(false)
 
   // Attachment state
-  const [pendingFiles, setPendingFiles] = useState([])   // { file, dataUrl }[]
-  const fileInputRef  = useRef(null)
+  const [pendingFiles, setPendingFiles] = useState([])
+  const fileInputRef = useRef(null)
 
   // Voice-input state
-  const [listening, setListening]   = useState(false)
+  const [listening, setListening] = useState(false)
   const [voiceError, setVoiceError] = useState('')
   const [interimText, setInterimText] = useState('')
   const recognitionRef = useRef(null)
 
-  // Voice-output (TTS) state
+  // Voice-output state
   const [ttsEnabled, setTtsEnabled] = useState(false)
 
+  // Conversation and request state
+  const conversationIdRef = useRef(null)
+  const requestControllerRef = useRef(null)
+  const requestInProgressRef = useRef(false)
+
   const messagesEndRef = useRef(null)
-  const inputRef       = useRef(null)
+  const inputRef = useRef(null)
+
+  const isOfflineDemo =
+    Boolean(isDemoSession) || token === 'demo-offline'
+
+  // ── TTS helper ──────────────────────────────────────────────────────────
+
+  const speak = useCallback((text) => {
+    if (!ttsEnabled || !window.speechSynthesis || !text) return
+
+    window.speechSynthesis.cancel()
+
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.lang = LANG_LOCALE[lang] || 'en-IN'
+    utterance.rate = 1.05
+
+    window.speechSynthesis.speak(utterance)
+  }, [ttsEnabled, lang])
+
+  // ── Add bot response ─────────────────────────────────────────────────────
+
+  function addBotMessage(text) {
+    if (!text) return
+
+    const msg = {
+      id: `${Date.now()}-${Math.random()}`,
+      role: 'bot',
+      text,
+    }
+
+    setMessages(prev => [...prev, msg])
+    speak(text)
+  }
+
+  // ── Permanent global language synchronization ──────────────────────────
+
+  useEffect(() => {
+    if (previousGlobalLangRef.current === globalLang) return
+
+    previousGlobalLangRef.current = globalLang
+    languageChangeVersionRef.current += 1
+
+    setLang(globalLang)
+
+    // Stop any request made using the previous language.
+    requestControllerRef.current?.abort()
+    requestControllerRef.current = null
+    requestInProgressRef.current = false
+    conversationIdRef.current = null
+
+    // Stop speech output from the previous language.
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel()
+    }
+
+    // Stop voice recognition using the previous language.
+    if (recognitionRef.current) {
+      recognitionRef.current.abort()
+      recognitionRef.current = null
+    }
+
+    setListening(false)
+    setInterimText('')
+    setVoiceError('')
+    setTyping(false)
+    setShowLang(false)
+
+    // Replace the old conversation with the new-language greeting.
+    setMessages([{
+      id: `${Date.now()}-${Math.random()}`,
+      role: 'bot',
+      text: KB[globalLang]?.greeting || KB.en.greeting,
+    }])
+  }, [globalLang])
+
+  // ── Reset conversation when account/session changes ──────────────────────
+
+  useEffect(() => {
+    requestControllerRef.current?.abort()
+    requestControllerRef.current = null
+    requestInProgressRef.current = false
+    conversationIdRef.current = null
+    setTyping(false)
+  }, [token, isDemoSession])
 
   // ── Init greeting ────────────────────────────────────────────────────────
+
   useEffect(() => {
-    if (open && messages.length === 0) addBotMessage(KB[lang].greeting)
-    if (open) setTimeout(() => inputRef.current?.focus(), 120)
+    if (open && messages.length === 0) {
+      addBotMessage(KB[lang]?.greeting || KB.en.greeting)
+    }
+
+    if (open) {
+      const focusTimer = window.setTimeout(
+        () => inputRef.current?.focus(),
+        120
+      )
+
+      return () => window.clearTimeout(focusTimer)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   // ── Auto-scroll ──────────────────────────────────────────────────────────
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    messagesEndRef.current?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'end',
+    })
   }, [messages, typing])
 
-  // ── Close lang dropdown on outside click ─────────────────────────────────
+  // ── Close language dropdown on outside click ─────────────────────────────
+
   useEffect(() => {
-    if (!showLang) return
+    if (!showLang) return undefined
+
     const close = () => setShowLang(false)
+
     window.addEventListener('mousedown', close)
-    return () => window.removeEventListener('mousedown', close)
+
+    return () => {
+      window.removeEventListener('mousedown', close)
+    }
   }, [showLang])
 
-  // ── Stop recognition on panel close ──────────────────────────────────────
+  // ── Stop voice recognition when panel closes ─────────────────────────────
+
   useEffect(() => {
     if (!open && recognitionRef.current) {
       recognitionRef.current.abort()
+      recognitionRef.current = null
       setListening(false)
       setInterimText('')
     }
   }, [open])
 
-  // ── TTS speak helper ─────────────────────────────────────────────────────
-  const speak = useCallback((text) => {
-    if (!ttsEnabled || !window.speechSynthesis) return
-    window.speechSynthesis.cancel()
-    const utt = new SpeechSynthesisUtterance(text)
-    utt.lang = LANG_LOCALE[lang] || 'en-IN'
-    utt.rate = 1.05
-    window.speechSynthesis.speak(utt)
-  }, [ttsEnabled, lang])
+  // ── Cleanup on unmount ───────────────────────────────────────────────────
 
-  function addBotMessage(text) {
-    const msg = { id: Date.now() + Math.random(), role: 'bot', text }
-    setMessages(prev => [...prev, msg])
-    speak(text)
+  useEffect(() => {
+    return () => {
+      requestControllerRef.current?.abort()
+
+      if (recognitionRef.current) {
+        recognitionRef.current.abort()
+      }
+
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel()
+      }
+    }
+  }, [])
+
+  // ── Local Offline Demo response ──────────────────────────────────────────
+
+  function getOfflineResponse(text, hasFiles) {
+    if (!text && hasFiles) {
+      return KB[lang].attachment_ack || KB.en.attachment_ack
+    }
+
+    const topic = classifyMessage(text)
+    return KB[lang][topic] || KB[lang].fallback
   }
 
-  // ── Send message (text + optional attachments) ───────────────────────────
-  function sendMessage(overrideText) {
+  // ── Attachment limitation message ────────────────────────────────────────
+
+  function getAttachmentNotice() {
+    const notices = {
+      en: 'Note: I received your message, but the attached file contents were not sent to the AI service. File-content analysis has not been connected yet.',
+      hi: 'ध्यान दें: आपका संदेश प्राप्त हुआ, लेकिन attached file की सामग्री AI service तक नहीं भेजी गई। File-content analysis अभी connect नहीं किया गया है।',
+      kn: 'ಸೂಚನೆ: ನಿಮ್ಮ ಸಂದೇಶ ಸ್ವೀಕರಿಸಲಾಗಿದೆ. ಆದರೆ attached file ವಿಷಯವನ್ನು AI service ಗೆ ಕಳುಹಿಸಲಾಗಿಲ್ಲ. File-content analysis ಇನ್ನೂ ಸಂಪರ್ಕಗೊಂಡಿಲ್ಲ.',
+      ta: 'குறிப்பு: உங்கள் செய்தி பெறப்பட்டது. ஆனால் attached file உள்ளடக்கம் AI service க்கு அனுப்பப்படவில்லை. File-content analysis இன்னும் இணைக்கப்படவில்லை.',
+      te: 'గమనిక: మీ సందేశం అందింది. కానీ attached file content AI service కు పంపబడలేదు. File-content analysis ఇంకా అనుసంధానించబడలేదు.',
+    }
+
+    return notices[lang] || notices.en
+  }
+
+  // ── Send message to Dify through authenticated backend ───────────────────
+
+  async function sendMessage(overrideText) {
     const text = (overrideText ?? input).trim()
-    const hasFiles = pendingFiles.length > 0
+    const filesToSend = [...pendingFiles]
+    const hasFiles = filesToSend.length > 0
 
-    if (!text && !hasFiles) return
+    if ((!text && !hasFiles) || requestInProgressRef.current) {
+      return
+    }
 
-    // Build user message
-    const userMsg = {
-      id: Date.now(),
+    const requestLanguage = lang
+    const requestLanguageVersion = languageChangeVersionRef.current
+
+    const userMessage = {
+      id: `${Date.now()}-${Math.random()}`,
       role: 'user',
       text: text || null,
-      files: hasFiles ? [...pendingFiles] : null,
+      files: hasFiles ? filesToSend : null,
     }
-    setMessages(prev => [...prev, userMsg])
+
+    setMessages(prev => [...prev, userMessage])
     setInput('')
     setPendingFiles([])
     setTyping(true)
 
-    let response
-    if (hasFiles && !text) {
-      response = KB[lang].attachment_ack || KB.en.attachment_ack
-    } else {
-      const topic = classifyMessage(text)
-      response = KB[lang][topic] || KB[lang].fallback
+    // Offline Demo remains independent of the backend and Dify.
+    if (isOfflineDemo) {
+      const response = getOfflineResponse(text, hasFiles)
+
+      window.setTimeout(() => {
+        // Ignore a response belonging to an older language.
+        if (
+          requestLanguageVersion !== languageChangeVersionRef.current
+        ) {
+          return
+        }
+
+        addBotMessage(response)
+        setTyping(false)
+      }, 500 + Math.random() * 500)
+
+      return
     }
 
-    setTimeout(() => {
+    // A valid IntelliWatch login is required for the protected AI endpoint.
+    if (!token) {
+      addBotMessage('Please sign in to IntelliWatch to use Bolt AI.')
       setTyping(false)
-      addBotMessage(response)
-    }, 900 + Math.random() * 400)
+      return
+    }
+
+    // The attachment preview is retained, but file contents are not uploaded yet.
+    if (!text) {
+      addBotMessage(getAttachmentNotice())
+      setTyping(false)
+      return
+    }
+
+    requestInProgressRef.current = true
+
+    const controller = new AbortController()
+    requestControllerRef.current = controller
+
+    try {
+      const languageName = LANGUAGE_NAMES[requestLanguage] || 'English'
+
+      const queryWithLanguage = [
+        `Please respond in ${languageName}.`,
+        'Use this as a response-language preference.',
+        '',
+        text,
+      ].join('\n')
+
+      const response = await fetch(`${API_BASE}/chatbot/message`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          query: queryWithLanguage,
+          language: requestLanguage,
+          conversation_id: conversationIdRef.current,
+        }),
+        signal: controller.signal,
+      })
+
+      const result = await response.json().catch(() => null)
+
+      // Ignore any result that belongs to an earlier language.
+      if (
+        requestLanguageVersion !== languageChangeVersionRef.current
+      ) {
+        return
+      }
+
+      if (!response.ok) {
+        const detail =
+          typeof result?.detail === 'string'
+            ? result.detail
+            : 'Bolt could not process your message. Please try again.'
+
+        throw new Error(detail)
+      }
+
+      if (
+        !result ||
+        typeof result.answer !== 'string' ||
+        !result.answer.trim()
+      ) {
+        throw new Error('Bolt received an empty response. Please try again.')
+      }
+
+      if (
+        typeof result.conversation_id === 'string' &&
+        result.conversation_id.trim()
+      ) {
+        conversationIdRef.current = result.conversation_id
+      }
+
+      addBotMessage(result.answer.trim())
+
+      if (hasFiles) {
+        addBotMessage(getAttachmentNotice())
+      }
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        return
+      }
+
+      if (
+        requestLanguageVersion !== languageChangeVersionRef.current
+      ) {
+        return
+      }
+
+      const message =
+        error instanceof TypeError
+          ? 'Bolt could not connect to the IntelliWatch backend. Check that the backend is running and reachable.'
+          : error.message || 'Something went wrong while contacting Bolt AI.'
+
+      addBotMessage(message)
+    } finally {
+      if (requestControllerRef.current === controller) {
+        requestControllerRef.current = null
+        requestInProgressRef.current = false
+        setTyping(false)
+      }
+    }
   }
 
-  function handleKey(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
+  // ── Keyboard handling ────────────────────────────────────────────────────
+
+  function handleKey(event) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault()
       sendMessage()
     }
   }
 
-  // ── Language change ───────────────────────────────────────────────────────
+  // ── Language change ──────────────────────────────────────────────────────
+
   function handleLangChange(code) {
-    setLang(code)
-    setMessages([])
+    if (!LANGUAGES.some(language => language.code === code)) return
+
     setShowLang(false)
-    setTyping(false)
-    if (recognitionRef.current) { recognitionRef.current.abort(); setListening(false) }
-    setTimeout(() => addBotMessage(KB[code].greeting), 200)
+
+    // The global synchronization effect handles the actual reset.
+    if (code === globalLang) return
+
+    setGlobalLang(code)
   }
 
-  // ── File attachment ───────────────────────────────────────────────────────
-  function handleFileChange(e) {
-    const files = Array.from(e.target.files || [])
+  // ── File attachment handling ─────────────────────────────────────────────
+
+  function handleFileChange(event) {
+    const files = Array.from(event.target.files || [])
+
     if (!files.length) return
+
     files.forEach(file => {
       if (isImage(file)) {
         const reader = new FileReader()
-        reader.onload = (ev) => {
-          setPendingFiles(prev => [...prev, { file, dataUrl: ev.target.result }])
+
+        reader.onload = (loadEvent) => {
+          setPendingFiles(prev => [
+            ...prev,
+            {
+              file,
+              dataUrl: loadEvent.target.result,
+            },
+          ])
         }
+
+        reader.onerror = () => {
+          setPendingFiles(prev => [
+            ...prev,
+            {
+              file,
+              dataUrl: null,
+            },
+          ])
+        }
+
         reader.readAsDataURL(file)
       } else {
-        setPendingFiles(prev => [...prev, { file, dataUrl: null }])
+        setPendingFiles(prev => [
+          ...prev,
+          {
+            file,
+            dataUrl: null,
+          },
+        ])
       }
     })
-    e.target.value = ''
+
+    event.target.value = ''
   }
 
-  function removePendingFile(idx) {
-    setPendingFiles(prev => prev.filter((_, i) => i !== idx))
+  function removePendingFile(index) {
+    setPendingFiles(prev => prev.filter((_, i) => i !== index))
   }
 
   // ── Voice input (Web Speech API) ─────────────────────────────────────────
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-  const hasSpeech = !!SpeechRecognition
+
+  const SpeechRecognition =
+    typeof window !== 'undefined'
+      ? window.SpeechRecognition || window.webkitSpeechRecognition
+      : null
+
+  const hasSpeech = Boolean(SpeechRecognition)
 
   function toggleVoice() {
     setVoiceError('')
+
     if (listening) {
       recognitionRef.current?.stop()
       setListening(false)
@@ -423,150 +1004,247 @@ export default function Chatbot() {
     }
 
     if (!hasSpeech) {
-      setVoiceError('Voice input not supported in this browser.')
+      setVoiceError('Voice input is not supported in this browser.')
       return
     }
 
-    const rec = new SpeechRecognition()
-    rec.lang          = LANG_LOCALE[lang] || 'en-IN'
-    rec.interimResults = true
-    rec.continuous    = false
-    rec.maxAlternatives = 1
+    try {
+      const recognition = new SpeechRecognition()
 
-    rec.onstart  = () => { setListening(true); setInterimText('') }
-    rec.onend    = () => { setListening(false); setInterimText('') }
-    rec.onerror  = (ev) => {
-      setListening(false)
-      setInterimText('')
-      if (ev.error !== 'aborted') setVoiceError(`Mic error: ${ev.error}`)
-    }
-    rec.onresult = (ev) => {
-      let final = '', interim = ''
-      for (let i = ev.resultIndex; i < ev.results.length; i++) {
-        const t = ev.results[i][0].transcript
-        if (ev.results[i].isFinal) final += t
-        else interim += t
-      }
-      if (interim) setInterimText(interim)
-      if (final.trim()) {
+      recognition.lang = LANG_LOCALE[lang] || 'en-IN'
+      recognition.interimResults = true
+      recognition.continuous = false
+      recognition.maxAlternatives = 1
+
+      recognition.onstart = () => {
+        setListening(true)
         setInterimText('')
-        setInput(prev => (prev ? prev + ' ' : '') + final.trim())
-        rec.stop()
       }
+
+      recognition.onend = () => {
+        setListening(false)
+        setInterimText('')
+      }
+
+      recognition.onerror = (event) => {
+        setListening(false)
+        setInterimText('')
+
+        if (event.error !== 'aborted') {
+          setVoiceError(`Mic error: ${event.error}`)
+        }
+      }
+
+      recognition.onresult = (event) => {
+        let finalText = ''
+        let interim = ''
+
+        for (
+          let index = event.resultIndex;
+          index < event.results.length;
+          index++
+        ) {
+          const transcript = event.results[index][0].transcript
+
+          if (event.results[index].isFinal) {
+            finalText += transcript
+          } else {
+            interim += transcript
+          }
+        }
+
+        if (interim) {
+          setInterimText(interim)
+        }
+
+        if (finalText.trim()) {
+          setInterimText('')
+          setInput(prev => (
+            prev ? `${prev} ${finalText.trim()}` : finalText.trim()
+          ))
+          recognition.stop()
+        }
+      }
+
+      recognitionRef.current = recognition
+      recognition.start()
+    } catch (error) {
+      setListening(false)
+      setVoiceError(
+        error.message || 'Unable to start voice recognition.'
+      )
+    }
+  }
+
+  // ── TTS toggle ───────────────────────────────────────────────────────────
+
+  function toggleTts() {
+    if (ttsEnabled && window.speechSynthesis) {
+      window.speechSynthesis.cancel()
     }
 
-    recognitionRef.current = rec
-    rec.start()
+    setTtsEnabled(value => !value)
   }
 
-  // ── TTS toggle ────────────────────────────────────────────────────────────
-  function toggleTts() {
-    if (ttsEnabled && window.speechSynthesis) window.speechSynthesis.cancel()
-    setTtsEnabled(v => !v)
+  // ── Quick prompt handling ────────────────────────────────────────────────
+
+  function handleQuickPrompt(prompt) {
+    sendMessage(prompt)
   }
 
-  const currentLang = LANGUAGES.find(l => l.code === lang)
+  // ── Display values ──────────────────────────────────────────────────────
+
+  const currentLang =
+    LANGUAGES.find(language => language.code === lang) || LANGUAGES[0]
 
   const PLACEHOLDERS = {
-    en: 'Ask about IntelliWatch…',
-    hi: 'IntelliWatch के बारे में पूछें…',
-    kn: 'IntelliWatch ಬಗ್ಗೆ ಕೇಳಿ…',
-    ta: 'IntelliWatch பற்றி கேளுங்கள்…',
-    te: 'IntelliWatch గురించి అడగండి…',
+    en: 'Ask Bolt anything…',
+    hi: 'Bolt से कुछ भी पूछें…',
+    kn: 'Bolt ಅನ್ನು ಏನಾದರೂ ಕೇಳಿ…',
+    ta: 'Bolt-இடம் ஏதாவது கேளுங்கள்…',
+    te: 'Bolt ను ఏదైనా అడగండి…',
   }
+
+  const sendDisabled =
+    typing ||
+    (!input.trim() && pendingFiles.length === 0)
+
+  // ==================================================
+  // RENDER
+  // ==================================================
 
   return (
     <>
       {/* ── Floating trigger button ── */}
+
       <button
         className={`chatbot-fab ${open ? 'chatbot-fab-open' : ''}`}
-        onClick={() => setOpen(o => !o)}
+        onClick={() => setOpen(value => !value)}
         aria-label="Open IntelliWatch Assistant"
         title="Chat with Bolt — IntelliWatch AI"
+        type="button"
       >
         <RobotAvatar size={46} glow pulse={!open} />
         {!open && <span className="chatbot-fab-badge">AI</span>}
       </button>
 
       {/* ── Chat panel ── */}
-      {open && (
-        <div className="chatbot-panel" role="dialog" aria-label="IntelliWatch Chatbot">
 
+      {open && (
+        <div
+          className="chatbot-panel"
+          role="dialog"
+          aria-label="IntelliWatch Chatbot"
+          aria-modal="false"
+        >
           {/* Header */}
+
           <div className="chatbot-header">
             <div className="chatbot-header-left">
               <RobotAvatar size={36} glow />
+
               <div>
                 <span className="chatbot-name">Bolt</span>
-                <span className="chatbot-tagline">IntelliWatch Assistant</span>
+                <span className="chatbot-tagline">
+                  IntelliWatch Assistant
+                </span>
               </div>
             </div>
 
             <div className="chatbot-header-right">
               {/* TTS toggle */}
+
               <button
                 className={`chatbot-icon-btn${ttsEnabled ? ' chatbot-icon-btn--active' : ''}`}
                 onClick={toggleTts}
                 title={ttsEnabled ? 'Mute voice responses' : 'Enable voice responses'}
                 aria-label={ttsEnabled ? 'Mute' : 'Unmute'}
+                type="button"
               >
                 {ttsEnabled ? '🔊' : '🔇'}
               </button>
 
               {/* Language selector */}
-              <div className="lang-selector-wrap" onMouseDown={e => e.stopPropagation()}>
+
+              <div
+                className="lang-selector-wrap"
+                onMouseDown={event => event.stopPropagation()}
+              >
                 <button
                   className="lang-btn"
-                  onClick={() => setShowLang(s => !s)}
+                  onClick={() => setShowLang(value => !value)}
                   title="Change language"
                   aria-label="Select language"
+                  type="button"
                 >
                   {currentLang.flag} {currentLang.label}
-                  <span className="lang-chevron">{showLang ? '▲' : '▼'}</span>
+                  <span className="lang-chevron">
+                    {showLang ? '▲' : '▼'}
+                  </span>
                 </button>
 
                 {showLang && (
                   <div className="lang-dropdown">
-                    {LANGUAGES.map(l => (
+                    {LANGUAGES.map(language => (
                       <button
-                        key={l.code}
-                        className={`lang-option ${l.code === lang ? 'lang-active' : ''}`}
-                        onClick={() => handleLangChange(l.code)}
+                        key={language.code}
+                        className={`lang-option ${language.code === lang ? 'lang-active' : ''}`}
+                        onClick={() => handleLangChange(language.code)}
+                        type="button"
                       >
-                        <span>{l.flag}</span>
-                        <span className="lang-opt-code">{l.label}</span>
-                        <span className="lang-opt-name">{l.name}</span>
+                        <span>{language.flag}</span>
+                        <span className="lang-opt-code">
+                          {language.label}
+                        </span>
+                        <span className="lang-opt-name">
+                          {language.name}
+                        </span>
                       </button>
                     ))}
                   </div>
                 )}
               </div>
 
+              {/* Close */}
+
               <button
                 className="chatbot-close"
                 onClick={() => setOpen(false)}
                 aria-label="Close chat"
-              >✕</button>
+                type="button"
+              >
+                ✕
+              </button>
             </div>
           </div>
 
           {/* Messages */}
+
           <div className="chatbot-messages">
-            {messages.map(msg => (
-              <div key={msg.id} className={`chat-msg chat-msg-${msg.role}`}>
-                {msg.role === 'bot' && (
+            {messages.map(message => (
+              <div
+                key={message.id}
+                className={`chat-msg chat-msg-${message.role}`}
+              >
+                {message.role === 'bot' && (
                   <span className="chat-avatar">
                     <RobotAvatar size={24} glow={false} />
                   </span>
                 )}
+
                 <div className="chat-bubble">
-                  {/* Text content */}
-                  {msg.text && <span>{msg.text}</span>}
-                  {/* Attached files */}
-                  {msg.files && msg.files.length > 0 && (
-                    <div className={`chat-attachments${msg.text ? ' chat-attachments--below' : ''}`}>
-                      {msg.files.map((f, i) => (
-                        <AttachmentPreview key={i} file={f.file} dataUrl={f.dataUrl} />
+                  {message.text && <span>{message.text}</span>}
+
+                  {message.files && message.files.length > 0 && (
+                    <div
+                      className={`chat-attachments${message.text ? ' chat-attachments--below' : ''}`}
+                    >
+                      {message.files.map((fileItem, index) => (
+                        <AttachmentPreview
+                          key={`${fileItem.file.name}-${index}`}
+                          file={fileItem.file}
+                          dataUrl={fileItem.dataUrl}
+                        />
                       ))}
                     </div>
                   )}
@@ -579,62 +1257,70 @@ export default function Chatbot() {
                 <span className="chat-avatar">
                   <RobotAvatar size={24} glow={false} />
                 </span>
+
                 <div className="chat-bubble chat-typing">
-                  <span /><span /><span />
+                  <span />
+                  <span />
+                  <span />
                 </div>
               </div>
             )}
+
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Quick chips */}
+          {/* Quick prompts */}
+
           <div className="chatbot-chips">
-            {[
-              { label: '📡 Vibration',    key: 'vibration'   },
-              { label: '🌡️ Temperature',  key: 'temperature' },
-              { label: '⚡ Current',      key: 'current'     },
-              { label: '🔔 Alerts',       key: 'alert'       },
-            ].map(chip => (
+            {QUICK_PROMPTS.map(prompt => (
               <button
-                key={chip.key}
+                key={prompt.key}
                 className="chip"
-                onClick={() => {
-                  const response = KB[lang][chip.key]
-                  const botMsg = { id: Date.now() + 1, role: 'bot', text: response }
-                  setMessages(prev => [
-                    ...prev,
-                    { id: Date.now(), role: 'user', text: chip.label, files: null },
-                    botMsg,
-                  ])
-                  speak(response)
-                }}
+                onClick={() => handleQuickPrompt(prompt.prompt)}
+                disabled={typing}
+                type="button"
               >
-                {chip.label}
+                {prompt.label}
               </button>
             ))}
           </div>
 
           {/* Pending file previews */}
+
           {pendingFiles.length > 0 && (
             <div className="chatbot-pending-files">
-              {pendingFiles.map((f, i) => (
-                <div key={i} className="pending-file-chip">
-                  <span className="pending-file-icon">{fileIcon(f.file)}</span>
-                  <span className="pending-file-name">{f.file.name}</span>
+              {pendingFiles.map((fileItem, index) => (
+                <div
+                  key={`${fileItem.file.name}-${index}`}
+                  className="pending-file-chip"
+                >
+                  <span className="pending-file-icon">
+                    {fileIcon(fileItem.file)}
+                  </span>
+
+                  <span className="pending-file-name">
+                    {fileItem.file.name}
+                  </span>
+
                   <button
                     className="pending-file-remove"
-                    onClick={() => removePendingFile(i)}
+                    onClick={() => removePendingFile(index)}
                     aria-label="Remove attachment"
-                  >×</button>
+                    type="button"
+                  >
+                    ×
+                  </button>
                 </div>
               ))}
             </div>
           )}
 
           {/* Voice interim transcript */}
+
           {(listening || interimText) && (
             <div className="chatbot-voice-bar">
               <span className="voice-ripple" />
+
               <span className="voice-interim">
                 {interimText || 'Listening…'}
               </span>
@@ -642,24 +1328,37 @@ export default function Chatbot() {
           )}
 
           {/* Voice error */}
+
           {voiceError && (
             <div className="chatbot-voice-error">
               ⚠ {voiceError}
-              <button onClick={() => setVoiceError('')} aria-label="Dismiss">×</button>
+
+              <button
+                onClick={() => setVoiceError('')}
+                aria-label="Dismiss"
+                type="button"
+              >
+                ×
+              </button>
             </div>
           )}
 
           {/* Input row */}
+
           <div className="chatbot-input-row">
             {/* Attachment button */}
+
             <button
               className="chatbot-icon-btn chatbot-attach-btn"
               onClick={() => fileInputRef.current?.click()}
               title="Attach photo or document"
               aria-label="Attach file"
+              type="button"
+              disabled={typing}
             >
               📎
             </button>
+
             <input
               ref={fileInputRef}
               type="file"
@@ -670,35 +1369,44 @@ export default function Chatbot() {
             />
 
             {/* Text input */}
+
             <input
               ref={inputRef}
               className="chatbot-input"
               type="text"
-              placeholder={listening ? 'Listening…' : PLACEHOLDERS[lang]}
+              placeholder={
+                listening ? 'Listening…' : PLACEHOLDERS[lang]
+              }
               value={input}
-              onChange={e => setInput(e.target.value)}
+              onChange={event => setInput(event.target.value)}
               onKeyDown={handleKey}
               aria-label="Chat input"
+              disabled={typing}
             />
 
             {/* Voice button */}
+
             {hasSpeech && (
               <button
                 className={`chatbot-icon-btn chatbot-mic-btn${listening ? ' chatbot-mic-btn--active' : ''}`}
                 onClick={toggleVoice}
                 title={listening ? 'Stop listening' : 'Voice input'}
                 aria-label={listening ? 'Stop listening' : 'Start voice input'}
+                type="button"
+                disabled={typing}
               >
                 🎙
               </button>
             )}
 
             {/* Send */}
+
             <button
               className="chatbot-send"
               onClick={() => sendMessage()}
-              disabled={!input.trim() && pendingFiles.length === 0}
+              disabled={sendDisabled}
               aria-label="Send"
+              type="button"
             >
               ➤
             </button>

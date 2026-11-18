@@ -1,0 +1,519 @@
+    return dict(row) if row else None
+
+
+def _active_admin_count(connection):
+    row = connection.execute("""
+        SELECT COUNT(*) AS total
+        FROM users
+        WHERE role = 'ADMIN'
+          AND is_active = 1
+          AND is_deleted = 0
+    """).fetchone()
+
+    return row["total"]
+
+
+def _validate_request_status(value):
+    value = str(value).upper()
+
+    if value not in {"PENDING", "APPROVED", "REJECTED", "ALL"}:
+        raise ValueError("Invalid request status.")
+
+    return value
+
+
+def _client_ip(request):
+    """
+    Uses the direct connection address.
+
+    Do not trust X-Forwarded-For unless a trusted reverse proxy
+    is configured to overwrite and validate it.
+    """
+    if not request or not request.client:
+        return "unknown"
+
+    host = request.client.host or "unknown"
+
+    try:
+        return str(ipaddress.ip_address(host))
+    except ValueError:
+        return "unknown"
+
+
+# =========================================================
+# RATE LIMITING
+# =========================================================
+
+def _rate_limit_key(action, request, subject=""):
+    """
+    Creates a rate-limit scope and a privacy-preserving subject.
+
+    The subject includes the action, client IP and supplied account
+    identifier. Only its SHA-256 hash is passed to the storage layer.
+    """
+    raw = (
+        f"{action}|{_client_ip(request)}|"
+        f"{str(subject).strip().lower()}"
+    )
+
+    subject_hash = hashlib.sha256(
+        raw.encode("utf-8")
+    ).hexdigest()
+
+    return f"{action}:{subject_hash}"
+
+
+def _split_rate_limit_key(key):
+    """
+    Converts the internal combined key into the two arguments
+    required by auth_security_store.py: scope and subject.
+    """
+    scope, separator, subject = str(key).partition(":")
+
+    if not separator or not scope or not subject:
+        raise ValueError("Invalid rate-limit key.")
+
+    return scope, subject
+
+
+def _enforce_rate_limit(
+    action,
+    request,
+    subject="",
+    max_attempts=5,
+    window_seconds=300,
+):
+    key = _rate_limit_key(action, request, subject)
+    scope, subject_hash = _split_rate_limit_key(key)
+
+    allowed = check_rate_limit(
+        scope,
+        subject_hash,
+        max_attempts=max_attempts,
+        window_seconds=window_seconds,
+    )
+
+    if not allowed:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many attempts. Please try again later.",
+            headers={"Retry-After": str(window_seconds)},
+        )
+
+    return key
+
+
+def _record_failure(key):
+    scope, subject_hash = _split_rate_limit_key(key)
+
+    record_rate_limit_failure(
+        scope,
+        subject_hash,
+    )
+
+
+def _clear_failures(key):
+    scope, subject_hash = _split_rate_limit_key(key)
+
+    clear_rate_limit(
+        scope,
+        subject_hash,
+    )
+
+
+def _generic_recovery_message():
+    return (
+        "If the account is eligible, the request has been received."
+    )
+
+
+# =========================================================
+# SECRET KEY AND PASSWORD SECURITY
+# =========================================================
+
+def get_secret_key():
+    secret_key = os.getenv("INTELLIWATCH_SECRET_KEY")
+
+    if not secret_key or len(secret_key) < 32:
+        raise RuntimeError(
+            "INTELLIWATCH_SECRET_KEY is missing or too short."
+        )
+
+    return secret_key
+
+
+def hash_password(password: str) -> str:
+    if not isinstance(password, str):
+        raise ValueError("Password must be a string.")
+
+    if not 12 <= len(password) <= 128:
+        raise ValueError(
+            "Password must contain between 12 and 128 characters."
+        )
+
+    return password_hasher.hash(password)
+
+
+def verify_password(plain_password, password_hash):
+    if not isinstance(plain_password, str) or not isinstance(
+        password_hash, str
+    ):
+        return False
+
+    try:
+        return password_hasher.verify(password_hash, plain_password)
+    except (
+        VerifyMismatchError,
+        VerificationError,
+        InvalidHashError,
+        TypeError,
+        ValueError,
+    ):
+        return False
+
+
+# =========================================================
+# AUTHENTICATION AND JWT
+# =========================================================
+
+def authenticate_user(username, password):
+    user = get_user_by_username(username.strip())
+
+    if not user or not user["is_active"]:
+        return None
+
+    if user.get("is_deleted", 0):
+        return None
+
+    if not verify_password(password, user["password_hash"]):
+        return None
+
+    return user
+
+
+def create_access_token(user, session_role=None):
+    account_role = user.get("account_role", user.get("role"))
+    effective_role = session_role or user.get("role")
+
+    if account_role not in VALID_ROLES or effective_role not in VALID_ROLES:
+        raise ValueError("Invalid account or session role.")
+
+    user_id = int(user["id"])
+    session_version = get_session_version(user_id)
+
+    now = datetime.now(timezone.utc)
+
+    payload = {
+        "sub": str(user_id),
+        "session_role": effective_role,
+        "iss": JWT_ISSUER,
+        "aud": JWT_AUDIENCE,
+        "typ": "access",
+        "jti": secrets.token_urlsafe(24),
+        "sv": int(session_version),
+        "iat": now,
+        "exp": now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+    }
+
+    return jwt.encode(
+        payload,
+        get_secret_key(),
+        algorithm=ALGORITHM,
+    )
+
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+):
+    unauthorized = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid or expired authentication token.",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    if credentials is None or not credentials.credentials:
+        raise unauthorized
+
+    try:
+        payload = jwt.decode(
+            credentials.credentials,
+            get_secret_key(),
+            algorithms=[ALGORITHM],
+            issuer=JWT_ISSUER,
+            audience=JWT_AUDIENCE,
+            options={
+                "require": [
+                    "sub",
+                    "session_role",
+                    "iss",
+                    "aud",
+                    "typ",
+                    "jti",
+                    "sv",
+                    "iat",
+                    "exp",
+                ]
+            },
+        )
+
+        if payload.get("typ") != "access":
+            raise unauthorized
+
+        user_id = int(payload["sub"])
+
+        if user_id <= 0:
+            raise unauthorized
+
+        session_role = payload.get("session_role")
+
+        if session_role not in VALID_ROLES:
+            raise unauthorized
+
+        token_version = payload.get("sv")
+
+        if not isinstance(token_version, int):
+            raise unauthorized
+
+        current_version = get_session_version(user_id)
+
+        if token_version != current_version:
+            raise unauthorized
+
+        user = get_user_by_id(user_id)
+
+        if (
+            not user
+            or not user["is_active"]
+            or user.get("is_deleted", 0)
+        ):
+            raise unauthorized
+
+        user = dict(user)
+        account_role = user["role"]
+
+        is_restricted_session = session_role != account_role
+
+        if is_restricted_session:
+            if account_role != "ADMIN":
+                raise unauthorized
+
+            required_permission = (
+                RESTRICTED_ADMIN_SESSION_PERMISSIONS.get(session_role)
+            )
+
+            if not required_permission:
+                raise unauthorized
+
+            overrides = get_user_permission_overrides(user_id)
+
+            if overrides.get(required_permission) is not True:
+                raise unauthorized
+
+        user["account_role"] = account_role
+        user["role"] = session_role
+        user["is_restricted_session"] = is_restricted_session
+
+        return user
+
+    except HTTPException:
+        raise
+    except (
+        jwt.PyJWTError,
+        ValueError,
+        TypeError,
+        KeyError,
+        OverflowError,
+    ):
+        raise unauthorized
+
+
+# =========================================================
+# ROLE AND PERMISSION AUTHORIZATION
+# =========================================================
+
+def require_roles(*allowed_roles):
+    async def role_checker(current_user=Depends(get_current_user)):
+        if current_user["role"] not in allowed_roles:
+            raise HTTPException(
+                status_code=403,
+                detail="You do not have permission to access this resource.",
+            )
+
+        return current_user
+
+    return role_checker
+
+
+admin_access = require_roles("ADMIN")
+operator_access = require_roles("OPERATOR")
+maintenance_access = require_roles("MAINTENANCE_ENGINEER")
+
+
+def get_effective_permissions(user_id, role, restricted_session=False):
+    role = str(role).upper()
+
+    permissions = set(ROLE_DEFAULT_PERMISSIONS.get(role, set()))
+
+    if restricted_session:
+        permissions.difference_update(ADMIN_ONLY_PERMISSIONS)
+        return sorted(permissions)
+
+    overrides = get_user_permission_overrides(user_id)
+
+    for key, granted in overrides.items():
+        if key not in ALL_PERMISSION_KEYS:
+            continue
+
+        if role != "ADMIN" and key in ADMIN_ONLY_PERMISSIONS:
+            continue
+
+        if granted:
+            permissions.add(key)
+        else:
+            permissions.discard(key)
+
+    return sorted(permissions)
+
+
+def has_permission(user, permission_key):
+    if permission_key not in ALL_PERMISSION_KEYS:
+        return False
+
+    if user.get("id") is None:
+        return False
+
+    permissions = get_effective_permissions(
+        user["id"],
+        user.get("role"),
+        restricted_session=user.get("is_restricted_session", False),
+    )
+
+    return permission_key in permissions
+
+
+def require_permissions(*permission_keys):
+    if not permission_keys:
+        raise ValueError("At least one permission must be specified.")
+
+    invalid = set(permission_keys) - ALL_PERMISSION_KEYS
+
+    if invalid:
+        raise ValueError(f"Unknown permissions: {sorted(invalid)}")
+
+    async def permission_checker(current_user=Depends(get_current_user)):
+        missing = [
+            key for key in permission_keys
+            if not has_permission(current_user, key)
+        ]
+
+        if missing:
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "message": "Insufficient permissions.",
+                    "missing_permissions": missing,
+                },
+            )
+
+        return current_user
+
+    return permission_checker
+
+
+# =========================================================
+# REQUEST MODELS
+# =========================================================
+
+class LoginRequest(BaseModel):
+    username: str = Field(min_length=3, max_length=50)
+    password: str = Field(min_length=1, max_length=128)
+    requested_role: Literal[
+        "ADMIN", "OPERATOR", "MAINTENANCE_ENGINEER"
+    ] = "OPERATOR"
+
+
+class LoginResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int
+    user_id: int
+    username: str
+    full_name: str
+    role: str
+    account_role: str | None = None
+    is_restricted_session: bool = False
+
+
+class UserCreateRequest(BaseModel):
+    username: str = Field(min_length=3, max_length=50)
+    full_name: str = Field(min_length=2, max_length=100)
+    password: str = Field(min_length=12, max_length=128)
+    role: Literal["OPERATOR", "MAINTENANCE_ENGINEER"]
+
+
+class UserStatusRequest(BaseModel):
+    is_active: bool
+
+
+class UserPermissionRequest(BaseModel):
+    is_granted: bool
+
+
+class RoleChangeRequest(BaseModel):
+    role: Literal["OPERATOR", "MAINTENANCE_ENGINEER"]
+
+
+class PromotionRequestModel(BaseModel):
+    reason: str = Field(min_length=5, max_length=1000)
+
+
+class PromotionReviewRequest(BaseModel):
+    approve: bool
+    remarks: str | None = Field(default=None, max_length=1000)
+
+
+class RecoveryRequestModel(BaseModel):
+    username: str = Field(min_length=3, max_length=50)
+    reason: str = Field(min_length=5, max_length=1000)
+
+
+class RecoveryReviewRequest(BaseModel):
+    approve: bool
+    remarks: str | None = Field(default=None, max_length=1000)
+
+
+class ForgotPasswordRequest(BaseModel):
+    username: str = Field(min_length=3, max_length=50)
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(min_length=8, max_length=256)
+    new_password: str = Field(min_length=12, max_length=128)
+
+
+class AdminRegisterRequest(BaseModel):
+    username: str = Field(min_length=3, max_length=50)
+    full_name: str = Field(min_length=2, max_length=100)
+    password: str = Field(min_length=12, max_length=128)
+    invite_token: str = Field(min_length=8, max_length=256)
+
+
+class RegisterRequest(BaseModel):
+    username: str = Field(min_length=3, max_length=50)
+    full_name: str = Field(min_length=2, max_length=100)
+    password: str = Field(min_length=12, max_length=128)
+    role: Literal["OPERATOR", "MAINTENANCE_ENGINEER"]
+
+
+# =========================================================
+# TRANSACTIONAL ACCOUNT MANAGEMENT
+# =========================================================
+
+def _change_user_status(user_id, is_active, admin_id):
+    connection = _begin_transaction()
+
+    try:
+        admin = _admin_in_transaction(connection, admin_id)
+        target = _account_in_transaction(connection, user_id)
+
+        if not target or target["is_deleted"]:

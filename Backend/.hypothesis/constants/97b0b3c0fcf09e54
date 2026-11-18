@@ -1,0 +1,4 @@
+# file: C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\feature_extractor.py
+# hypothesis_version: 6.131.10
+
+[-2.0, -1.0, 0.0, 1.0, 1.23, 2.0, 3.0, 5.0, 8.0, 10.0, 20.0, 25.0, 30.0, 40.0, 42.0, 42.5, 50.0, 250.0, 1000.0, 5000.0, 10000.0, 100, 200, 1000, 1024, '1.0', '2.1', '2024-01-01T00:00:00Z', 'A', 'ACSensor', 'ADXL345', 'DS18B20', '__main__', 'a', 'available', 'available value', 'b', 'c', 'crest_factor', 'crest_factor_x', 'crest_factor_y', 'current_mean_b', 'current_rms', 'current_rms_b', 'current_variation_b', 'degC', 'explicit defaults', 'fft_band0_x', 'fft_band1_x', 'g', 'g^2', 'inf', 'kurtosis', 'kurtosis_x', 'kurtosis_y', 'max', 'mean', 'min', 'name', 'nan', 'peak', 'peak_x', 'peak_y', 'rise_rate', 'rms', 'rms_x', 'rms_y', 'rms_z', 's', 'schema_version', 'sensor_source', 'temperature_max', 'temperature_mean', 'temperature_min', 'timestamp', 'unavailable', 'unit', 'value', 'variance', 'variance_x', 'variance_y', 'variation', 'x', 'y', 'z']

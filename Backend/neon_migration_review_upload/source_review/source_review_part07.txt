@@ -1,0 +1,472 @@
+                "username": request["username"],
+                "remarks": remarks,
+            },
+        )
+
+        connection.commit()
+
+        return {
+            "request_id": request_id,
+            "user_id": request["user_id"],
+            "status": new_status,
+        }
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+# =========================================================
+# LOGIN
+# =========================================================
+
+@auth_router.post("/login", response_model=LoginResponse)
+async def login(request: LoginRequest, http_request: Request):
+    rate_key = _enforce_rate_limit(
+        "login",
+        http_request,
+        request.username,
+        max_attempts=5,
+        window_seconds=300,
+    )
+
+    user = authenticate_user(request.username, request.password)
+
+    if not user:
+        _record_failure(rate_key)
+        raise HTTPException(
+            status_code=401,
+            detail="Incorrect username or password, or account inactive.",
+        )
+
+    account_role = user["role"]
+    requested_role = request.requested_role
+    is_restricted_session = False
+
+    if requested_role == account_role:
+        session_role = account_role
+
+    elif account_role == "ADMIN":
+        required_permission = (
+            RESTRICTED_ADMIN_SESSION_PERMISSIONS.get(requested_role)
+        )
+
+        if not required_permission:
+            raise HTTPException(
+                status_code=403,
+                detail="This account cannot sign in through the selected role.",
+            )
+
+        overrides = get_user_permission_overrides(user["id"])
+
+        if overrides.get(required_permission) is not True:
+            raise HTTPException(
+                status_code=403,
+                detail=(
+                    "Restricted access has not been granted for this role. "
+                    "Sign in through the Admin tab or ask an administrator "
+                    "to grant the required restricted access."
+                ),
+            )
+
+        session_role = requested_role
+        is_restricted_session = True
+
+    else:
+        raise HTTPException(
+            status_code=403,
+            detail="This account is not authorised for the selected role tab.",
+        )
+
+    _clear_failures(rate_key)
+
+    update_last_login(user["id"])
+
+    _audit_event(
+        "USER_LOGIN",
+        actor=user["username"],
+        target=user["id"],
+        details={
+            "account_role": account_role,
+            "session_role": session_role,
+            "is_restricted_session": is_restricted_session,
+        },
+    )
+
+    return {
+        "access_token": create_access_token(user, session_role),
+        "token_type": "bearer",
+        "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        "user_id": user["id"],
+        "username": user["username"],
+        "full_name": user["full_name"],
+        "role": session_role,
+        "account_role": account_role,
+        "is_restricted_session": is_restricted_session,
+    }
+
+
+# =========================================================
+# CURRENT USER
+# =========================================================
+
+@auth_router.get("/me")
+async def get_my_account(current_user=Depends(get_current_user)):
+    return {
+        "id": current_user["id"],
+        "username": current_user["username"],
+        "full_name": current_user["full_name"],
+        "role": current_user["role"],
+        "account_role": current_user["account_role"],
+        "is_restricted_session": current_user["is_restricted_session"],
+        "is_active": current_user["is_active"],
+        "created_at": current_user["created_at"],
+        "last_login": current_user["last_login"],
+        "effective_permissions": get_effective_permissions(
+            current_user["id"],
+            current_user["role"],
+            restricted_session=current_user["is_restricted_session"],
+        ),
+    }
+
+
+# =========================================================
+# ADMIN: CREATE USER
+# =========================================================
+
+@auth_router.post("/users")
+async def create_user_account(
+    request: UserCreateRequest,
+    current_admin=Depends(admin_access),
+):
+    try:
+        user_id = create_user(
+            username=request.username,
+            full_name=request.full_name,
+            password_hash=hash_password(request.password),
+            role=request.role,
+        )
+
+        _audit_event(
+            "USER_CREATED_BY_ADMIN",
+            actor=current_admin["username"],
+            target=user_id,
+            details={"username": request.username, "role": request.role},
+        )
+
+        return {
+            "success": True,
+            "user_id": user_id,
+            "username": request.username,
+            "role": request.role,
+            "message": "User account created successfully.",
+        }
+
+    except sqlite3.IntegrityError:
+        raise HTTPException(status_code=409, detail="Username already exists.")
+
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+# =========================================================
+# ADMIN: LIST USERS
+# =========================================================
+
+@auth_router.get("/users")
+async def list_users(
+    include_deleted: bool = False,
+    current_admin=Depends(admin_access),
+):
+    connection = get_connection()
+
+    try:
+        query = """
+            SELECT
+                id, username, full_name, role, is_active, is_deleted,
+                deleted_at, deletion_reason, created_at, last_login
+            FROM users
+        """
+
+        if not include_deleted:
+            query += " WHERE is_deleted = 0"
+
+        query += " ORDER BY id"
+
+        users = [
+            dict(row)
+            for row in connection.execute(query).fetchall()
+        ]
+
+        return {
+            "success": True,
+            "total_users": len(users),
+            "users": users,
+        }
+
+    finally:
+        connection.close()
+
+
+# =========================================================
+# ADMIN: USER PERMISSIONS
+# =========================================================
+
+@auth_router.get("/users/{user_id}/permissions")
+async def get_user_permissions(
+    user_id: int,
+    current_admin=Depends(admin_access),
+):
+    target = get_user_by_id(user_id)
+
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    role = target["role"]
+    overrides = get_user_permission_overrides(user_id)
+
+    return {
+        "success": True,
+        "user_id": user_id,
+        "username": target["username"],
+        "role": role,
+        "role_default_permissions": sorted(
+            ROLE_DEFAULT_PERMISSIONS.get(role, set())
+        ),
+        "overrides": overrides,
+        "effective_permissions": get_effective_permissions(user_id, role),
+        "available_permissions": sorted(ALL_PERMISSION_KEYS),
+    }
+
+
+@auth_router.put("/users/{user_id}/permissions/{permission_key}")
+async def update_user_permission(
+    user_id: int,
+    permission_key: str,
+    request: UserPermissionRequest,
+    current_admin=Depends(admin_access),
+):
+    target = get_user_by_id(user_id)
+
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    if permission_key not in ALL_PERMISSION_KEYS:
+        raise HTTPException(status_code=400, detail="Unknown permission key.")
+
+    if (
+        permission_key in ADMIN_ONLY_PERMISSIONS
+        and target["role"] != "ADMIN"
+        and request.is_granted
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="This permission is restricted to administrator accounts.",
+        )
+
+    if (
+        user_id == current_admin["id"]
+        and permission_key == "permissions.manage"
+        and not request.is_granted
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="You cannot revoke your own permission-management access.",
+        )
+
+    try:
+        set_user_permission(
+            user_id=user_id,
+            permission_key=permission_key,
+            is_granted=request.is_granted,
+            updated_by=current_admin["id"],
+        )
+
+        if (
+            target["role"] == "ADMIN"
+            and permission_key in RESTRICTED_ADMIN_SESSION_PERMISSIONS.values()
+        ):
+            increment_session_version(user_id)
+
+        _audit_event(
+            "USER_PERMISSION_UPDATED",
+            actor=current_admin["username"],
+            target=user_id,
+            details={
+                "permission_key": permission_key,
+                "is_granted": request.is_granted,
+                "target_username": target["username"],
+            },
+        )
+
+    except sqlite3.IntegrityError:
+        raise HTTPException(
+            status_code=404,
+            detail="Unable to update permission.",
+        )
+
+    return {
+        "success": True,
+        "user_id": user_id,
+        "permission_key": permission_key,
+        "is_granted": request.is_granted,
+        "effective_permissions": get_effective_permissions(
+            user_id, target["role"]
+        ),
+    }
+
+
+@auth_router.delete("/users/{user_id}/permissions/{permission_key}")
+async def reset_user_permission(
+    user_id: int,
+    permission_key: str,
+    current_admin=Depends(admin_access),
+):
+    target = get_user_by_id(user_id)
+
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    if permission_key not in ALL_PERMISSION_KEYS:
+        raise HTTPException(status_code=400, detail="Unknown permission key.")
+
+    if (
+        user_id == current_admin["id"]
+        and permission_key == "permissions.manage"
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="You cannot reset your own permission-management override.",
+        )
+
+    removed = clear_user_permission_override(user_id, permission_key)
+
+    if (
+        target["role"] == "ADMIN"
+        and permission_key in RESTRICTED_ADMIN_SESSION_PERMISSIONS.values()
+    ):
+        increment_session_version(user_id)
+
+    _audit_event(
+        "USER_PERMISSION_OVERRIDE_RESET",
+        actor=current_admin["username"],
+        target=user_id,
+        details={
+            "permission_key": permission_key,
+            "override_removed": removed,
+            "target_username": target["username"],
+        },
+    )
+
+    return {
+        "success": True,
+        "user_id": user_id,
+        "permission_key": permission_key,
+        "override_removed": removed,
+        "effective_permissions": get_effective_permissions(
+            user_id, target["role"]
+        ),
+    }
+
+
+# =========================================================
+# ADMIN: LOCK / UNLOCK USER
+# =========================================================
+
+@auth_router.patch("/users/{user_id}/status")
+async def update_user_status(
+    user_id: int,
+    request: UserStatusRequest,
+    current_admin=Depends(admin_access),
+):
+    if user_id == current_admin["id"] and not request.is_active:
+        raise HTTPException(
+            status_code=400,
+            detail="You cannot deactivate your own account.",
+        )
+
+    try:
+        updated = _change_user_status(
+            user_id, request.is_active, current_admin["id"]
+        )
+
+        return {
+            "success": updated,
+            "user_id": user_id,
+            "is_active": request.is_active,
+            "message": "User account status updated successfully.",
+        }
+
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+# =========================================================
+# ADMIN: CHANGE ROLE
+# =========================================================
+
+@auth_router.patch("/users/{user_id}/role")
+async def change_user_role(
+    user_id: int,
+    request: RoleChangeRequest,
+    current_admin=Depends(admin_access),
+):
+    if user_id == current_admin["id"]:
+        raise HTTPException(
+            status_code=400,
+            detail="You cannot change your own role.",
+        )
+
+    try:
+        _change_user_role(user_id, request.role, current_admin["id"])
+
+        return {
+            "success": True,
+            "user_id": user_id,
+            "new_role": request.role,
+            "message": "User role updated successfully.",
+        }
+
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+# =========================================================
+# ADMIN: TEMPORARY DELETE
+# =========================================================
+
+@auth_router.delete("/users/{user_id}")
+async def delete_user_account(
+    user_id: int,
+    reason: str | None = Query(default=None, max_length=1000),
+    current_admin=Depends(admin_access),
+):
+    if user_id == current_admin["id"]:
+        raise HTTPException(
+            status_code=400,
+            detail="You cannot delete your own account.",
+        )
+
+    try:
+        _soft_delete_account(user_id, current_admin["id"], reason)
+
+        return {
+            "success": True,
+            "user_id": user_id,
+            "message": "Account temporarily deleted. Recovery remains possible.",
+        }
+
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+# =========================================================
+# ADMIN: PERMANENT DELETE
+# =========================================================
+
+@auth_router.delete("/users/{user_id}/permanent-delete")
+async def permanently_delete_user_account(
+    user_id: int,

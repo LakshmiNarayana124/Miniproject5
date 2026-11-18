@@ -1,0 +1,587 @@
+    if image.content_type not in allowed_types:
+        await image.close()
+
+        raise HTTPException(
+            status_code=415,
+            detail="Only JPEG, PNG and WEBP images are supported.",
+        )
+
+    try:
+        image_bytes = await image.read(
+            MAX_IMAGE_SIZE + 1
+        )
+
+        if not image_bytes:
+            raise HTTPException(
+                status_code=400,
+                detail="The uploaded image is empty.",
+            )
+
+        if len(image_bytes) > MAX_IMAGE_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail="Image exceeds the 8 MB limit.",
+            )
+
+        result = await analyse_equipment_image_async(
+            image_bytes,
+            image.content_type,
+            language,
+        )
+
+        return {
+            "success": True,
+            "analysis": result,
+        }
+
+    except HTTPException:
+        raise
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        ) from exc
+
+    except RuntimeError:
+        raise HTTPException(
+            status_code=503,
+            detail="Equipment analysis service is unavailable.",
+        )
+
+    except Exception:
+        raise HTTPException(
+            status_code=502,
+            detail="Equipment image analysis failed. Please try again.",
+        )
+
+    finally:
+        await image.close()
+
+
+# ============================================================
+# EQUIPMENT VISION — LIVE OBJECT DETECTION
+# ============================================================
+
+@app.post(
+    "/vision/detect",
+    tags=["Vision"],
+)
+async def detect_equipment_frame(
+    image: UploadFile = File(...),
+    user=Depends(sensor_access),
+):
+    allowed_types = {
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+    }
+
+    if image.content_type not in allowed_types:
+        await image.close()
+
+        raise HTTPException(
+            status_code=415,
+            detail="Only JPEG, PNG and WEBP images are supported.",
+        )
+
+    try:
+        image_bytes = await image.read(
+            MAX_FRAME_SIZE + 1
+        )
+
+        if not image_bytes:
+            raise HTTPException(
+                status_code=400,
+                detail="The uploaded frame is empty.",
+            )
+
+        if len(image_bytes) > MAX_FRAME_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail="Frame exceeds the 2 MB limit.",
+            )
+
+        result = await detect_objects_async(
+            image_bytes,
+            image.content_type,
+        )
+
+        return {
+            "success": True,
+            "detection": result,
+        }
+
+    except HTTPException:
+        raise
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        ) from exc
+
+    except RuntimeError:
+        raise HTTPException(
+            status_code=503,
+            detail="Equipment detection service is unavailable.",
+        )
+
+    except Exception:
+        raise HTTPException(
+            status_code=502,
+            detail="Equipment detection failed. Please try again.",
+        )
+
+    finally:
+        await image.close()
+
+
+# ============================================================
+# SENSOR RESPONSE MODELS
+# ============================================================
+
+class VibrationData(BaseModel):
+    x_g: Optional[float] = None
+    y_g: Optional[float] = None
+    z_g: Optional[float] = None
+    magnitude_g: Optional[float] = None
+    quality: str = "UNAVAILABLE"
+
+
+class TemperatureData(BaseModel):
+    celsius: Optional[float] = None
+    fahrenheit: Optional[float] = None
+    quality: str = "UNAVAILABLE"
+
+
+class CurrentData(BaseModel):
+    rms_current_a: Optional[float] = None
+    dc_current_a: Optional[float] = None
+    raw_voltage_v: Optional[float] = None
+    quality: str = "UNAVAILABLE"
+
+
+# ============================================================
+# HEALTH
+# ============================================================
+
+@app.get("/", tags=["Health"])
+async def root():
+    return {
+        "project": "IntelliWatch",
+        "status": "running",
+        "version": "2.0.0",
+    }
+
+
+@app.get("/health", tags=["Health"])
+async def health_check():
+    return {
+        "status": "ok",
+        "timestamp": time.time(),
+    }
+
+
+# ============================================================
+# SENSOR ENDPOINTS
+# ============================================================
+
+@app.get(
+    "/sensors/vibration",
+    response_model=VibrationData,
+    tags=["Sensors"],
+    dependencies=[Depends(sensor_access)],
+)
+async def get_vibration():
+    snapshot = _get_hardware_snapshot()
+
+    record = _get_snapshot_record(
+        snapshot,
+        "vibration",
+    )
+
+    metadata = record.get("metadata", {})
+
+    return VibrationData(
+        x_g=metadata.get("x"),
+        y_g=metadata.get("y"),
+        z_g=metadata.get("z"),
+        magnitude_g=record.get("value"),
+        quality=record.get("quality", "UNAVAILABLE"),
+    )
+
+
+@app.get(
+    "/sensors/temperature",
+    response_model=TemperatureData,
+    tags=["Sensors"],
+    dependencies=[Depends(sensor_access)],
+)
+async def get_temperature():
+    snapshot = _get_hardware_snapshot()
+
+    record = _get_snapshot_record(
+        snapshot,
+        "temperature",
+    )
+
+    celsius = record.get("value")
+
+    fahrenheit = (
+        celsius * 9 / 5 + 32
+        if celsius is not None
+        else None
+    )
+
+    return TemperatureData(
+        celsius=celsius,
+        fahrenheit=fahrenheit,
+        quality=record.get("quality", "UNAVAILABLE"),
+    )
+
+
+@app.get(
+    "/sensors/current",
+    response_model=CurrentData,
+    tags=["Sensors"],
+    dependencies=[Depends(sensor_access)],
+)
+async def get_current():
+    snapshot = _get_hardware_snapshot()
+
+    record = _get_snapshot_record(
+        snapshot,
+        "current",
+    )
+
+    metadata = record.get("metadata", {})
+
+    dc_current = metadata.get("dc_current_a")
+    raw_voltage = metadata.get("raw_voltage_v")
+
+    return CurrentData(
+        rms_current_a=record.get("value"),
+        dc_current_a=dc_current,
+        raw_voltage_v=raw_voltage,
+        quality=record.get("quality", "UNAVAILABLE"),
+    )
+
+
+@app.get(
+    "/sensors/all",
+    tags=["Sensors"],
+    dependencies=[Depends(sensor_access)],
+)
+async def get_all_sensors():
+    snapshot = _get_hardware_snapshot()
+
+    records = {
+        key: _get_snapshot_record(snapshot, key)
+        for key in EXPECTED_SENSORS
+    }
+
+    assessment = None
+
+    if snapshot:
+        device_id = snapshot.get("device_id")
+
+        with _assessment_lock:
+            cached = _latest_assessments.get(device_id)
+
+            if cached:
+                assessment = deepcopy(
+                    cached.get("result")
+                )
+
+    if assessment is None:
+        assessment = _unavailable_assessment()
+
+    any_valid_reading = any(
+        record.get("value") is not None
+        for record in records.values()
+    )
+
+    return {
+        "timestamp": (
+            snapshot.get("timestamp")
+            if snapshot
+            else time.time()
+        ),
+        "source": "hardware",
+        "device_id": (
+            snapshot.get("device_id")
+            if snapshot
+            else None
+        ),
+        "status": (
+            "ok"
+            if any_valid_reading
+            else "unavailable"
+        ),
+        "vibration": records["vibration"],
+        "temperature": records["temperature"],
+        "current": records["current"],
+        "assessment": assessment,
+    }
+
+
+# ============================================================
+# SENSOR WEBSOCKET
+# ============================================================
+
+@app.websocket("/stream/sensors")
+async def sensor_stream(websocket: WebSocket):
+    user = await _authenticate_websocket(websocket)
+
+    if user is None:
+        return
+
+    await websocket.accept()
+    _sensor_clients.append(websocket)
+
+    try:
+        while True:
+            snapshot = _get_hardware_snapshot()
+
+            payload = _build_sensor_stream_payload(
+                snapshot
+            )
+
+            await websocket.send_text(
+                json.dumps(
+                    payload,
+                    default=str,
+                    allow_nan=False,
+                )
+            )
+
+            await asyncio.sleep(3)
+
+    except WebSocketDisconnect:
+        pass
+
+    except Exception as error:
+        print(
+            f"[WebSocket] Sensor stream error: {error}"
+        )
+
+    finally:
+        if websocket in _sensor_clients:
+            _sensor_clients.remove(websocket)
+
+
+# ============================================================
+# TASK 12.1 — CONTROL / STATUS ENDPOINTS
+# ============================================================
+
+class DispatchRequest(BaseModel):
+    intent: str
+    target_equipment: Optional[str] = "default"
+
+
+class AckRequest(BaseModel):
+    control_signal_id: int
+    equipment_state: str = ""
+
+
+@app.post(
+    "/control/dispatch",
+    tags=["Control"],
+    dependencies=[Depends(actuation_access)],
+)
+async def dispatch_control(
+    req: DispatchRequest,
+    user=Depends(actuation_access),
+):
+    if _controller is None:
+        raise HTTPException(
+            503,
+            "Controller not initialized",
+        )
+
+    from equipment_controller import PermissionDenied
+
+    try:
+        result = _controller.dispatch(
+            intent=req.intent.upper(),
+            status=obs_service._current_status.get(
+                "status",
+                "NORMAL",
+            ),
+            session={
+                "role": user["role"],
+                "username": user["username"],
+            },
+            target_equipment=req.target_equipment,
+        )
+
+        obs_service.set_current_status(
+            result["status"],
+            result["intent"],
+        )
+
+        await _push_status_update()
+
+        return result
+
+    except PermissionDenied as error:
+        raise HTTPException(
+            403,
+            str(error),
+        )
+
+
+@app.get(
+    "/control/current",
+    tags=["Control"],
+    dependencies=[Depends(sensor_access)],
+)
+async def get_current_control():
+    return obs_service.get_system_status(
+        _iot_layer
+    )
+
+
+@app.post(
+    "/control/ack",
+    tags=["Control"],
+    dependencies=[Depends(actuation_access)],
+)
+async def ack_control(req: AckRequest):
+    if _controller is None:
+        raise HTTPException(
+            503,
+            "Controller not initialized",
+        )
+
+    ok = _controller.on_ack(
+        req.control_signal_id,
+        req.equipment_state,
+    )
+
+    return {
+        "acknowledged": ok,
+        "control_signal_id": req.control_signal_id,
+    }
+
+
+# ============================================================
+# STATUS WEBSOCKET
+# ============================================================
+
+@app.websocket("/stream/status")
+async def status_stream(websocket: WebSocket):
+    user = await _authenticate_websocket(websocket)
+
+    if user is None:
+        return
+
+    await websocket.accept()
+    _status_clients.add(websocket)
+
+    try:
+        await websocket.send_text(
+            json.dumps(
+                obs_service.get_system_status(_iot_layer),
+                default=str,
+            )
+        )
+
+        while True:
+            await asyncio.sleep(5)
+
+            await websocket.send_text(
+                json.dumps(
+                    obs_service.get_system_status(_iot_layer),
+                    default=str,
+                )
+            )
+
+    except WebSocketDisconnect:
+        pass
+
+    except Exception as error:
+        print(
+            f"[WebSocket] Status stream error: {error}"
+        )
+
+    finally:
+        _status_clients.discard(websocket)
+
+
+async def _push_status_update():
+    msg = json.dumps(
+        obs_service.get_system_status(_iot_layer),
+        default=str,
+    )
+
+    for ws in list(_status_clients):
+        try:
+            await ws.send_text(msg)
+        except Exception:
+            _status_clients.discard(ws)
+
+
+# ============================================================
+# TASK 12.2 — MODEL / LEARNING ENDPOINTS
+# ============================================================
+
+@app.get(
+    "/models/status",
+    tags=["Models"],
+    dependencies=[Depends(sensor_access)],
+)
+async def get_models_status():
+    return obs_service.get_all_model_statuses()
+
+
+@app.get(
+    "/models/trend/{family}",
+    tags=["Models"],
+    dependencies=[Depends(sensor_access)],
+)
+async def get_model_trend(family: str):
+    return {
+        "family": family,
+        "trend": obs_service.get_accuracy_trend(family),
+    }
+
+
+@app.get(
+    "/models/degradation",
+    tags=["Models"],
+    dependencies=[Depends(sensor_access)],
+)
+async def get_degradation():
+    return {
+        "alerts": obs_service.check_model_degradation(),
+    }
+
+
+class LabelRequest(BaseModel):
+    event_id: Optional[int] = None
+    label: str
+    feature_vector: list
+    model_version: str
+
+
+class RecalibrateRequest(BaseModel):
+    family: str = "tabular"
+
+
+@app.post(
+    "/learning/label",
+    tags=["Learning"],
+    dependencies=[Depends(label_access)],
+)
+async def submit_label(
+    req: LabelRequest,
+    user=Depends(label_access),
+):
+    if _learning_system is None:
+        raise HTTPException(
+            503,
+            "Learning system not initialized",
+        )
+

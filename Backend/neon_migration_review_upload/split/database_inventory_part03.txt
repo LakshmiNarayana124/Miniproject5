@@ -1,0 +1,102 @@
+C_Ready\Backend\intelliwatch_engine.py                 580                 SELECT * FROM sensor_knowledge_profiles                          
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\intelliwatch_engine.py                 608                 SELECT * FROM sensor_knowledge_profiles                          
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\intelliwatch_engine.py                 639                     UPDATE sensor_knowledge_profiles                             
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\intelliwatch_engine.py                 660                     INSERT INTO sensor_knowledge_profiles (                      
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\intelliwatch_engine.py                 718                 INSERT INTO knowledge_profiles (                                 
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\intelliwatch_engine.py                 761                 INSERT INTO analysis_events (                                    
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\intelliwatch_engine.py                1087                 INSERT INTO sensor_status_history (                              
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\intelliwatch_engine.py                1116                 SELECT * FROM sensor_status_history                              
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\intelliwatch_engine.py                1139                 SELECT * FROM unknown_patterns                                   
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\intelliwatch_engine.py                1216                     UPDATE unknown_patterns                                      
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\intelliwatch_engine.py                1237                     INSERT INTO unknown_patterns (                               
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\intelliwatch_engine.py                1261                 )).lastrowid                                                     
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\intelliwatch_engine.py                1264                 INSERT INTO engine_observations (                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\intelliwatch_engine.py                1293                 SELECT features, timestamp                                       
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\intelliwatch_engine.py                1606                     "no knowledge update or deletion performed."                 
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\intelliwatch_engine.py                1674                 SELECT features                                                  
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\intelliwatch_engine.py                1742                 INSERT INTO knowledge_profiles (                                 
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\intelliwatch_engine.py                1767                 UPDATE unknown_patterns                                          
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\intelliwatch_engine.py                1804                 UPDATE unknown_patterns                                          
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\intelliwatch_engine.py                1830                 INSERT INTO analysis_events (                                    
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\intelliwatch_engine.py                1966                 INSERT INTO system_status_history (                              
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\intelliwatch_engine.py                2172                 SELECT COUNT(*) FROM knowledge_profiles                          
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\intelliwatch_engine.py                2177                 SELECT COUNT(*) FROM knowledge_profiles                          
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\intelliwatch_engine.py                2182                 SELECT COUNT(*) FROM unknown_patterns                            
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\intelliwatch_engine.py                2187                 SELECT COUNT(*) FROM unknown_patterns                            
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\intelliwatch_engine.py                2192                 SELECT COUNT(*) FROM sensor_knowledge_profiles                   
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\intelliwatch_engine.py                2197                 SELECT COUNT(*) FROM sensor_knowledge_profiles                   
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\iot_layer.py                          1170                 "Could not update device status for '%s'.",                      
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\iot_layer.py                          1482                 "Could not update reconnect status for '%s'.",                   
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\iot_layer.py                          1607                         "Could not update unresponsive status for '%s'.",        
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\iso_standards.py                        28 - ``database`` (``get_connection``, ``current_timestamp``) for threshold         
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\iso_standards.py                        47 from database import get_connection, current_timestamp                           
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\iso_standards.py                       645     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\iso_standards.py                       650             "DELETE FROM threshold_definitions WHERE parameter_name = ?",        
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\iso_standards.py                       655             INSERT INTO threshold_definitions (                                  
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\iso_standards.py                       674         return cursor.lastrowid                                                  
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\iso_standards.py                       698     connection = get_connection()                                                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\iso_standards.py                       702             SELECT parameter_name,                                               
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\iso_standards.py                       908         connection = get_connection()                                            
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\iso_standards.py                       911                 "DELETE FROM threshold_definitions "                             
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\learning_system.py                     133         conn = database.get_connection()                                         
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\learning_system.py                     136                 "SELECT * FROM verified_labels ORDER BY verified_at ASC"         
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\learning_system.py                     161         conn = database.get_connection()                                         
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\learning_system.py                     164                 "SELECT id FROM ml_models WHERE family=? AND version=?",         
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\model_registry.py                       15 - Existing ``database.py`` (``get_connection``).                                 
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\model_registry.py                      316         """Insert or update a ``ml_models`` row for the model."""                
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\model_registry.py                      318         connection = database.get_connection()                                   
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\model_registry.py                      322                 INSERT INTO ml_models (                                          
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\model_registry.py                      336                 DO UPDATE SET                                                    
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\model_registry.py                      367         connection = database.get_connection()                                   
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\model_registry.py                      371                 SELECT 1                                                         
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\model_registry.py                      384         connection = database.get_connection()                                   
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\model_registry.py                      388                 UPDATE ml_models                                                 
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\model_registry.py                      405         connection = database.get_connection()                                   
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\model_registry.py                      409                 UPDATE ml_models                                                 
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\model_registry.py                      426         connection = database.get_connection()                                   
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\model_registry.py                      430                 SELECT version                                                   
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\obs_service.py                          27     """Update the live system status (called by brain/controller)."""            
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\obs_service.py                         135     conn = database.get_connection()                                             
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\obs_service.py                         138             SELECT at.f1_score, at.measured_at                                   
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\recommendations.py                     111     """Select different wording while preserving the recommendation goal."""     
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\reset_engineer.py                        1 from database import get_connection                                              
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\reset_engineer.py                        3 with get_connection() as connection:                                             
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\reset_engineer.py                        6         SELECT id, username, full_name, role                                     
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\reset_engineer.py                       30             DELETE FROM users                                                    
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\server.py                             1802     conn = database.get_connection()                                             
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\server.py                             1807             SELECT * FROM audit_entries                                          
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\server.py                             1836     conn = database.get_connection()                                             
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\server.py                             1841             SELECT * FROM audit_entries                                          
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\training_pipeline.py                    53 except ImportError:  # pragma: no cover                                          
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\tests\test_database_helpers.py          14 import sqlite3                                                                   
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\tests\test_database_helpers.py          49         with closing(sqlite3.connect(self.db_path)) as conn:                     
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\tests\test_database_helpers.py          50             conn.row_factory = sqlite3.Row                                       
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\tests\test_database_helpers.py          54         with closing(sqlite3.connect(self.db_path)) as conn:                     
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\tests\test_database_helpers.py          55             conn.row_factory = sqlite3.Row                                       
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\tests\test_database_helpers.py          59         with closing(sqlite3.connect(self.db_path)) as conn:                     
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\tests\test_database_helpers.py          61                 INSERT INTO control_signals (                                    
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\tests\test_database_helpers.py          72             return cursor.lastrowid                                              
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\tests\test_database_helpers.py          75         with closing(sqlite3.connect(self.db_path)) as conn:                     
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\tests\test_database_helpers.py          77                 INSERT INTO anomaly_events (                                     
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\tests\test_database_helpers.py          87             return cursor.lastrowid                                              
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\tests\test_database_helpers.py          90         with closing(sqlite3.connect(self.db_path)) as conn:                     
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\tests\test_database_helpers.py          92                 INSERT INTO ml_models (                                          
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\tests\test_database_helpers.py         102             return cursor.lastrowid                                              
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\tests\test_database_helpers.py         119             "SELECT ack_timestamp, resulting_equipment_state "                   
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\tests\test_database_helpers.py         152         rows = self.fetch_all("SELECT * FROM audit_entries ORDER BY id")         
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\tests\test_database_helpers.py         173             "SELECT hash FROM audit_entries WHERE id = ?",                       
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\tests\test_database_helpers.py         194             "SELECT * FROM verified_labels WHERE id = ?",                        
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\tests\test_database_helpers.py         217             "SELECT * FROM accuracy_trend WHERE id = ?",                         
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\tests\test_database_helpers.py         283             "SELECT * FROM edge_devices WHERE device_id = ?",                    
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\tests\test_database_helpers.py         295             "SELECT * FROM edge_devices WHERE device_id = ?",                    
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\tests\test_database_helpers.py         314             "SELECT status, last_known_state_json "                              
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\tests\test_engine.py                     9 import sqlite3                                                                   
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\tests\test_engine.py                    40         with closing(sqlite3.connect(self.db_path)) as conn:                     
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\tests\test_engine.py                   122             "SELECT COUNT(*) FROM knowledge_profiles "                           
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\tests\test_engine.py                   140             "SELECT COUNT(*) FROM knowledge_profiles "                           
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\tests\test_engine.py                   300             "SELECT COUNT(*) FROM knowledge_profiles "                           
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\tests\test_engine.py                   339         with closing(sqlite3.connect(self.db_path)) as conn:                     
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\tests\test_engine.py                   341                 "PRAGMA integrity_check"                                         
+C:\Users\Dell\Downloads\IntelliWatch_PC_Ready\Backend\tests\test_training_pipeline.py         24 except ImportError:  # pragma: no cover                                          
+
+

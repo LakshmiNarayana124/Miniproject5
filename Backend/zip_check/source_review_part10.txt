@@ -1,0 +1,557 @@
+                  AND token_type = ?
+                  AND consumed_at IS NULL
+                  AND revoked_at IS NULL
+            """, (
+                _timestamp(),
+                user_id,
+                token_type,
+            ))
+
+        connection.commit()
+        return cursor.rowcount
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+# =========================================================
+# SESSION VERSION MANAGEMENT
+# =========================================================
+
+def increment_session_version(user_id):
+    connection = _connect()
+
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+
+        cursor = connection.execute("""
+            UPDATE users
+            SET session_version = session_version + 1
+            WHERE id = ?
+              AND is_active = 1
+              AND is_deleted = 0
+        """, (user_id,))
+
+        if cursor.rowcount != 1:
+            connection.rollback()
+            return None
+
+        row = connection.execute("""
+            SELECT session_version
+            FROM users
+            WHERE id = ?
+        """, (user_id,)).fetchone()
+
+        connection.commit()
+        return row["session_version"]
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+def get_session_version(user_id):
+    connection = _connect()
+
+    try:
+        row = connection.execute("""
+            SELECT session_version
+            FROM users
+            WHERE id = ?
+              AND is_active = 1
+              AND is_deleted = 0
+        """, (user_id,)).fetchone()
+
+        return row["session_version"] if row else None
+
+    finally:
+        connection.close()
+
+
+# =========================================================
+# RATE LIMIT CHECKING
+# =========================================================
+
+def check_rate_limit(
+    scope,
+    subject,
+    max_attempts=5,
+    window_seconds=900,
+    block_seconds=900,
+):
+    if not isinstance(scope, str) or not scope.strip():
+        raise ValueError("A valid rate-limit scope is required.")
+
+    _validate_rate_limit_settings(
+        max_attempts,
+        window_seconds,
+        block_seconds,
+    )
+
+    subject_hash = _hash_identifier(subject)
+    now = _now()
+    now_text = now.isoformat()
+
+    connection = _connect()
+
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+
+        row = connection.execute("""
+            SELECT *
+            FROM auth_rate_limits
+            WHERE scope = ?
+              AND subject_hash = ?
+        """, (
+            scope,
+            subject_hash,
+        )).fetchone()
+
+        if row and row["blocked_until"]:
+            blocked_until = datetime.fromisoformat(
+                row["blocked_until"]
+            )
+
+            if blocked_until > now:
+                connection.commit()
+
+                return {
+                    "allowed": False,
+                    "retry_after_seconds": max(
+                        1,
+                        int((blocked_until - now).total_seconds()),
+                    ),
+                }
+
+        if row is None:
+            connection.execute("""
+                INSERT INTO auth_rate_limits (
+                    scope,
+                    subject_hash,
+                    window_started_at,
+                    attempts,
+                    blocked_until,
+                    updated_at
+                )
+                VALUES (?, ?, ?, 0, NULL, ?)
+            """, (
+                scope,
+                subject_hash,
+                now_text,
+                now_text,
+            ))
+
+            attempts = 0
+            window_started = now
+
+        else:
+            window_started = datetime.fromisoformat(
+                row["window_started_at"]
+            )
+
+            attempts = row["attempts"]
+
+            if (now - window_started).total_seconds() >= window_seconds:
+                attempts = 0
+                window_started = now
+
+                connection.execute("""
+                    UPDATE auth_rate_limits
+                    SET attempts = 0,
+                        window_started_at = ?,
+                        blocked_until = NULL,
+                        updated_at = ?
+                    WHERE scope = ?
+                      AND subject_hash = ?
+                """, (
+                    now_text,
+                    now_text,
+                    scope,
+                    subject_hash,
+                ))
+
+        if attempts >= max_attempts:
+            blocked_until = now + timedelta(
+                seconds=block_seconds
+            )
+
+            connection.execute("""
+                UPDATE auth_rate_limits
+                SET blocked_until = ?,
+                    updated_at = ?
+                WHERE scope = ?
+                  AND subject_hash = ?
+            """, (
+                blocked_until.isoformat(),
+                now_text,
+                scope,
+                subject_hash,
+            ))
+
+            connection.commit()
+
+            return {
+                "allowed": False,
+                "retry_after_seconds": block_seconds,
+            }
+
+        connection.commit()
+
+        return {
+            "allowed": True,
+            "retry_after_seconds": 0,
+        }
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+# =========================================================
+# RATE LIMIT FAILURE RECORDING
+# =========================================================
+
+def record_rate_limit_failure(
+    scope,
+    subject,
+    max_attempts=5,
+    window_seconds=900,
+    block_seconds=900,
+):
+    if not isinstance(scope, str) or not scope.strip():
+        raise ValueError("A valid rate-limit scope is required.")
+
+    _validate_rate_limit_settings(
+        max_attempts,
+        window_seconds,
+        block_seconds,
+    )
+
+    subject_hash = _hash_identifier(subject)
+    now = _now()
+    now_text = now.isoformat()
+
+    connection = _connect()
+
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+
+        row = connection.execute("""
+            SELECT *
+            FROM auth_rate_limits
+            WHERE scope = ?
+              AND subject_hash = ?
+        """, (
+            scope,
+            subject_hash,
+        )).fetchone()
+
+        if row is None:
+            attempts = 1
+            window_started = now
+
+        else:
+            window_started = datetime.fromisoformat(
+                row["window_started_at"]
+            )
+
+            if (now - window_started).total_seconds() >= window_seconds:
+                attempts = 1
+                window_started = now
+            else:
+                attempts = row["attempts"] + 1
+
+        blocked_until = None
+
+        if attempts >= max_attempts:
+            blocked_until = (
+                now + timedelta(seconds=block_seconds)
+            ).isoformat()
+
+        connection.execute("""
+            INSERT INTO auth_rate_limits (
+                scope,
+                subject_hash,
+                window_started_at,
+                attempts,
+                blocked_until,
+                updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(scope, subject_hash)
+            DO UPDATE SET
+                window_started_at = excluded.window_started_at,
+                attempts = excluded.attempts,
+                blocked_until = excluded.blocked_until,
+                updated_at = excluded.updated_at
+        """, (
+            scope,
+            subject_hash,
+            window_started.isoformat(),
+            attempts,
+            blocked_until,
+            now_text,
+        ))
+
+        connection.commit()
+
+        return {
+            "attempts": attempts,
+            "blocked": blocked_until is not None,
+        }
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+# =========================================================
+# RATE LIMIT RESET
+# =========================================================
+
+def clear_rate_limit(scope, subject):
+    if not isinstance(scope, str) or not scope.strip():
+        raise ValueError("A valid rate-limit scope is required.")
+
+    subject_hash = _hash_identifier(subject)
+    connection = _connect()
+
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+
+        cursor = connection.execute("""
+            DELETE FROM auth_rate_limits
+            WHERE scope = ?
+              AND subject_hash = ?
+        """, (
+            scope,
+            subject_hash,
+        ))
+
+        connection.commit()
+        return cursor.rowcount > 0
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+# =========================================================
+# EXPIRED RECORD CLEANUP
+# =========================================================
+
+def cleanup_expired_security_records():
+    now = _timestamp()
+    old_rate_limit_cutoff = _timestamp(
+        _now() - timedelta(days=2)
+    )
+
+    connection = _connect()
+
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+
+        token_cursor = connection.execute("""
+            DELETE FROM auth_security_tokens
+            WHERE expires_at < ?
+               OR consumed_at IS NOT NULL
+               OR revoked_at IS NOT NULL
+        """, (now,))
+
+        rate_cursor = connection.execute("""
+            DELETE FROM auth_rate_limits
+            WHERE blocked_until IS NOT NULL
+              AND blocked_until < ?
+              AND updated_at < ?
+        """, (
+            now,
+            old_rate_limit_cutoff,
+        ))
+
+        connection.commit()
+
+        return {
+            "security_tokens_removed": token_cursor.rowcount,
+            "rate_limit_records_removed": rate_cursor.rowcount,
+        }
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+===== END FILE: auth_security_store.py =====
+===== FILE: intelliwatch_engine.py =====
+
+"""
+INTELLIWATCH ENGINE
+Version: 3.0
+
+Purpose:
+- Independent vibration, temperature and current tracking.
+- Separate normal and abnormal sensor knowledge.
+- Unknown sensor and combined-pattern investigation.
+- Multi-sensor correlation and unified system assessment.
+- Stability and scenario analysis.
+- Manual and automatic analysis modes.
+- SQLite persistence and historical tracking.
+
+Dependencies:
+- Python standard library.
+- Existing sensor_reader.py
+
+IMPORTANT:
+Scenario scores are heuristic, not calibrated probabilities.
+No universal equipment thresholds are assumed.
+Unknown patterns are not automatically deleted due to instability.
+"""
+
+import json
+import math
+import sqlite3
+import statistics
+
+from pathlib import Path
+from datetime import datetime, timezone
+from contextlib import contextmanager
+
+
+# ============================================================
+# 1. CONFIGURATION
+# ============================================================
+
+DATABASE_PATH = (
+    Path(__file__).resolve().parent
+    / "database"
+    / "intelliwatch.db"
+)
+
+MIN_PATTERN_OBSERVATIONS = 8
+DECISION_CONFIDENCE_THRESHOLD = 0.65
+
+KNOWN_PATTERN_DISTANCE = 3.5
+UNKNOWN_PATTERN_DISTANCE = 3.0
+
+TREND_WINDOW = 20
+
+ANALYSIS_MODES = ("automatic", "manual")
+
+SENSOR_NAMES = {
+    "vibration": "Vibration",
+    "temperature": "Temperature",
+    "current": "Electrical Current"
+}
+
+EXPECTED_SENSORS = (
+    "vibration",
+    "temperature",
+    "current"
+)
+
+STATUS_PRIORITY = {
+    "NORMAL": 0,
+    "UNKNOWN": 1,
+    "UNDER_OBSERVATION": 2,
+    "UNAVAILABLE": 3,
+    "WARNING": 4,
+    "CRITICAL": 5
+}
+
+
+# ============================================================
+# 2. GENERAL UTILITIES
+# ============================================================
+
+def current_timestamp():
+    return datetime.now(timezone.utc).isoformat()
+
+
+def safe_json(value):
+    return json.dumps(value, default=str)
+
+
+def load_json(value, fallback=None):
+    try:
+        return json.loads(value)
+    except (TypeError, ValueError):
+        return fallback if fallback is not None else {}
+
+
+def normalise_name(value):
+    return str(value or "").strip().lower().replace(" ", "_")
+
+
+def sensor_group(feature_name):
+    """Identify the physical sensor responsible for a feature."""
+
+    name = normalise_name(feature_name)
+
+    if name.startswith("vibration"):
+        return "vibration"
+
+    if name.startswith("temperature"):
+        return "temperature"
+
+    if name.startswith("current"):
+        return "current"
+
+    return "other"
+
+
+def safe_number(value):
+    try:
+        number = float(value)
+        return number if math.isfinite(number) else None
+    except (TypeError, ValueError):
+        return None
+
+
+# ============================================================
+# 3. SENSOR NORMALISATION
+# ============================================================
+
+def normalise_readings(data):
+
+    if isinstance(data, dict):
+
+        if isinstance(data.get("readings"), list):
+            data = data["readings"]
+
+        elif "value" in data:
+            data = [data]
+
+        else:
+            data = [
+                item for item in data.values()
+                if isinstance(item, dict) and "value" in item
+            ]
+
+    if not isinstance(data, list):
+        raise ValueError(
+            "Sensor data must be a list or dictionary."
+        )
+
+    features = {}
+    timestamp = current_timestamp()
+    quality_values = []
+
+    for reading in data:
+

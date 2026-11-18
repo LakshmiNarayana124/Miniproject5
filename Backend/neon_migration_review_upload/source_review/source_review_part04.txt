@@ -1,0 +1,588 @@
+    limit = max(1, min(int(limit), 10000))
+    connection = get_connection()
+
+    try:
+        rows = connection.execute("""
+            SELECT *
+            FROM explorer_history
+            ORDER BY timestamp DESC, id DESC
+            LIMIT ?
+        """, (limit,)).fetchall()
+
+        return [dict(row) for row in rows]
+
+    finally:
+        connection.close()
+
+
+def get_explorer_history_entry(entry_id):
+    connection = get_connection()
+
+    try:
+        row = connection.execute("""
+            SELECT *
+            FROM explorer_history
+            WHERE id = ?
+        """, (entry_id,)).fetchone()
+
+        return dict(row) if row else None
+
+    finally:
+        connection.close()
+
+
+# =====================================================
+# 18. DATA RETENTION
+# =====================================================
+
+def cleanup_old_records(retention_days=None):
+    """
+    Retain sensor and anomaly data for the configured period.
+
+    Audit entries are deliberately excluded to preserve security history.
+    """
+
+    days = (
+        DEFAULT_RETENTION_DAYS
+        if retention_days is None
+        else max(1, int(retention_days))
+    )
+
+    cutoff = (
+        datetime.now(timezone.utc) - timedelta(days=days)
+    ).isoformat()
+
+    deleted = {}
+    connection = get_connection()
+
+    try:
+        for table in ("sensor_readings", "anomaly_events"):
+            cursor = connection.execute(
+                f"DELETE FROM {table} WHERE timestamp < ?",
+                (cutoff,),
+            )
+
+            deleted[table] = cursor.rowcount
+
+        deleted["audit_entries"] = 0
+
+        connection.commit()
+        return deleted
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+# =====================================================
+# 19. EDGE DEVICE MANAGEMENT
+# =====================================================
+
+def save_edge_device(
+    device_id,
+    protocol,
+    capabilities_json=None,
+    status="offline",
+):
+    connection = get_connection()
+
+    try:
+        connection.execute("""
+            INSERT INTO edge_devices (
+                device_id, protocol, capabilities_json,
+                status, registered_at
+            )
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(device_id)
+            DO UPDATE SET
+                protocol = excluded.protocol,
+                capabilities_json = excluded.capabilities_json,
+                status = excluded.status
+        """, (
+            device_id,
+            protocol,
+            capabilities_json,
+            status,
+            current_timestamp(),
+        ))
+
+        connection.commit()
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+def update_edge_device_status(
+    device_id,
+    status,
+    last_known_state_json=None,
+):
+    connection = get_connection()
+
+    try:
+        cursor = connection.execute("""
+            UPDATE edge_devices
+            SET status = ?,
+                last_known_state_json =
+                    COALESCE(?, last_known_state_json)
+            WHERE device_id = ?
+        """, (
+            status,
+            last_known_state_json,
+            device_id,
+        ))
+
+        connection.commit()
+        return cursor.rowcount > 0
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+# =====================================================
+# 20. CONTROL SIGNAL QUEUE
+# =====================================================
+
+def queue_control_signal(device_id, intent, priority):
+    connection = get_connection()
+
+    try:
+        cursor = connection.execute("""
+            INSERT INTO control_signal_queue (
+                device_id, intent, priority, queued_at
+            )
+            VALUES (?, ?, ?, ?)
+        """, (
+            device_id,
+            intent,
+            priority,
+            current_timestamp(),
+        ))
+
+        connection.commit()
+        return cursor.lastrowid
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+def get_queued_signals(device_id, undelivered_only=True):
+    connection = get_connection()
+
+    try:
+        query = """
+            SELECT *
+            FROM control_signal_queue
+            WHERE device_id = ?
+        """
+
+        if undelivered_only:
+            query += " AND delivered_at IS NULL"
+
+        query += " ORDER BY priority DESC, queued_at ASC, id ASC"
+
+        rows = connection.execute(query, (device_id,)).fetchall()
+        return [dict(row) for row in rows]
+
+    finally:
+        connection.close()
+
+
+def mark_signal_delivered(queue_id):
+    connection = get_connection()
+
+    try:
+        cursor = connection.execute("""
+            UPDATE control_signal_queue
+            SET delivered_at = ?
+            WHERE id = ?
+        """, (
+            current_timestamp(),
+            queue_id,
+        ))
+
+        connection.commit()
+        return cursor.rowcount > 0
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+# =====================================================
+# 21. USER PERMISSION MANAGEMENT
+# =====================================================
+
+def get_user_permission_overrides(user_id):
+    connection = get_connection()
+
+    try:
+        rows = connection.execute("""
+            SELECT permission_key, is_granted
+            FROM user_permissions
+            WHERE user_id = ?
+        """, (user_id,)).fetchall()
+
+        return {
+            row["permission_key"]: bool(row["is_granted"])
+            for row in rows
+        }
+
+    finally:
+        connection.close()
+
+
+def set_user_permission(
+    user_id,
+    permission_key,
+    is_granted,
+    updated_by=None,
+):
+    if not isinstance(permission_key, str) or not permission_key.strip():
+        raise ValueError("A valid permission key is required.")
+
+    if type(is_granted) is not bool:
+        raise ValueError("is_granted must be a boolean.")
+
+    connection = get_connection()
+
+    try:
+        connection.execute("""
+            INSERT INTO user_permissions (
+                user_id, permission_key, is_granted,
+                updated_by, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(user_id, permission_key)
+            DO UPDATE SET
+                is_granted = excluded.is_granted,
+                updated_by = excluded.updated_by,
+                updated_at = excluded.updated_at
+        """, (
+            user_id,
+            permission_key.strip(),
+            int(is_granted),
+            updated_by,
+            current_timestamp(),
+        ))
+
+        connection.commit()
+        return True
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+def clear_user_permission_override(user_id, permission_key):
+    connection = get_connection()
+
+    try:
+        cursor = connection.execute("""
+            DELETE FROM user_permissions
+            WHERE user_id = ?
+              AND permission_key = ?
+        """, (
+            user_id,
+            permission_key,
+        ))
+
+        connection.commit()
+        return cursor.rowcount > 0
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+# =====================================================
+# 22. DATABASE STARTUP
+# =====================================================
+
+if __name__ == "__main__":
+    initialize_database()
+    print(f"Database location: {DATABASE_PATH}")
+
+===== END FILE: database.py =====
+===== FILE: auth.py =====
+import os
+import getpass
+import sqlite3
+import json
+import hashlib
+import secrets
+import time
+import ipaddress
+
+from datetime import datetime, timedelta, timezone
+from typing import Literal
+
+import jwt
+
+from argon2 import PasswordHasher
+from argon2.exceptions import (
+    VerifyMismatchError,
+    VerificationError,
+    InvalidHashError,
+)
+
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    Request,
+    status,
+)
+
+from fastapi.security import (
+    HTTPBearer,
+    HTTPAuthorizationCredentials,
+)
+
+from pydantic import BaseModel, Field
+
+from database import (
+    initialize_database,
+    create_user,
+    get_user_by_username,
+    get_user_by_id,
+    get_all_users,
+    update_last_login,
+    get_connection,
+    get_user_permission_overrides,
+    set_user_permission,
+    clear_user_permission_override,
+    record_audit_entry,
+)
+
+from auth_security_store import (
+    initialize_security_storage,
+    store_token,
+    consume_token,
+    revoke_token,
+    revoke_user_tokens,
+    increment_session_version,
+    get_session_version,
+    check_rate_limit,
+    record_rate_limit_failure,
+    clear_rate_limit,
+    cleanup_expired_security_records,
+)
+
+
+# =========================================================
+# CONFIGURATION
+# =========================================================
+
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+JWT_ISSUER = "IntelliWatch"
+JWT_AUDIENCE = "IntelliWatch-API"
+
+RESET_TOKEN_TTL_SECONDS = 900
+ADMIN_INVITE_TTL_SECONDS = 86400
+
+password_hasher = PasswordHasher()
+security = HTTPBearer(auto_error=False)
+
+auth_router = APIRouter(
+    prefix="/auth",
+    tags=["Authentication"],
+)
+
+VALID_ROLES = {
+    "ADMIN",
+    "OPERATOR",
+    "MAINTENANCE_ENGINEER",
+}
+
+ROLE_DEFAULT_PERMISSIONS = {
+    "ADMIN": {
+        "dashboard.view",
+        "sensors.view",
+        "machine_status.view",
+        "calibration.manage",
+        "models.manage",
+        "users.manage",
+        "permissions.manage",
+    },
+    "OPERATOR": {
+        "dashboard.view",
+        "sensors.view",
+        "machine_status.view",
+        "alerts.view",
+        "recommendations.operational.view",
+    },
+    "MAINTENANCE_ENGINEER": {
+        "dashboard.view",
+        "sensors.view",
+        "machine_status.view",
+        "alerts.view",
+        "recommendations.operational.view",
+        "diagnostics.view",
+        "diagnostics.confidence.view",
+        "recommendations.maintenance.view",
+        "edge_devices.view",
+    },
+}
+
+RESTRICTED_ADMIN_SESSION_PERMISSIONS = {
+    "OPERATOR": "admin.operator_access",
+    "MAINTENANCE_ENGINEER": "admin.engineer_access",
+}
+
+ALL_PERMISSION_KEYS = {
+    "dashboard.view",
+    "sensors.view",
+    "machine_status.view",
+    "alerts.view",
+    "recommendations.operational.view",
+    "diagnostics.view",
+    "diagnostics.confidence.view",
+    "recommendations.maintenance.view",
+    "edge_devices.view",
+    "control.execute",
+    "control.acknowledge",
+    "calibration.manage",
+    "models.manage",
+    "users.manage",
+    "permissions.manage",
+    "admin.operator_access",
+    "admin.engineer_access",
+}
+
+ADMIN_ONLY_PERMISSIONS = {
+    "calibration.manage",
+    "models.manage",
+    "users.manage",
+    "permissions.manage",
+    "admin.operator_access",
+    "admin.engineer_access",
+}
+
+
+# =========================================================
+# INITIALIZATION
+# =========================================================
+
+def initialize_auth_security():
+    initialize_database()
+    initialize_security_storage()
+    cleanup_expired_security_records()
+
+
+# =========================================================
+# SHARED HELPERS
+# =========================================================
+
+def _now():
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _audit_event(category, actor=None, target=None, details=None):
+    record_audit_entry(
+        category=category,
+        actor=actor,
+        target=str(target) if target is not None else None,
+        detail_json=json.dumps(details or {}, default=str),
+    )
+
+
+def _begin_transaction():
+    connection = get_connection()
+    connection.execute("BEGIN IMMEDIATE")
+    return connection
+
+
+def _audit_transaction(connection, category, actor, target, details):
+    timestamp = _now()
+    detail_json = json.dumps(details or {}, default=str)
+
+    previous = connection.execute("""
+        SELECT hash
+        FROM audit_entries
+        ORDER BY id DESC
+        LIMIT 1
+    """).fetchone()
+
+    previous_hash = previous["hash"] if previous else ""
+
+    chain_input = "|".join((
+        str(previous_hash),
+        timestamp,
+        str(category),
+        str(actor),
+        str(target),
+        detail_json,
+    ))
+
+    entry_hash = hashlib.sha256(
+        chain_input.encode("utf-8")
+    ).hexdigest()
+
+    cursor = connection.execute("""
+        INSERT INTO audit_entries (
+            timestamp, category, actor, target, detail_json, hash
+        )
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (
+        timestamp,
+        category,
+        actor,
+        str(target) if target is not None else None,
+        detail_json,
+        entry_hash,
+    ))
+
+    return cursor.lastrowid
+
+
+def _admin_in_transaction(connection, admin_id):
+    admin = connection.execute("""
+        SELECT id, username, role, is_active, is_deleted
+        FROM users
+        WHERE id = ?
+    """, (admin_id,)).fetchone()
+
+    if (
+        not admin
+        or admin["role"] != "ADMIN"
+        or not admin["is_active"]
+        or admin["is_deleted"]
+    ):
+        raise ValueError("An active administrator is required.")
+
+    return dict(admin)
+
+
+def _account_in_transaction(connection, user_id):
+    row = connection.execute(
+        "SELECT * FROM users WHERE id = ?",
+        (user_id,),
+    ).fetchone()
+

@@ -1,0 +1,511 @@
+                "feature_names": load_json(
+                    row["feature_names"], []
+                ),
+                "sample_count": row["sample_count"],
+                "means": load_json(row["means"]),
+                "m2_values": load_json(row["m2_values"]),
+                "minimums": load_json(row["minimums"]),
+                "maximums": load_json(row["maximums"])
+            }
+            for row in rows
+        ]
+
+    def find_unknown_pattern(self, features):
+
+        best_match = None
+        best_distance = float("inf")
+
+        for pattern in self.get_unknown_patterns():
+
+            distance = self.feature_distance(
+                features,
+                pattern["means"],
+                pattern["m2_values"],
+                pattern["sample_count"]
+            )
+
+            if distance < best_distance:
+
+                best_distance = distance
+                best_match = pattern
+
+        if (
+            best_match
+            and best_distance <= UNKNOWN_PATTERN_DISTANCE
+        ):
+            return best_match
+
+        return None
+
+    def store_unknown_observation(self, result):
+
+        features = result["features"]
+        timestamp = result["timestamp"]
+
+        pattern = self.find_unknown_pattern(
+            features
+        )
+
+        with self.connect() as connection:
+
+            if pattern:
+
+                pattern_id = pattern["pattern_id"]
+
+                (
+                    count,
+                    means,
+                    m2,
+                    minimums,
+                    maximums
+                ) = self.update_statistics(
+                    features,
+                    pattern["sample_count"],
+                    pattern["means"],
+                    pattern["m2_values"],
+                    pattern["minimums"],
+                    pattern["maximums"]
+                )
+
+                connection.execute("""
+                    UPDATE unknown_patterns
+                    SET sample_count = ?,
+                        means = ?,
+                        m2_values = ?,
+                        minimums = ?,
+                        maximums = ?,
+                        last_seen = ?
+                    WHERE pattern_id = ?
+                """, (
+                    count,
+                    safe_json(means),
+                    safe_json(m2),
+                    safe_json(minimums),
+                    safe_json(maximums),
+                    timestamp,
+                    pattern_id
+                ))
+
+            else:
+
+                pattern_id = connection.execute("""
+                    INSERT INTO unknown_patterns (
+                        feature_names,
+                        sample_count,
+                        means,
+                        m2_values,
+                        minimums,
+                        maximums,
+                        status,
+                        first_seen,
+                        last_seen
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    safe_json(list(features.keys())),
+                    1,
+                    safe_json(features),
+                    safe_json({
+                        key: 0.0 for key in features
+                    }),
+                    safe_json(features),
+                    safe_json(features),
+                    "investigating",
+                    timestamp,
+                    timestamp
+                )).lastrowid
+
+            connection.execute("""
+                INSERT INTO engine_observations (
+                    pattern_id,
+                    timestamp,
+                    features,
+                    quality
+                )
+                VALUES (?, ?, ?, ?)
+            """, (
+                pattern_id,
+                timestamp,
+                safe_json(features),
+                result["quality"]
+            ))
+
+        return pattern_id
+
+    # ========================================================
+    # 14. PATTERN HISTORY AND STABILITY
+    # ========================================================
+
+    def get_pattern_history(
+        self,
+        pattern_id,
+        limit=TREND_WINDOW
+    ):
+
+        with self.connect() as connection:
+
+            rows = connection.execute("""
+                SELECT features, timestamp
+                FROM engine_observations
+                WHERE pattern_id = ?
+                ORDER BY observation_id DESC
+                LIMIT ?
+            """, (
+                pattern_id,
+                limit
+            )).fetchall()
+
+        return [
+            {
+                "features": load_json(row["features"]),
+                "timestamp": row["timestamp"]
+            }
+            for row in reversed(rows)
+        ]
+
+    def analyse_stability(self, pattern_id):
+
+        history = self.get_pattern_history(
+            pattern_id,
+            TREND_WINDOW
+        )
+
+        if not history:
+
+            return {
+                "stability_score": 0.0,
+                "consistency_score": 0.0,
+                "trend_score": 0.0,
+                "range_score": None,
+                "observations": 0
+            }
+
+        feature_names = history[-1]["features"].keys()
+
+        consistency_scores = []
+        trend_scores = []
+        range_scores = []
+
+        for name in feature_names:
+
+            values = [
+                item["features"][name]
+                for item in history
+                if name in item["features"]
+            ]
+
+            if not values:
+                continue
+
+            mean_value = statistics.mean(values)
+
+            if len(values) > 1:
+
+                std_dev = statistics.pstdev(values)
+
+                scale = max(
+                    abs(mean_value),
+                    0.05
+                )
+
+                consistency = 1 / (
+                    1 + std_dev / scale
+                )
+
+                x_values = list(
+                    range(len(values))
+                )
+
+                x_mean = statistics.mean(
+                    x_values
+                )
+
+                denominator = sum(
+                    (x - x_mean) ** 2
+                    for x in x_values
+                )
+
+                slope = (
+                    sum(
+                        (x - x_mean) * (y - mean_value)
+                        for x, y in zip(x_values, values)
+                    ) / denominator
+                    if denominator else 0
+                )
+
+                trend = 1 / (
+                    1 + abs(slope) / scale
+                )
+
+            else:
+
+                consistency = 0.5
+                trend = 0.5
+
+            consistency_scores.append(
+                consistency
+            )
+
+            trend_scores.append(
+                trend
+            )
+
+            limits = self.operating_limits.get(
+                name
+            )
+
+            if limits:
+
+                minimum = limits.get("minimum")
+                maximum = limits.get("maximum")
+
+                if (
+                    minimum is not None
+                    and maximum is not None
+                ):
+
+                    range_scores.append(
+                        1.0
+                        if minimum <= values[-1] <= maximum
+                        else 0.0
+                    )
+
+        consistency_score = (
+            statistics.mean(consistency_scores)
+            if consistency_scores else 0.0
+        )
+
+        trend_score = (
+            statistics.mean(trend_scores)
+            if trend_scores else 0.0
+        )
+
+        range_score = (
+            statistics.mean(range_scores)
+            if range_scores else None
+        )
+
+        if range_score is None:
+
+            stability = (
+                consistency_score * 0.60
+                + trend_score * 0.40
+            )
+
+        else:
+
+            stability = (
+                consistency_score * 0.40
+                + trend_score * 0.30
+                + range_score * 0.30
+            )
+
+        return {
+            "stability_score": round(
+                stability, 4
+            ),
+            "consistency_score": round(
+                consistency_score, 4
+            ),
+            "trend_score": round(
+                trend_score, 4
+            ),
+            "range_score": (
+                round(range_score, 4)
+                if range_score is not None
+                else None
+            ),
+            "observations": len(history)
+        }
+
+    # ========================================================
+    # 15. ABNORMAL SIMILARITY
+    # ========================================================
+
+    def abnormal_similarity(self, features):
+
+        profiles = self.get_profiles(
+            "abnormal"
+        )
+
+        distances = []
+
+        for profile in profiles:
+
+            distance = self.feature_distance(
+                features,
+                profile["means"],
+                profile["m2_values"],
+                profile["sample_count"]
+            )
+
+            if math.isfinite(distance):
+                distances.append(distance)
+
+        if not distances:
+            return 0.0
+
+        return 1 / (
+            1 + min(distances)
+        )
+
+    # ========================================================
+    # 16. SCENARIO ANALYSIS
+    # ========================================================
+
+    def predict_scenarios(
+        self,
+        features,
+        stability
+    ):
+
+        stability_score = stability[
+            "stability_score"
+        ]
+
+        abnormal_score = self.abnormal_similarity(
+            features
+        )
+
+        instability = 1 - stability_score
+
+        scores = {
+
+            "temporary_operating_variation": (
+                instability * 0.60
+                + (1 - abnormal_score) * 0.20
+                + (1 - stability["trend_score"]) * 0.20
+            ),
+
+            "developing_abnormal_behaviour": (
+                abnormal_score * 0.65
+                + instability * 0.35
+            ),
+
+            "new_stable_behaviour": (
+                stability_score * 0.70
+                + (1 - abnormal_score) * 0.30
+            )
+        }
+
+        total = sum(scores.values())
+
+        estimates = (
+            {
+                name: round(
+                    score / total * 100,
+                    2
+                )
+                for name, score in scores.items()
+            }
+            if total > 0 else
+            {
+                name: 0.0
+                for name in scores
+            }
+        )
+
+        return {
+            "estimated_scenarios": estimates,
+            "abnormal_similarity": round(
+                abnormal_score, 4
+            ),
+            "interpretation": (
+                "Relative heuristic estimates, not calibrated probabilities."
+            )
+        }
+
+    # ========================================================
+    # 17. AUTOMATIC UNKNOWN DECISION
+    # ========================================================
+
+    def make_automatic_decision(
+        self,
+        pattern_id,
+        features,
+        stability,
+        scenarios
+    ):
+
+        probabilities = scenarios[
+            "estimated_scenarios"
+        ]
+
+        if (
+            stability["observations"]
+            < MIN_PATTERN_OBSERVATIONS
+        ):
+
+            return {
+                "decision": "continue_investigation",
+                "reason": "Insufficient observations."
+            }
+
+        best_scenario = max(
+            probabilities,
+            key=probabilities.get
+        )
+
+        best_probability = (
+            probabilities[best_scenario] / 100
+        )
+
+        # An unstable pattern is retained for investigation.
+        # Instability alone is not evidence that it is invalid.
+        if stability["stability_score"] < 0.25:
+
+            return {
+                "decision": "continue_investigation",
+                "reason": (
+                    "Pattern is unstable. Retained for further observation; "
+                    "no knowledge update or deletion performed."
+                )
+            }
+
+        if (
+            best_scenario == "new_stable_behaviour"
+            and best_probability >= DECISION_CONFIDENCE_THRESHOLD
+            and stability["stability_score"] >= 0.65
+        ):
+
+            self.store_pattern_as_knowledge(
+                pattern_id,
+                "normal"
+            )
+
+            return {
+                "decision": "learned_as_normal",
+                "reason": (
+                    "Stable behaviour met the initial evidence criteria."
+                )
+            }
+
+        if (
+            best_scenario == "developing_abnormal_behaviour"
+            and best_probability >= DECISION_CONFIDENCE_THRESHOLD
+            and scenarios["abnormal_similarity"] >= 0.55
+        ):
+
+            self.store_pattern_as_knowledge(
+                pattern_id,
+                "abnormal"
+            )
+
+            return {
+                "decision": "learned_as_abnormal",
+                "reason": (
+                    "Behaviour resembles established abnormal knowledge."
+                )
+            }
+
+        return {
+            "decision": "continue_investigation",
+            "reason": (
+                "Evidence is not sufficient for a knowledge update."
+            )
+        }
+
+    # ========================================================
+    # 18. STORE VALIDATED COMBINED KNOWLEDGE
+    # ========================================================
+

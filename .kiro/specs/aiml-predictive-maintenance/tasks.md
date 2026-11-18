@@ -1,14 +1,14 @@
-# Implementation Plan: AIML Predictive Maintenance
+﻿# Implementation Plan: AIML Predictive Maintenance
 
 ## Overview
 
-This plan upgrades IntelliWatch from a heuristic Welford-statistics engine into a trained, continuously-learning predictive-maintenance platform. It is organized so that foundational layers (database schema, model registry, feature extraction) come first, followed by the offline training pipeline, then the live inference → control → IoT loop, the adaptive learning and observability services, the API surface, and finally the frontend ML/history/navigation work. Each step builds on the previous one and the plan ends by wiring everything together inside the existing `intelliwatch_brain.py` orchestration cycle and FastAPI server startup.
+This plan upgrades IntelliWatch from a heuristic Welford-statistics engine into a trained, continuously-learning predictive-maintenance platform. It is organized so that foundational layers (database schema, model registry, feature extraction) come first, followed by the offline training pipeline, then the live inference â†’ control â†’ IoT loop, the adaptive learning and observability services, the API surface, and finally the frontend ML/history/navigation work. Each step builds on the previous one and the plan ends by wiring everything together inside the existing `intelliwatch_brain.py` orchestration cycle and FastAPI server startup.
 
 Implementation language is already fixed by the codebase: **Python** for the backend (FastAPI + SQLite) and **JavaScript/JSX (React)** for the frontend. The KAIST bearing features under `KAIST/features/batch/{vibration,temperature_current}/` are the training data source.
 
 **Conventions used in this plan:**
 - Sub-tasks postfixed with `*` are optional (tests). The implementer MUST implement non-`*` sub-tasks and SHOULD implement `*` sub-tasks.
-- Each property-based test sub-task references its **Property N** from `design.md` §Correctness Properties and the requirement clause it validates. Property tests use Hypothesis-style generators with a minimum of 100 iterations, matching the design's testing strategy. Frontend tests are example/snapshot based.
+- Each property-based test sub-task references its **Property N** from `design.md` Â§Correctness Properties and the requirement clause it validates. Property tests use Hypothesis-style generators with a minimum of 100 iterations, matching the design's testing strategy. Frontend tests are example/snapshot based.
 - Affected files and requirements are listed as sub-bullets under each task.
 
 ---
@@ -22,16 +22,16 @@ Implementation language is already fixed by the codebase: **Python** for the bac
     - Render the existing NavLinks (`/`, `/vibration`, `/temperature`, `/current`, `/explorer`, `/about`) inline when wide and in a `nav-links-mobile` panel when narrow; keep the language switcher on the right and visible at all widths
     - Keep existing routes in `App.jsx` unchanged (they already match the NavLinks)
     - _Affected files: `frontend/src/components/Navbar.jsx`, `frontend/src/App.css`_
-    - _Requirements: design §10.1 (Navbar fix)_
-  - [ ]* 1.2 Write frontend tests for Navbar responsive collapse
+    - _Requirements: design Â§10.1 (Navbar fix)_
+  - [x]* 1.2 Write frontend tests for Navbar responsive collapse
     - Assert NavLinks are visible at every viewport width (wide inline, narrow dropdown)
     - Use snapshot/example tests for the collapse behavior
     - _Affected files: `frontend/src/components/__tests__/Navbar.test.jsx` (new)_
-    - _Requirements: design §10.1_
+    - _Requirements: design Â§10.1_
 
-- [ ] 2. Database schema and persistence layer
+- [x] 2. Database schema and persistence layer
   - [x] 2.1 Add the 9 new tables and indexes to `database.initialize_database()`
-    - Create idempotently (additive migration; do not alter the existing 7 tables): `ml_models`, `verified_labels`, `accuracy_trend`, `control_signals`, `audit_entries`, `edge_devices`, `control_signal_queue`, `explorer_history`, `threshold_definitions` per design §3
+    - Create idempotently (additive migration; do not alter the existing 7 tables): `ml_models`, `verified_labels`, `accuracy_trend`, `control_signals`, `audit_entries`, `edge_devices`, `control_signal_queue`, `explorer_history`, `threshold_definitions` per design Â§3
     - Add indexes: `idx_ml_models_active`, `idx_verified_model_ts`, `idx_trend_model_time`, `idx_control_intent_ts`, `idx_audit_category_ts`, `idx_edge_status`, `idx_queue_device_delivered`, `idx_explorer_ts`; keep the existing `idx_sensor_name_timestamp` (Req 9.4)
     - Add the `audit_entries.hash` chain-hash column for tamper-evidence (Req 13.1)
     - _Affected files: `Backend/database.py`_
@@ -43,7 +43,7 @@ Implementation language is already fixed by the codebase: **Python** for the bac
     - _Requirements: 3.8, 6.1, 6.2, 8.1, 8.2, 8.5, 13.1_
   - [x] 2.3 Implement explorer history retention/eviction and 365-day retention cleanup
     - After each explorer-history insert, evict oldest beyond 500 rows (Req 6.5/6.6)
-    - Add a nightly-style cleanup that deletes `sensor_readings`, `anomaly_events`, and `audit_entries` older than a configurable cutoff (≥365 days, Req 13.4)
+    - Add a nightly-style cleanup that deletes `sensor_readings`, `anomaly_events`, and `audit_entries` older than a configurable cutoff (â‰¥365 days, Req 13.4)
     - _Affected files: `Backend/database.py`_
     - _Requirements: 6.5, 6.6, 13.4_
   - [x]* 2.4 Write property test for explorer history retention and eviction
@@ -51,7 +51,7 @@ Implementation language is already fixed by the codebase: **Python** for the bac
     - **Validates: Requirements 6.5, 6.6**
     - Assert that after inserting >500 entries, exactly the 500 most recent remain in recency order
     - _Affected files: `Backend/tests/properties/test_property_22.py` (new)_
-  - [ ]* 2.5 Write unit tests for database schema and helpers
+  - [x]* 2.5 Write unit tests for database schema and helpers
     - Verify all 9 new tables + indexes exist after `initialize_database()`; verify helper round-trips using an isolated temp SQLite DB (match `test_engine.py` style)
     - _Affected files: `Backend/tests/test_database_schema.py` (new)_
     - _Requirements: 2.5, 3.8, 6.1, 8.1, 13.1_
@@ -88,10 +88,10 @@ Implementation language is already fixed by the codebase: **Python** for the bac
     - Assert `crest_factor == peak / rms` and kurtosis satisfies the excess-kurtosis definition for every available axis
     - _Affected files: `Backend/tests/properties/test_property_05.py` (new)_
   - [x] 4.5 Implement FFT band-energy extraction (at least four defined bands)
-    - Compute non-negative FFT frequency-band energy across ≥4 bands per vibration window (Req 2.2)
+    - Compute non-negative FFT frequency-band energy across â‰¥4 bands per vibration window (Req 2.2)
     - _Affected files: `Backend/feature_extractor.py`_
     - _Requirements: 2.2_
-  - [ ]* 4.6 Write property test for FFT band-energy validity
+  - [x]* 4.6 Write property test for FFT band-energy validity
     - **Property 6: FFT band-energy validity**
     - **Validates: Requirements 2.2**
     - Assert at least four non-negative band-energy values for any vibration window
@@ -100,7 +100,7 @@ Implementation language is already fixed by the codebase: **Python** for the bac
     - `mean` = arithmetic mean, `min`/`max` = window extrema, `rise_rate` = slope over the window (Req 2.3)
     - _Affected files: `Backend/feature_extractor.py`_
     - _Requirements: 2.3_
-  - [ ]* 4.8 Write property test for temperature feature correctness
+  - [x]* 4.8 Write property test for temperature feature correctness
     - **Property 7: Temperature feature correctness**
     - **Validates: Requirements 2.3**
     - _Affected files: `Backend/tests/properties/test_property_07.py` (new)_
@@ -108,7 +108,7 @@ Implementation language is already fixed by the codebase: **Python** for the bac
     - Per-phase `rms` and `mean` satisfying statistical definitions (Req 2.4)
     - _Affected files: `Backend/feature_extractor.py`_
     - _Requirements: 2.4_
-  - [ ]* 4.10 Write property test for current feature correctness
+  - [x]* 4.10 Write property test for current feature correctness
     - **Property 8: Current feature correctness**
     - **Validates: Requirements 2.4**
     - _Affected files: `Backend/tests/properties/test_property_08.py` (new)_
@@ -116,7 +116,7 @@ Implementation language is already fixed by the codebase: **Python** for the bac
     - When a Monitoring_Parameter value is missing/NaN/None, mark the derived feature `available=False` and exclude it from the model input vector without failing the whole window (Req 2.7)
     - _Affected files: `Backend/feature_extractor.py`_
     - _Requirements: 2.7_
-  - [ ]* 4.12 Write property test for missing-value window resilience
+  - [x]* 4.12 Write property test for missing-value window resilience
     - **Property 40: Missing-value window resilience (edge case)**
     - **Validates: Requirements 2.7**
     - _Affected files: `Backend/tests/properties/test_property_40.py` (new)_
@@ -127,7 +127,7 @@ Implementation language is already fixed by the codebase: **Python** for the bac
     - Compute a SHA-256 `dataset_hash` over the sorted file list + row counts; honor `{channel}_available` columns for per-feature availability
     - _Affected files: `Backend/training_pipeline.py` (new)_
     - _Requirements: 1.1_
-  - [ ]* 5.2 Write property test for unified training-set coverage
+  - [x]* 5.2 Write property test for unified training-set coverage
     - **Property 1: Unified training-set coverage**
     - **Validates: Requirements 1.1**
     - Assert every `(fault, load)` tuple present on disk appears in the loaded set with a non-zero window count
@@ -148,17 +148,17 @@ Implementation language is already fixed by the codebase: **Python** for the bac
     - Combined decision is the primary classifier; the ensemble stores member references so its output is a deterministic function of member outputs (Req 1.5)
     - _Affected files: `Backend/training_pipeline.py`_
     - _Requirements: 1.5_
-  - [ ]* 5.7 Write property test for ensemble decision consistency
+  - [x]* 5.7 Write property test for ensemble decision consistency
     - **Property 4: Ensemble decision consistency**
     - **Validates: Requirements 1.5**
     - Assert the ensemble decision is a deterministic function of member outputs and references every member
     - _Affected files: `Backend/tests/properties/test_property_04.py` (new)_
   - [x] 5.8 Implement validation and training report (accuracy/precision/recall/F1/false-alarm)
     - Stratified held-out split per fault/load; emit one metrics entry per model family with all metrics in `[0,1]` (Req 1.7)
-    - Gate promotion by accuracy targets: tabular ≥0.92 accuracy, unsupervised ≥0.90 F1, false-alarm ≤0.05; a failing candidate is not activated and the shortfall is recorded (Req 10.1–10.4)
+    - Gate promotion by accuracy targets: tabular â‰¥0.92 accuracy, unsupervised â‰¥0.90 F1, false-alarm â‰¤0.05; a failing candidate is not activated and the shortfall is recorded (Req 10.1â€“10.4)
     - _Affected files: `Backend/training_pipeline.py`_
     - _Requirements: 1.7, 10.1, 10.2, 10.3, 10.4_
-  - [ ]* 5.9 Write property test for training report completeness
+  - [x]* 5.9 Write property test for training report completeness
     - **Property 3: Training report completeness**
     - **Validates: Requirements 1.7**
     - Assert exactly one metrics entry per family, each metric within `[0,1]`
@@ -168,10 +168,10 @@ Implementation language is already fixed by the codebase: **Python** for the bac
     - Mini-batch iteration when frame exceeds `BATCH_SIZE` (Req 9.2); `try/except` resource-probe reduces capacity (fewer estimators / smaller hidden) and logs `RESOURCE_ERROR` without aborting (Req 1.8)
     - _Affected files: `Backend/training_pipeline.py`_
     - _Requirements: 1.6, 1.8, 9.1, 9.2_
-  - [ ]* 5.11 Write property test for mini-batch bounded size
+  - [x]* 5.11 Write property test for mini-batch bounded size
     - **Property 28: Mini-batch bounded size**
     - **Validates: Requirements 9.2**
-    - Assert each mini-batch chunk size ≤ configured `BATCH_SIZE`
+    - Assert each mini-batch chunk size â‰¤ configured `BATCH_SIZE`
     - _Affected files: `Backend/tests/properties/test_property_28.py` (new)_
 
 - [x] 6. Inference module
@@ -188,17 +188,17 @@ Implementation language is already fixed by the codebase: **Python** for the bac
     - _Affected files: `Backend/tests/properties/test_property_10.py` (new)_
 
 - [x] 7. Equipment controller
-  - [x] 7.1 Implement EquipmentController (status→intent mapping, dispatch, SHUTDOWN priority, CRITICAL→NORMAL restoration)
+  - [x] 7.1 Implement EquipmentController (statusâ†’intent mapping, dispatch, SHUTDOWN priority, CRITICALâ†’NORMAL restoration)
     - `STATUS_TO_INTENT = {"CRITICAL":"SHUTDOWN","WARNING":"DE_RATE","NORMAL":"RUN"}`; SHUTDOWN carries the highest numeric priority (Req 3.1, 3.3, 3.4, 3.6)
-    - On CRITICAL→NORMAL transition, dispatch RUN to restore operation (Req 3.2)
-    - In-process dispatch so the SHUTDOWN ≤500 ms budget is achievable (Req 3.5)
+    - On CRITICALâ†’NORMAL transition, dispatch RUN to restore operation (Req 3.2)
+    - In-process dispatch so the SHUTDOWN â‰¤500 ms budget is achievable (Req 3.5)
     - _Affected files: `Backend/equipment_controller.py` (new)_
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6_
   - [x]* 7.2 Write property test for status-to-control-signal mapping
     - **Property 11: Status-to-control-signal mapping**
     - **Validates: Requirements 3.1, 3.3, 3.4**
     - _Affected files: `Backend/tests/properties/test_property_11.py` (new)_
-  - [ ]* 7.3 Write property test for critical-to-normal restoration round-trip
+  - [x]* 7.3 Write property test for critical-to-normal restoration round-trip
     - **Property 12: Critical-to-normal restoration round-trip**
     - **Validates: Requirements 3.2**
     - _Affected files: `Backend/tests/properties/test_property_12.py` (new)_
@@ -211,11 +211,11 @@ Implementation language is already fixed by the codebase: **Python** for the bac
     - If the control channel is unavailable at CRITICAL detection, raise a fail-safe alert within 1 s and keep retrying (Req 11.4)
     - _Affected files: `Backend/equipment_controller.py`_
     - _Requirements: 11.2, 11.3, 11.4_
-  - [ ]* 7.6 Write property test for SHUTDOWN delivery retry
+  - [x]* 7.6 Write property test for SHUTDOWN delivery retry
     - **Property 29: SHUTDOWN delivery retry**
     - **Validates: Requirements 11.2**
     - _Affected files: `Backend/tests/properties/test_property_29.py` (new)_
-  - [ ]* 7.7 Write property test for critical SHUTDOWN latching
+  - [x]* 7.7 Write property test for critical SHUTDOWN latching
     - **Property 30: Critical SHUTDOWN latching**
     - **Validates: Requirements 11.3**
     - _Affected files: `Backend/tests/properties/test_property_30.py` (new)_
@@ -225,15 +225,15 @@ Implementation language is already fixed by the codebase: **Python** for the bac
     - On equipment ack, record ack timestamp + resulting equipment state (Req 3.8); if no ack within timeout, raise an actuation-failure alert (Req 3.9)
     - _Affected files: `Backend/equipment_controller.py`_
     - _Requirements: 3.8, 3.9, 13.1, 13.3, 13.5_
-  - [ ]* 7.9 Write property test for control-signal authorization gate
+  - [x]* 7.9 Write property test for control-signal authorization gate
     - **Property 37: Control-signal authorization gate**
     - **Validates: Requirements 13.3, 13.5**
     - _Affected files: `Backend/tests/properties/test_property_37.py` (new)_
-  - [ ]* 7.10 Write property test for control-signal audit completeness
+  - [x]* 7.10 Write property test for control-signal audit completeness
     - **Property 35: Control-signal audit completeness**
     - **Validates: Requirements 13.1**
     - _Affected files: `Backend/tests/properties/test_property_35.py` (new)_
-  - [ ]* 7.11 Write property test for control-signal acknowledgement persistence
+  - [x]* 7.11 Write property test for control-signal acknowledgement persistence
     - **Property 14: Control-signal acknowledgement persistence**
     - **Validates: Requirements 3.8**
     - _Affected files: `Backend/tests/properties/test_property_14.py` (new)_
@@ -245,33 +245,33 @@ Implementation language is already fixed by the codebase: **Python** for the bac
     - _Affected files: `Backend/iot_layer.py` (new)_
     - _Requirements: 4.1, 4.3_
   - [x] 8.2 Implement handshake (accept/reject) and data forwarding (verbatim)
-    - `register_device` performs a graceful boot handshake verifying identity, capability set, and protocol compatibility; incompatible capability → reject and log the reason (Req 4.2, 4.8)
+    - `register_device` performs a graceful boot handshake verifying identity, capability set, and protocol compatibility; incompatible capability â†’ reject and log the reason (Req 4.2, 4.8)
     - `on_data` forwards the device's already-computed payload to inference without recomputing on the server (Req 4.4)
     - _Affected files: `Backend/iot_layer.py`_
     - _Requirements: 4.2, 4.4, 4.8_
-  - [ ]* 8.3 Write property test for handshake accept/reject correctness
+  - [x]* 8.3 Write property test for handshake accept/reject correctness
     - **Property 15: Handshake accept/reject correctness**
     - **Validates: Requirements 4.2, 4.8**
     - _Affected files: `Backend/tests/properties/test_property_15.py` (new)_
-  - [ ]* 8.4 Write property test for device data forwarding fidelity
+  - [x]* 8.4 Write property test for device data forwarding fidelity
     - **Property 16: Device data forwarding fidelity**
     - **Validates: Requirements 4.4**
     - Assert forwarded payload equals received payload byte-for-byte
     - _Affected files: `Backend/tests/properties/test_property_16.py` (new)_
   - [x] 8.5 Implement disconnect marking, reconnect resumption, and heartbeat/timeout
     - On unexpected disconnect: mark device offline, surface status, retain last known state (Req 4.6); on reconnect: re-establish session and resume data/command exchange (Req 4.7)
-    - `heartbeat_loop` pings each online device at `HEARTBEAT_INTERVAL`; missing beyond `2 * INTERVAL` → mark `unresponsive` and notify UI (Req 12.1, 12.2)
+    - `heartbeat_loop` pings each online device at `HEARTBEAT_INTERVAL`; missing beyond `2 * INTERVAL` â†’ mark `unresponsive` and notify UI (Req 12.1, 12.2)
     - _Affected files: `Backend/iot_layer.py`_
     - _Requirements: 4.6, 4.7, 12.1, 12.2_
-  - [ ]* 8.6 Write property test for disconnect marking and last-known-state retention
+  - [x]* 8.6 Write property test for disconnect marking and last-known-state retention
     - **Property 17: Disconnect marking and last-known-state retention**
     - **Validates: Requirements 4.6**
     - _Affected files: `Backend/tests/properties/test_property_17.py` (new)_
-  - [ ]* 8.7 Write property test for reconnect session resumption
+  - [x]* 8.7 Write property test for reconnect session resumption
     - **Property 18: Reconnect session resumption**
     - **Validates: Requirements 4.7**
     - _Affected files: `Backend/tests/properties/test_property_18.py` (new)_
-  - [ ]* 8.8 Write property test for heartbeat timeout detection
+  - [x]* 8.8 Write property test for heartbeat timeout detection
     - **Property 31: Heartbeat timeout detection**
     - **Validates: Requirements 12.2**
     - _Affected files: `Backend/tests/properties/test_property_31.py` (new)_
@@ -282,15 +282,15 @@ Implementation language is already fixed by the codebase: **Python** for the bac
     - Relay Control_Signals from the Equipment_Controller over the device's active protocol (Req 4.5)
     - _Affected files: `Backend/iot_layer.py`_
     - _Requirements: 4.5, 12.3, 12.4, 12.5_
-  - [ ]* 8.10 Write property test for disconnected control-signal queueing
+  - [x]* 8.10 Write property test for disconnected control-signal queueing
     - **Property 32: Disconnected control-signal queueing**
     - **Validates: Requirements 12.3**
     - _Affected files: `Backend/tests/properties/test_property_32.py` (new)_
-  - [ ]* 8.11 Write property test for device authentication gate
+  - [x]* 8.11 Write property test for device authentication gate
     - **Property 33: Device authentication gate**
     - **Validates: Requirements 12.4**
     - _Affected files: `Backend/tests/properties/test_property_33.py` (new)_
-  - [ ]* 8.12 Write property test for malformed-message isolation
+  - [x]* 8.12 Write property test for malformed-message isolation
     - **Property 34: Malformed-message isolation**
     - **Validates: Requirements 12.5**
     - _Affected files: `Backend/tests/properties/test_property_34.py` (new)_
@@ -307,7 +307,7 @@ Implementation language is already fixed by the codebase: **Python** for the bac
     - _Affected files: `Backend/tests/properties/test_property_23.py` (new)_
   - [x] 9.3 Implement threshold source documentation and equipment-specific flag
     - Each threshold definition carries a non-empty documented source standard OR is flagged `equipment_specific` and inactive until operator confirmation (Req 7.3, 7.4)
-    - Add `source` field and `equipmentSpecific` flag to `sensor_config.py` thresholds and `frontend/src/sensors.js` (formalize the existing ISO-source comments as data) so the UI can show "equipment-specific — confirm" badges
+    - Add `source` field and `equipmentSpecific` flag to `sensor_config.py` thresholds and `frontend/src/sensors.js` (formalize the existing ISO-source comments as data) so the UI can show "equipment-specific â€” confirm" badges
     - _Affected files: `Backend/sensor_config.py`, `frontend/src/sensors.js`_
     - _Requirements: 7.3, 7.4_
   - [x]* 9.4 Write property test for threshold source documentation
@@ -320,31 +320,31 @@ Implementation language is already fixed by the codebase: **Python** for the bac
     - Accept operator-verified labels (confirm/dismiss) and store with the originating feature vector, the model version that produced the original decision, and the verification timestamp (Req 8.1, 8.2)
     - _Affected files: `Backend/learning_system.py` (new)_
     - _Requirements: 8.1, 8.2_
-  - [ ]* 10.2 Write property test for operator label ingestion and storage
+  - [x]* 10.2 Write property test for operator label ingestion and storage
     - **Property 25: Operator label ingestion and storage**
     - **Validates: Requirements 8.1, 8.2**
     - _Affected files: `Backend/tests/properties/test_property_25.py` (new)_
   - [x] 10.3 Implement recalibration, promotion gate, and accuracy trend
-    - At a configurable interval, train a candidate from accumulated labels and validate it (Req 8.3); promote only when its F1 exceeds the active model's and it meets accuracy targets (Req 8.4, 10.1–10.4)
+    - At a configurable interval, train a candidate from accumulated labels and validate it (Req 8.3); promote only when its F1 exceeds the active model's and it meets accuracy targets (Req 8.4, 10.1â€“10.4)
     - Append an F1 entry to `accuracy_trend` per recalibration (Req 8.5); record an audit entry for every promotion/recalibration with model version, trigger, and resulting metrics (Req 13.2)
     - _Affected files: `Backend/learning_system.py`_
     - _Requirements: 8.3, 8.4, 8.5, 10.1, 10.2, 10.3, 10.4, 13.2_
-  - [ ]* 10.4 Write property test for model promotion gate
+  - [x]* 10.4 Write property test for model promotion gate
     - **Property 26: Model promotion gate**
     - **Validates: Requirements 8.4, 10.1, 10.2, 10.3, 10.4**
     - _Affected files: `Backend/tests/properties/test_property_26.py` (new)_
-  - [ ]* 10.5 Write property test for accuracy trend recording
+  - [x]* 10.5 Write property test for accuracy trend recording
     - **Property 27: Accuracy trend recording**
     - **Validates: Requirements 8.5**
     - _Affected files: `Backend/tests/properties/test_property_27.py` (new)_
-  - [ ]* 10.6 Write property test for model-change audit completeness
+  - [x]* 10.6 Write property test for model-change audit completeness
     - **Property 36: Model-change audit completeness**
     - **Validates: Requirements 13.2**
     - _Affected files: `Backend/tests/properties/test_property_36.py` (new)_
 
 - [x] 11. Observability service
   - [x] 11.1 Implement obs_service.py (model/system status responses)
-    - Build the model-status response (active version, last training timestamp, validation metrics — Req 14.1) and the system-status response (current System_Status, current Control_Signal intent, connected Edge_Device status — Req 14.2)
+    - Build the model-status response (active version, last training timestamp, validation metrics â€” Req 14.1) and the system-status response (current System_Status, current Control_Signal intent, connected Edge_Device status â€” Req 14.2)
     - _Affected files: `Backend/obs_service.py` (new)_
     - _Requirements: 14.1, 14.2_
   - [x] 11.2 Implement model-degradation alerting and event-log completeness
@@ -352,11 +352,11 @@ Implementation language is already fixed by the codebase: **Python** for the bac
     - Log every Training_Pipeline run, recalibration, and feedback ingestion with a timestamp and outcome (Req 14.3)
     - _Affected files: `Backend/obs_service.py`_
     - _Requirements: 14.3, 14.4_
-  - [ ]* 11.3 Write property test for model-degradation alerting
+  - [x]* 11.3 Write property test for model-degradation alerting
     - **Property 39: Model-degradation alerting (edge case)**
     - **Validates: Requirements 14.4**
     - _Affected files: `Backend/tests/properties/test_property_39.py` (new)_
-  - [ ]* 11.4 Write property test for event-log completeness
+  - [x]* 11.4 Write property test for event-log completeness
     - **Property 38: Event-log completeness**
     - **Validates: Requirements 14.3**
     - _Affected files: `Backend/tests/properties/test_property_38.py` (new)_
@@ -383,8 +383,8 @@ Implementation language is already fixed by the codebase: **Python** for the bac
     - `GET /audit/control` (ADMIN, Req 13.1), `GET /audit/models` (ADMIN, Req 13.2)
     - _Affected files: `Backend/server.py`_
     - _Requirements: 13.1, 13.2_
-  - [ ]* 12.6 Write endpoint contract/integration tests
-    - Smoke tests for endpoint contracts, role enforcement, and service startup with valid config (design §Testing Strategy)
+  - [x]* 12.6 Write endpoint contract/integration tests
+    - Smoke tests for endpoint contracts, role enforcement, and service startup with valid config (design Â§Testing Strategy)
     - _Affected files: `Backend/tests/test_server_endpoints.py` (new)_
     - _Requirements: 3.7, 5.2, 6.3, 13.3, 14.1, 14.2_
 
@@ -399,7 +399,7 @@ Implementation language is already fixed by the codebase: **Python** for the bac
     - **Validates: Requirements 5.2**
     - Assert the classification returns a valid label and confidence within `[0,1]`
     - _Affected files: `Backend/tests/properties/test_property_19.py` (new)_
-  - [ ]* 13.3 Write property test for explorer feature-vector acceptance
+  - [x]* 13.3 Write property test for explorer feature-vector acceptance
     - **Property 20: Explorer feature-vector acceptance**
     - **Validates: Requirements 5.3**
     - Assert the model accepts arrangement + readings and produces a non-empty typed feature vector
@@ -414,11 +414,11 @@ Implementation language is already fixed by the codebase: **Python** for the bac
     - Persist a `workspace_state` entry on state change and a `classification` entry on each classification (Req 6.1, 6.2)
     - _Affected files: `frontend/src/components/SensorExplorer.jsx`, `frontend/src/components/ExplorerHistory.jsx` (new)_
     - _Requirements: 6.1, 6.2, 6.3, 6.4_
-  - [ ]* 13.6 Write property test for explorer history persistence round-trip
+  - [x]* 13.6 Write property test for explorer history persistence round-trip
     - **Property 21: Explorer history persistence round-trip**
     - **Validates: Requirements 6.1, 6.2**
     - _Affected files: `Backend/tests/properties/test_property_21.py` (new)_
-  - [ ]* 13.7 Write frontend tests for explorer history replay
+  - [x]* 13.7 Write frontend tests for explorer history replay
     - Assert selecting a history entry restores the recorded arrangement + classification
     - _Affected files: `frontend/src/components/__tests__/ExplorerHistory.test.jsx` (new)_
     - _Requirements: 6.3, 6.4_
@@ -432,7 +432,7 @@ Implementation language is already fixed by the codebase: **Python** for the bac
     - Fetch `/models/status` and `/models/trend/{family}`; render current model version, last recalibration timestamp, and a sparkline of the accuracy trend (Req 8.6, 14.1); keep `mlEngine.js` as the cold-start/local fallback
     - _Affected files: `frontend/src/components/MLStatusPanel.jsx`_
     - _Requirements: 8.6, 14.1_
-  - [ ]* 14.3 Write frontend tests for control banner and ML status panel
+  - [x]* 14.3 Write frontend tests for control banner and ML status panel
     - Example/snapshot tests for banner rendering across intent states and ML panel metric display
     - _Affected files: `frontend/src/components/__tests__/ControlSignalBanner.test.jsx` (new)_
     - _Requirements: 3.7, 8.6, 14.1_
@@ -446,13 +446,14 @@ Implementation language is already fixed by the codebase: **Python** for the bac
     - Instantiate the controller, IoT layer, and scheduled recalibration at FastAPI startup; connect the controller's relay to the IoT layer and the controller's audit to `record_audit_entry`
     - _Affected files: `Backend/server.py`_
     - _Requirements: 3.1, 4.5, 8.3, 13.1_
-  - [ ]* 15.3 Write integration tests (latency budgets, scalability, retention)
-    - ≥100k-window training memory (Req 9.1), ≤100 ms inference timing (Req 9.3), ≥1M-row indexed query (Req 9.4), ≤200 ms status determination (Req 11.1), ≤500 ms SHUTDOWN dispatch (Req 3.5), ≤1 s fail-safe alert (Req 11.4), 365-day retention (Req 13.4), MQTT+HTTP protocol wiring (Req 4.3), heartbeat interval (Req 12.1)
+  - [x]* 15.3 Write integration tests (latency budgets, scalability, retention)
+    - â‰¥100k-window training memory (Req 9.1), â‰¤100 ms inference timing (Req 9.3), â‰¥1M-row indexed query (Req 9.4), â‰¤200 ms status determination (Req 11.1), â‰¤500 ms SHUTDOWN dispatch (Req 3.5), â‰¤1 s fail-safe alert (Req 11.4), 365-day retention (Req 13.4), MQTT+HTTP protocol wiring (Req 4.3), heartbeat interval (Req 12.1)
     - _Affected files: `Backend/tests/test_integration.py` (new)_
     - _Requirements: 3.5, 4.3, 9.1, 9.3, 9.4, 11.1, 11.4, 12.1, 13.4_
 
-- [ ] 16. Final checkpoint - Ensure all tests pass
-  - Ensure all tests pass, ask the user if questions arise.
+- [x] 16. Final checkpoint - Ensure all tests pass
+  - All 85 backend property/unit tests pass (`pytest Backend/tests/ -x -q` â†’ 85 passed).
+  - Frontend production build succeeds with 0 errors (`npm run build` â†’ âœ” built).
 
 ## Notes
 
@@ -464,7 +465,7 @@ Implementation language is already fixed by the codebase: **Python** for the bac
 - The existing Welford engine (`intelliwatch_engine.py`) and browser-side `mlEngine.js` are preserved as a cold-start fallback so the system degrades gracefully when no trained model is loaded.
 - Schema migration is additive: the existing 7 tables are untouched; the 9 new tables are created idempotently.
 - Each property-based test is written to its own dedicated test file (e.g. `test_property_11.py`) so that tests for the same module can run in parallel without file conflicts.
-- Inference and control dispatch run in-process within the FastAPI server so the ≤200 ms status and ≤500 ms SHUTDOWN latency budgets are achievable without IPC overhead.
+- Inference and control dispatch run in-process within the FastAPI server so the â‰¤200 ms status and â‰¤500 ms SHUTDOWN latency budgets are achievable without IPC overhead.
 
 ## Task Dependency Graph
 
@@ -488,3 +489,4 @@ Implementation language is already fixed by the codebase: **Python** for the bac
   ]
 }
 ```
+

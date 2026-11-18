@@ -1,0 +1,71 @@
+# Render Blueprint — IntelliWatch full-stack deployment
+# https://render.com/docs/blueprint-spec
+#
+# Deploys:
+#   1. Backend  — Python FastAPI web service (free tier compatible)
+#   2. Frontend — Static site (build with Vite, served by Render)
+#   3. Database — Neon Postgres (external, connected via DATABASE_URL)
+#
+# Prerequisites:
+#   - Push this repo to GitHub/GitLab
+#   - Create a Neon database at https://neon.tech
+#   - Set the DATABASE_URL env var (below) to the Neon connection string
+#   - Set INTELLIWATCH_SECRET_KEY to a 64-char random hex string
+#   - Set FIREBASE_SERVICE_ACCOUNT_JSON to your Firebase service account JSON
+
+# ── Backend (FastAPI) ─────────────────────────────────────────────────────
+services:
+  - type: web
+    name: intelliwatch-backend
+    runtime: python
+    region: oregon
+    plan: free
+    rootDir: Backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /auth/registration-status
+    autoDeploy: true
+    envVars:
+      - key: INTELLIWATCH_SECRET_KEY
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: INTELLIWATCH_CORS_ORIGINS
+        value: https://intelliwatch.onrender.com
+      - key: PYTHON_VERSION
+        value: "3.12.0"
+
+  # ── Frontend (Vite static site) ──────────────────────────────────────────
+  - type: web
+    name: intelliwatch-frontend
+    runtime: static
+    region: oregon
+    plan: free
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    autoDeploy: true
+    envVars:
+      - key: VITE_API_URL
+        value: https://intelliwatch-backend.onrender.com
+      - key: VITE_FIREBASE_API_KEY
+        sync: false
+      - key: VITE_FIREBASE_AUTH_DOMAIN
+        sync: false
+      - key: VITE_FIREBASE_PROJECT_ID
+        sync: false
+      - key: VITE_FIREBASE_STORAGE_BUCKET
+        sync: false
+      - key: VITE_FIREBASE_MESSAGING_SENDER_ID
+        sync: false
+      - key: VITE_FIREBASE_APP_ID
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+# ── Databases are managed externally on Neon ──────────────────────────────
+# Create a free Neon Postgres project at https://console.neon.tech
+# Then set DATABASE_URL in the backend env vars above.
+# The migrate_sqlite_to_neon.py script handles schema migration.

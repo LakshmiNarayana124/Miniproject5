@@ -1,0 +1,1086 @@
+INTELLIWATCH FIREBASE IMPLEMENTATION CONTEXT
+
+========== DATABASE INITIALIZATION ==========
+            ),
+            ("idx_explorer_ts", "explorer_history(timestamp)"),
+            (
+                "idx_users_deleted_active",
+                "users(is_deleted, is_active)",
+            ),
+        )
+
+        for index_name, expression in indexes:
+            cursor.execute(
+                f"CREATE INDEX IF NOT EXISTS {index_name} ON {expression}"
+            )
+
+        # ONE PENDING REQUEST PER USER
+        cursor.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS
+            idx_one_pending_admin_promotion
+            ON admin_promotion_requests(user_id)
+            WHERE status = 'PENDING'
+        """)
+
+        cursor.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS
+            idx_one_pending_account_recovery
+            ON account_recovery_requests(user_id)
+            WHERE status = 'PENDING'
+        """)
+
+        connection.commit()
+
+        print(
+            "IntelliWatch SQLite database initialized successfully!"
+        )
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+# =====================================================
+# 8. SENSOR READINGS AND ANALYTICS
+# =====================================================
+
+def save_sensor_readings(readings):
+    if not readings:
+
+========== TOKEN CREATION ==========
+        return None
+
+    return user
+
+
+def create_access_token(user, session_role=None):
+    account_role = user.get("account_role", user.get("role"))
+    effective_role = session_role or user.get("role")
+
+    if account_role not in VALID_ROLES or effective_role not in VALID_ROLES:
+        raise ValueError("Invalid account or session role.")
+
+    user_id = int(user["id"])
+    session_version = get_session_version(user_id)
+
+    now = datetime.now(timezone.utc)
+
+    payload = {
+        "sub": str(user_id),
+        "session_role": effective_role,
+        "iss": JWT_ISSUER,
+        "aud": JWT_AUDIENCE,
+        "typ": "access",
+        "jti": secrets.token_urlsafe(24),
+        "sv": int(session_version),
+        "iat": now,
+        "exp": now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+    }
+
+    return jwt.encode(
+        payload,
+        get_secret_key(),
+        algorithm=ALGORITHM,
+    )
+
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+):
+    unauthorized = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid or expired authentication token.",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    if credentials is None or not credentials.credentials:
+        raise unauthorized
+
+    try:
+        payload = jwt.decode(
+            credentials.credentials,
+            get_secret_key(),
+            algorithms=[ALGORITHM],
+            issuer=JWT_ISSUER,
+            audience=JWT_AUDIENCE,
+            options={
+                "require": [
+                    "sub",
+                    "session_role",
+                    "iss",
+                    "aud",
+                    "typ",
+                    "jti",
+                    "sv",
+                    "iat",
+                    "exp",
+                ]
+            },
+        )
+
+        if payload.get("typ") != "access":
+            raise unauthorized
+
+        user_id = int(payload["sub"])
+
+        if user_id <= 0:
+            raise unauthorized
+
+        session_role = payload.get("session_role")
+
+        if session_role not in VALID_ROLES:
+            raise unauthorized
+
+        token_version = payload.get("sv")
+
+        if not isinstance(token_version, int):
+            raise unauthorized
+
+        current_version = get_session_version(user_id)
+
+        if token_version != current_version:
+            raise unauthorized
+
+        user = get_user_by_id(user_id)
+
+        if (
+            not user
+            or not user["is_active"]
+            or user.get("is_deleted", 0)
+        ):
+            raise unauthorized
+
+        user = dict(user)
+        account_role = user["role"]
+
+        is_restricted_session = session_role != account_role
+
+        if is_restricted_session:
+            if account_role != "ADMIN":
+                raise unauthorized
+
+            required_permission = (
+                RESTRICTED_ADMIN_SESSION_PERMISSIONS.get(session_role)
+            )
+
+
+========== EXISTING LOGIN ENDPOINT ==========
+        raise
+
+    finally:
+        connection.close()
+
+
+# =========================================================
+# LOGIN
+# =========================================================
+
+@auth_router.post("/login", response_model=LoginResponse)
+async def login(request: LoginRequest, http_request: Request):
+    rate_key = _enforce_rate_limit(
+        "login",
+        http_request,
+        request.username,
+        max_attempts=5,
+        window_seconds=300,
+    )
+
+    user = authenticate_user(request.username, request.password)
+
+    if not user:
+        _record_failure(rate_key)
+        raise HTTPException(
+            status_code=401,
+            detail="Incorrect username or password, or account inactive.",
+        )
+
+    account_role = user["role"]
+    requested_role = request.requested_role
+    is_restricted_session = False
+
+    if requested_role == account_role:
+        session_role = account_role
+
+    elif account_role == "ADMIN":
+        required_permission = (
+            RESTRICTED_ADMIN_SESSION_PERMISSIONS.get(requested_role)
+        )
+
+        if not required_permission:
+            raise HTTPException(
+                status_code=403,
+                detail="This account cannot sign in through the selected role.",
+            )
+
+        overrides = get_user_permission_overrides(user["id"])
+
+        if overrides.get(required_permission) is not True:
+            raise HTTPException(
+                status_code=403,
+                detail=(
+                    "Restricted access has not been granted for this role. "
+                    "Sign in through the Admin tab or ask an administrator "
+                    "to grant the required restricted access."
+                ),
+            )
+
+        session_role = requested_role
+        is_restricted_session = True
+
+    else:
+        raise HTTPException(
+            status_code=403,
+            detail="This account is not authorised for the selected role tab.",
+        )
+
+    _clear_failures(rate_key)
+
+    update_last_login(user["id"])
+
+    _audit_event(
+        "USER_LOGIN",
+        actor=user["username"],
+        target=user["id"],
+        details={
+            "account_role": account_role,
+            "session_role": session_role,
+            "is_restricted_session": is_restricted_session,
+        },
+    )
+
+    return {
+        "access_token": create_access_token(user, session_role),
+        "token_type": "bearer",
+        "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        "user_id": user["id"],
+        "username": user["username"],
+        "full_name": user["full_name"],
+        "role": session_role,
+        "account_role": account_role,
+        "is_restricted_session": is_restricted_session,
+    }
+
+
+# =========================================================
+# CURRENT USER
+# =========================================================
+
+@auth_router.get("/me")
+async def get_my_account(current_user=Depends(get_current_user)):
+    return {
+        "id": current_user["id"],
+        "username": current_user["username"],
+        "full_name": current_user["full_name"],
+        "role": current_user["role"],
+        "account_role": current_user["account_role"],
+        "is_restricted_session": current_user["is_restricted_session"],
+        "is_active": current_user["is_active"],
+
+========== SERVER IMPORTS AND ROUTERS ==========
+
+# -*- coding: utf-8 -*-
+"""
+INTELLIWATCH — FastAPI Server
+
+Handles:
+- Authentication and role-protected sensor endpoints
+- Hardware IoT ingestion and sensor streaming
+- Control signals and status streaming
+- ML and learning endpoints
+- 3D explorer and history
+- Equipment vision and object detection
+- Calibration and audit
+- Feedback and leaderboard
+
+Hardware readings are accepted only through the validated IoT layer.
+Simulation and Offline Demo remain separate frontend environments.
+"""
+
+import asyncio
+import json
+import os
+import random as _random
+import threading
+import time
+
+from copy import deepcopy
+from typing import Optional, List
+
+from fastapi import (
+    FastAPI,
+    Depends,
+    HTTPException,
+    WebSocket,
+    WebSocketDisconnect,
+    status,
+    UploadFile,
+    File,
+    Form,
+    Header,
+    Query,
+)
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPAuthorizationCredentials
+from pydantic import BaseModel, Field
+
+from auth import (
+    auth_router,
+    require_roles,
+    get_current_user,
+    initialize_auth_security,
+)
+
+from chatbot_api import router as chatbot_router
+
+import database
+import obs_service
+
+from vision_service import (
+    analyse_equipment_image_async,
+    MAX_IMAGE_SIZE,
+)
+
+from equipment_detection_service import (
+    detect_objects_async,
+    MAX_FRAME_SIZE,
+)
+
+
+# ============================================================
+# APPLICATION
+# ============================================================
+
+app = FastAPI(
+    title="IntelliWatch – Real-Time Anomaly Detection",
+    version="2.0.0",
+)
+
+_raw_origins = os.environ.get(
+    "INTELLIWATCH_CORS_ORIGINS",
+    "",
+)
+
+_extra_origins = [
+    origin.strip()
+    for origin in _raw_origins.split(",")
+    if origin.strip()
+]
+
+_allowed_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:4173",
+    "http://127.0.0.1:4173",
+    "https://localhost:5173",
+    "https://127.0.0.1:5173",
+    "https://localhost:4173",
+    "https://127.0.0.1:4173",
+] + _extra_origins
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(auth_router)
+app.include_router(chatbot_router)
+
+
+# ============================================================
+# GLOBAL SINGLETONS
+# ============================================================
+
+========== SERVER STARTUP ==========
+# ============================================================
+# STARTUP / SHUTDOWN
+# ============================================================
+
+@app.on_event("startup")
+async def startup():
+    global _controller
+    global _iot_layer
+    global _learning_system
+    global _brain
+
+    database.initialize_database()
+    initialize_auth_security()
+
+    print(
+        "[startup] Authentication security storage ready"
+    )
+
+    try:
+        from intelliwatch_brain import IntelliWatchBrain
+
+        _brain = IntelliWatchBrain(
+            auto_calibrate=False,
+        )
+
+        print("[startup] IntelliWatchBrain ready")
+
+    except Exception as error:
+        print(
+            f"[startup] IntelliWatchBrain init warning: {error}"
+        )
+
+    try:
+        from iot_layer import IoTIntegrationLayer
+
+        _iot_layer = IoTIntegrationLayer(
+            inference_callback=_handle_iot_inference_payload,
+        )
+
+        _iot_layer.start_heartbeat()
+
+        print(
+            "[startup] IoTIntegrationLayer ready "
+            "with hardware inference callback"
+        )
+
+    except Exception as error:
+        print(
+            f"[startup] IoT layer init warning: {error}"
+        )
+
+    try:
+        from equipment_controller import EquipmentController
+
+        _controller = EquipmentController(
+            iot_layer=_iot_layer
+        )
+
+        _controller.add_alert_listener(
+            _broadcast_alert
+        )
+
+    except Exception as error:
+        print(
+            f"[startup] EquipmentController init warning: {error}"
+
+========== LOGIN COMPONENT MAIN HANDLER ==========
+    setError('')
+  }
+
+
+
+  // ==================================================
+  // LOGIN
+  // ==================================================
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+
+    if (loading) return
+
+    setError('')
+
+    const enteredUsername = username.trim()
+
+    if (!enteredUsername || !password) {
+      setError('Please enter both username and password.')
+      return
+    }
+
+    const requestedRole =
+      mode === 'admin'
+        ? 'ADMIN'
+        : activeRole
+
+    const exactDemoCredentials =
+      DEMO_MODE &&
+      enteredUsername.toLowerCase() === 'demo' &&
+      password === 'demo'
+
+    setLoading(true)
+
+    try {
+      // ------------------------------------------------
+      // 1. DEMO LOGIN
+      // ------------------------------------------------
+      // Demo credentials create a local, restricted session.
+      // They never authenticate against the real backend.
+
+      
+
+      // ------------------------------------------------
+      // 2. CHECK SERVICE AVAILABILITY
+      // ------------------------------------------------
+
+      const currentAvailability = await detectAvailability()
+
+      setAvailability(currentAvailability)
+
+      // ------------------------------------------------
+      // 3. REGISTERED ACCOUNT AUTHENTICATION
+      // ------------------------------------------------
+
+      if (!currentAvailability.backendAvailable) {
+        if (exactDemoCredentials) {
+          completeDemoLogin(requestedRole)
+          return
+        }
+        setError(
+          DEMO_MODE
+            ? 'Online services are unavailable. Use demo / demo for the local demonstration.'
+            : 'The IntelliWatch backend is unavailable. Start the backend and try again.'
+        )
+        return
+      }
+      // ------------------------------------------------
+
+      let response
+
+      try {
+        response = await fetch(`${API}/auth/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            username: enteredUsername,
+            password,
+            requested_role: requestedRole,
+          }),
+        })
+      } catch (networkError) {
+        console.error(
+          '[IntelliWatch Login] Authentication request failed:',
+          networkError
+        )
+
+        const refreshedAvailability = await detectAvailability()
+
+        setAvailability(refreshedAvailability)
+
+        if (exactDemoCredentials && !refreshedAvailability.backendAvailable) {
+          completeDemoLogin(requestedRole)
+          return
+        }
+
+        setError(
+          refreshedAvailability.backendAvailable
+            ? 'Unable to reach the authentication endpoint. Check the HTTPS certificate, API URL and CORS configuration.'
+            : 'The IntelliWatch backend is unavailable. Please start the backend and try again.'
+        )
+
+        return
+      }
+
+      // ------------------------------------------------
+      // 4. PARSE THE SERVER RESPONSE
+      // ------------------------------------------------
+
+      if (!response.ok && [502, 503, 504].includes(response.status) && exactDemoCredentials) {
+        completeDemoLogin(requestedRole)
+        return
+      }
+
+      const responseText = await response.text()
+
+      let data = {}
+
+      if (responseText.trim()) {
+        try {
+          data = JSON.parse(responseText)
+        } catch (parseError) {
+          console.error(
+            '[IntelliWatch Login] Invalid JSON response:',
+            parseError
+          )
+
+          setError(
+            `The authentication server returned an invalid response (HTTP ${response.status}).`
+          )
+
+          return
+        }
+      }
+
+      if (
+        !data ||
+        typeof data !== 'object' ||
+        Array.isArray(data)
+      ) {
+        console.error(
+          '[IntelliWatch Login] Server returned an invalid response object.'
+        )
+
+        setError(
+          'The authentication server returned an invalid response.'
+        )
+
+        return
+      }
+
+      // ------------------------------------------------
+      // 5. HANDLE BACKEND AUTHENTICATION ERRORS
+      // ------------------------------------------------
+
+      if (!response.ok) {
+        const serverMessage = getLoginErrorMessage(
+          data,
+          `Authentication failed (HTTP ${response.status}).`
+        )
+
+        console.warn(
+          '[IntelliWatch Login] Backend rejected authentication:',
+          {
+            status: response.status,
+            message: serverMessage,
+          }
+        )
+
+        setError(serverMessage)
+        return
+      }
+
+      // ------------------------------------------------
+      // 6. VALIDATE SUCCESSFUL AUTHENTICATION RESPONSE
+      // ------------------------------------------------
+
+      if (
+        typeof data.access_token !== 'string' ||
+        !data.access_token.trim()
+      ) {
+        console.error(
+          '[IntelliWatch Login] Access token missing from successful response.'
+        )
+
+        setError(
+          'The authentication server did not return a valid access token.'
+        )
+
+        return
+      }
+
+      if (
+        typeof data.username !== 'string' ||
+        typeof data.role !== 'string' ||
+        !['ADMIN', 'OPERATOR', 'MAINTENANCE_ENGINEER'].includes(data.role) ||
+        data.role !== requestedRole ||
+        !Number.isInteger(data.user_id) ||
+        typeof data.full_name !== 'string'
+      ) {
+        console.error(
+          '[IntelliWatch Login] Incomplete or invalid account information returned by the backend.'
+        )
+
+        setError(
+          'The authentication server returned incomplete account information.'
+        )
+
+        return
+      }
+
+      const onlineUser = {
+        ...data,
+        account_role: data.account_role || data.role,
+        is_restricted_session: !!data.is_restricted_session,
+        is_demo_session: false,
+        session_mode: 'ONLINE',
+      }
+
+      const sessionUser = {
+        username: data.username,
+        full_name: data.full_name,
+        role: data.role,
+        account_role: data.account_role || data.role,
+        is_restricted_session: !!data.is_restricted_session,
+        is_demo_session: false,
+        user_id: data.user_id,
+        session_mode: 'ONLINE',
+      }
+
+      // ------------------------------------------------
+      // 7. STORE THE AUTHENTICATED SESSION
+      // ------------------------------------------------
+
+      try {
+        saveSession(data.access_token, sessionUser)
+      } catch (storageError) {
+        console.error(
+          '[IntelliWatch Login] Session storage failed:',
+          storageError
+        )
+
+        clearSavedSession()
+
+        setError(
+          'Your browser could not store the login session. Please enable session storage and try again.'
+        )
+
+        return
+      }
+
+      // ------------------------------------------------
+      // 9. INITIALIZE THE AUTHENTICATED APPLICATION
+      // ------------------------------------------------
+
+      try {
+        onLogin(onlineUser)
+      } catch (applicationError) {
+        console.error(
+          '[IntelliWatch Login] Application initialization failed after authentication:',
+          applicationError
+        )
+
+        clearSavedSession()
+
+        setError(
+          'Authentication succeeded, but the application could not initialize. Refresh the page and inspect the application console.'
+        )
+      }
+
+    } catch (unexpectedError) {
+      console.error(
+
+========== LOGIN COMPONENT MAIN RENDER ==========
+        <div className="login-root">
+          <div className="login-card">
+            <div className="login-error" role="alert">
+              Account registration requires both internet and an available
+              IntelliWatch backend.
+            </div>
+
+            <button
+              type="button"
+              className="login-btn"
+              onClick={() => setView('login')}
+            >
+              ← Back to Sign In
+            </button>
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <CreateAccountView
+        onBackToLogin={() => setView('login')}
+      />
+    )
+  }
+
+
+  // ==================================================
+  // LOGIN PAGE UI
+  // ==================================================
+
+  return (
+    <div className="login-root">
+      <div className="login-bg">
+        <span className="orb orb-1" />
+        <span className="orb orb-2" />
+        <span className="orb orb-3" />
+      </div>
+
+      <div className="login-stack">
+        <div className="login-card">
+          <div className="login-brand">
+            <span className="login-eye" aria-hidden="true">
+              &#128065;&#65039;
+            </span>
+
+            <div>
+              <h1 className="login-title">
+                IntelliWatch
+              </h1>
+
+              <p className="login-sub">
+                Real-Time Monitoring & Decision Support
+              </p>
+            </div>
+          </div>
+
+
+          {/* ROLE MODE SELECTOR */}
+
+          <div className="mode-selector">
+            <button
+              type="button"
+              className={`mode-tab${mode === 'operator' ? ' mode-tab--active' : ''}`}
+              onClick={() => switchMode('operator')}
+            >
+              <span className="mode-tab-icon">📊</span>
+
+              <span className="mode-tab-text">
+                <span className="mode-tab-title">
+                  Operator / Engineer
+                </span>
+
+                <span className="mode-tab-sub">
+                  Equipment monitoring and maintenance
+                </span>
+              </span>
+            </button>
+
+            <button
+              type="button"
+              className={`mode-tab mode-tab--admin${mode === 'admin' ? ' mode-tab--active-admin' : ''}`}
+              onClick={() => switchMode('admin')}
+            >
+              <span className="mode-tab-icon">🛡️</span>
+
+              <span className="mode-tab-text">
+                <span className="mode-tab-title">
+                  Administrator
+                </span>
+
+                <span className="mode-tab-sub">
+                  System administration access
+                </span>
+              </span>
+            </button>
+          </div>
+
+
+          {/* OPERATOR / ENGINEER SUBROLE */}
+
+          {mode === 'operator' && (
+            <div className="subrole-bar">
+              <button
+                type="button"
+                className={`subrole-btn${activeRole === 'OPERATOR' ? ' subrole-btn--active subrole-btn--op' : ''}`}
+                onClick={() => switchActiveRole('OPERATOR')}
+              >
+                📊 Operator
+              </button>
+
+              <button
+                type="button"
+                className={`subrole-btn${activeRole === 'MAINTENANCE_ENGINEER' ? ' subrole-btn--active subrole-btn--eng' : ''}`}
+                onClick={() => switchActiveRole('MAINTENANCE_ENGINEER')}
+              >
+                🔧 Engineer
+              </button>
+            </div>
+          )}
+
+
+          {/* LOGIN FORM */}
+
+          <form
+            className="login-form"
+            onSubmit={handleSubmit}
+            autoComplete="off"
+            noValidate
+          >
+            <div className="login-field">
+              <label
+                className="login-label"
+                htmlFor="iw-username"
+              >
+                Username
+              </label>
+
+              <div className="login-input-wrap">
+                <span className="login-input-icon">👤</span>
+
+                <input
+                  id="iw-username"
+                  className="login-input"
+                  type="text"
+                  placeholder="Enter your username"
+                  value={username}
+                  onChange={e => setUsername(e.target.value)}
+                  autoComplete="off"
+                  disabled={loading}
+                  spellCheck={false}
+                />
+              </div>
+
+
+            </div>
+
+            <div className="login-field">
+              <label
+                className="login-label"
+                htmlFor="iw-password"
+              >
+                Password
+              </label>
+
+              <div className="login-input-wrap">
+                <span className="login-input-icon">🔒</span>
+
+                <input
+                  id="iw-password"
+                  className="login-input"
+                  type={showPass ? 'text' : 'password'}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  disabled={loading}
+                />
+
+                <button
+                  type="button"
+                  className="login-eye-btn"
+                  onClick={() => setShowPass(p => !p)}
+                  aria-label={showPass ? 'Hide password' : 'Show password'}
+                >
+                  <PasswordVisibilityIcon visible={showPass} />
+                </button>
+              </div>
+            </div>
+
+            {error && (
+              <div className="login-error" role="alert">
+                ⚠️ {error}
+              </div>
+            )}
+
+            <button
+              className={`login-btn${mode === 'admin' ? ' login-btn--admin-purple' : ''}`}
+              type="submit"
+              disabled={loading}
+            >
+              {loading ? (
+                <span className="login-spinner" />
+              ) : (
+                'Sign In'
+              )}
+            </button>
+          </form>
+
+
+
+          {/* MANUAL OFFLINE DEMO ACCESS */}
+          <div style={{ marginTop: '14px' }}>
+            <button
+              type="button"
+              className="login-btn"
+              aria-label="Enter Offline Demo"
+              onClick={() =>
+                completeDemoLogin(
+                  mode === 'admin' ? 'ADMIN' : activeRole
+                )
+              }
+              disabled={loading}
+            >
+              Enter Offline Demo
+            </button>
+          </div>
+          {/* DEMO HINT — SHOWN ONLY IN FALLBACK MODE */}
+
+          {!availability.onlineMode && DEMO_MODE && (
+            <p className="login-demo-hint">
+              Demo fallback — username: <strong>demo</strong> · password:{' '}
+              <strong>demo</strong>
+              <span style={{ display: 'block', marginTop: 4 }}>
+                Available for Operator, Engineer and Admin demonstration.
+              </span>
+            </p>
+          )}
+
+
+          {/* ONLINE-ONLY ACCOUNT ACTIONS */}
+
+          {onlineMode && (
+            <div className="login-bottom-links">
+              <button
+                type="button"
+                className="login-extra-btn"
+                onClick={() => setModal('forgot')}
+              >
+                Forgot Password?
+              </button>
+
+              {mode === 'admin' && (
+                <>
+                  <span className="login-extra-sep">•</span>
+
+                  <button
+                    type="button"
+                    className="login-extra-btn login-extra-btn--admin"
+                    onClick={() => setModal('admin-register')}
+
+========== FIREBASE INITIALIZATION ==========
+import { getApp, getApps, initializeApp } from 'firebase/app'
+
+const firebaseConfig = {
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID,
+}
+
+export const isFirebaseConfigured = Boolean(
+    firebaseConfig.apiKey &&
+    firebaseConfig.authDomain &&
+    firebaseConfig.projectId &&
+    firebaseConfig.messagingSenderId &&
+    firebaseConfig.appId
+)
+
+export const firebaseApp = isFirebaseConfigured
+    ? (getApps().length ? getApp() : initializeApp(firebaseConfig))
+    : null
+
+========== FRONTEND ENVIRONMENT KEY NAMES ==========
+VITE_API_URL
+VITE_DEMO_MODE
+VITE_FIREBASE_API_KEY
+VITE_FIREBASE_AUTH_DOMAIN
+VITE_FIREBASE_PROJECT_ID
+VITE_FIREBASE_STORAGE_BUCKET
+VITE_FIREBASE_MESSAGING_SENDER_ID
+VITE_FIREBASE_APP_ID
+VITE_FIREBASE_VAPID_KEY
+
+========== FRONTEND PACKAGE CONFIGURATION ==========
+{
+  "name": "frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:https": "vite --https",
+    "dev:network": "vite --host",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview --host"
+  },
+  "dependencies": {
+    "@react-three/drei": "^10.7.9",
+    "@react-three/fiber": "^9.8.2",
+    "firebase": "^13.4.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "react-router-dom": "^7.18.5",
+    "recharts": "^3.10.1",
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.8",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "eslint": "^10.14.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.6.0",
+    "jsdom": "^31.0.0",
+    "vite": "^8.0.12",
+    "vitest": "^5.1.0"
+  },
+  "overrides": {
+    "minimatch": "^11.0.1"
+  }
+}
+
+========== FIREBASE ADMIN SDK ==========
+Firebase Admin: 7.8.0

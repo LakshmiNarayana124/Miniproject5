@@ -1,0 +1,10 @@
+{
+  "family": "explorer",
+  "model_name": "UnsupervisedModel",
+  "version": "v20261116_091955",
+  "training_timestamp": "2026-11-16T09:19:55.740006+00:00",
+  "dataset_hash": "",
+  "artifact_path": "C:\\Users\\Dell\\Downloads\\IntelliWatch_PC_Ready\\Backend\\models\\explorer\\v20261116_091955",
+  "metrics": {},
+  "schema_version": "1.0"
+}

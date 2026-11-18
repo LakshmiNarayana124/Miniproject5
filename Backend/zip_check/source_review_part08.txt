@@ -1,0 +1,476 @@
+    current_admin=Depends(admin_access),
+):
+    if user_id == current_admin["id"]:
+        raise HTTPException(
+            status_code=400,
+            detail="You cannot delete your own account.",
+        )
+
+    try:
+        _permanently_delete_account(user_id, current_admin["id"])
+
+        return {
+            "success": True,
+            "user_id": user_id,
+            "message": "Account permanently deleted. Audit evidence retained.",
+        }
+
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+# =========================================================
+# USER: REQUEST ADMIN PROMOTION
+# =========================================================
+
+@auth_router.post("/promotion-requests")
+async def request_admin_promotion(
+    request: PromotionRequestModel,
+    current_user=Depends(get_current_user),
+):
+    try:
+        request_id = _create_promotion_request(
+            current_user["id"], request.reason
+        )
+
+        return {
+            "success": True,
+            "request_id": request_id,
+            "status": "PENDING",
+            "message": "Admin promotion request submitted for review.",
+        }
+
+    except sqlite3.IntegrityError:
+        raise HTTPException(
+            status_code=409,
+            detail="A pending promotion request already exists.",
+        )
+
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+# =========================================================
+# ADMIN: REVIEW PROMOTION REQUESTS
+# =========================================================
+
+@auth_router.get("/promotion-requests")
+async def list_promotion_requests(
+    request_status: str = "PENDING",
+    current_admin=Depends(admin_access),
+):
+    try:
+        requests = _get_promotion_requests(request_status)
+
+        return {
+            "success": True,
+            "total": len(requests),
+            "requests": requests,
+        }
+
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+@auth_router.post("/promotion-requests/{request_id}/review")
+async def review_promotion_request(
+    request_id: int,
+    request: PromotionReviewRequest,
+    current_admin=Depends(admin_access),
+):
+    try:
+        result = _review_promotion_request(
+            request_id,
+            current_admin["id"],
+            request.approve,
+            request.remarks,
+        )
+
+        return {
+            "success": True,
+            **result,
+            "message": (
+                "Promotion approved."
+                if request.approve else "Promotion rejected."
+            ),
+        }
+
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+# =========================================================
+# PUBLIC: ACCOUNT RECOVERY REQUEST
+# =========================================================
+
+@auth_router.post("/account-recovery/request")
+async def request_account_recovery(
+    request: RecoveryRequestModel,
+    http_request: Request,
+):
+    rate_key = _enforce_rate_limit(
+        "account_recovery",
+        http_request,
+        request.username,
+        max_attempts=3,
+        window_seconds=900,
+    )
+
+    try:
+        _create_recovery_request(request.username, request.reason)
+        _record_failure(rate_key)
+
+    except sqlite3.IntegrityError:
+        _record_failure(rate_key)
+
+    return {
+        "success": True,
+        "message": _generic_recovery_message(),
+    }
+
+
+# =========================================================
+# ADMIN: REVIEW RECOVERY REQUESTS
+# =========================================================
+
+@auth_router.get("/account-recovery/requests")
+async def list_recovery_requests(
+    request_status: str = "PENDING",
+    current_admin=Depends(admin_access),
+):
+    try:
+        requests = _get_recovery_requests(request_status)
+
+        return {
+            "success": True,
+            "total": len(requests),
+            "requests": requests,
+        }
+
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+@auth_router.post("/account-recovery/requests/{request_id}/review")
+async def review_recovery_request(
+    request_id: int,
+    request: RecoveryReviewRequest,
+    current_admin=Depends(admin_access),
+):
+    try:
+        result = _review_recovery_request(
+            request_id,
+            current_admin["id"],
+            request.approve,
+            request.remarks,
+        )
+
+        return {
+            "success": True,
+            **result,
+            "message": (
+                "Account recovery approved."
+                if request.approve else "Account recovery rejected."
+            ),
+        }
+
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+# =========================================================
+# INITIAL ADMINISTRATOR SETUP
+# =========================================================
+
+def bootstrap_admin():
+    initialize_auth_security()
+
+    users = get_all_users()
+
+    if any(user["role"] == "ADMIN" for user in users):
+        print("Administrator account already exists.")
+        return
+
+    print("\nINTELLIWATCH - INITIAL ADMINISTRATOR SETUP")
+    print("=" * 50)
+
+    username = input("Admin username: ").strip()
+    full_name = input("Admin full name: ").strip()
+
+    password = getpass.getpass(
+        "Admin password (minimum 12 characters): "
+    )
+    confirm_password = getpass.getpass("Confirm admin password: ")
+
+    if password != confirm_password:
+        print("Passwords do not match.")
+        return
+
+    try:
+        user_id = create_user(
+            username=username,
+            full_name=full_name,
+            password_hash=hash_password(password),
+            role="ADMIN",
+        )
+
+        print("\nAdministrator created successfully.")
+        print(f"Admin ID: {user_id}")
+        print(f"Username: {username}")
+
+    except (ValueError, sqlite3.IntegrityError) as error:
+        print(f"\nAdministrator setup failed: {error}")
+
+
+# =========================================================
+# TOKEN REFRESH
+# =========================================================
+
+@auth_router.post("/refresh", response_model=LoginResponse)
+async def refresh_token(current_user=Depends(get_current_user)):
+    # Compatibility endpoint: this renews a still-valid access token.
+    # It is not a separate long-lived refresh-token mechanism.
+    return {
+        "access_token": create_access_token(
+            current_user,
+            session_role=current_user["role"],
+        ),
+        "token_type": "bearer",
+        "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        "user_id": current_user["id"],
+        "username": current_user["username"],
+        "full_name": current_user["full_name"],
+        "role": current_user["role"],
+        "account_role": current_user["account_role"],
+        "is_restricted_session": current_user["is_restricted_session"],
+    }
+
+
+# =========================================================
+# PUBLIC SELF-REGISTRATION
+# =========================================================
+
+@auth_router.post("/register")
+async def register(request: RegisterRequest, http_request: Request):
+    rate_key = _enforce_rate_limit(
+        "register",
+        http_request,
+        request.username,
+        max_attempts=5,
+        window_seconds=900,
+    )
+
+    try:
+        user_id = create_user(
+            username=request.username,
+            full_name=request.full_name,
+            password_hash=hash_password(request.password),
+            role=request.role,
+        )
+
+        _clear_failures(rate_key)
+
+        _audit_event(
+            "USER_REGISTERED",
+            actor=request.username,
+            target=user_id,
+            details={"role": request.role},
+        )
+
+        return {
+            "success": True,
+            "user_id": user_id,
+            "username": request.username,
+            "role": request.role,
+            "message": "Account created successfully. You can now sign in.",
+        }
+
+    except sqlite3.IntegrityError:
+        _record_failure(rate_key)
+        raise HTTPException(status_code=409, detail="Username already exists.")
+
+    except ValueError as error:
+        _record_failure(rate_key)
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+@auth_router.get("/registration-status")
+async def registration_status():
+    return {"registration_enabled": True}
+
+
+# =========================================================
+# PASSWORD RESET
+# =========================================================
+
+@auth_router.post("/forgot-password")
+async def forgot_password(
+    request: ForgotPasswordRequest,
+    http_request: Request,
+):
+    rate_key = _enforce_rate_limit(
+        "forgot_password",
+        http_request,
+        request.username,
+        max_attempts=3,
+        window_seconds=900,
+    )
+
+    # No verified email/SMS recovery provider is configured here.
+    # Therefore, do NOT create or return a reset token from this
+    # public endpoint. Returning a token would allow account takeover.
+    #
+    # Once a trusted delivery provider is configured, generate a
+    # random token, store only its hash using store_token(), and
+    # deliver the raw token privately through that provider.
+
+    user = get_user_by_username(request.username.strip())
+
+    if user and user["is_active"] and not user.get("is_deleted", 0):
+        _audit_event(
+            "PASSWORD_RESET_REQUESTED",
+            actor="PUBLIC_RECOVERY_REQUEST",
+            target=user["id"],
+            details={"status": "RECOVERY_CHANNEL_NOT_CONFIGURED"},
+        )
+
+    _record_failure(rate_key)
+
+    return {
+        "success": True,
+        "message": (
+            "If the account exists, password reset instructions "
+            "will be sent through the configured recovery channel."
+        ),
+    }
+
+
+@auth_router.post("/reset-password")
+async def reset_password(request: ResetPasswordRequest):
+    # Hash before consuming the token so a password validation error
+    # does not unnecessarily destroy a valid recovery token.
+    try:
+        new_hash = hash_password(request.new_password)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+    # Tokens are stored by hash, never in plaintext.
+    try:
+        entry = consume_token(request.token, "PASSWORD_RESET")
+    except Exception:
+        entry = None
+
+    if not entry:
+        raise HTTPException(
+            status_code=400,
+            detail="Reset token is invalid, expired or already used.",
+        )
+
+    user_id = entry.get("user_id")
+
+    if not user_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Reset token is invalid or expired.",
+        )
+
+    connection = _begin_transaction()
+
+    try:
+        user = connection.execute("""
+            SELECT id, username, is_active, is_deleted
+            FROM users
+            WHERE id = ?
+        """, (user_id,)).fetchone()
+
+        if (
+            not user
+            or not user["is_active"]
+            or user["is_deleted"]
+        ):
+            raise ValueError("Account not found or inactive.")
+
+        cursor = connection.execute("""
+            UPDATE users
+            SET password_hash = ?,
+                session_version = COALESCE(session_version, 0) + 1
+            WHERE id = ?
+              AND is_active = 1
+              AND is_deleted = 0
+        """, (new_hash, user_id))
+
+        if cursor.rowcount != 1:
+            raise ValueError("Account not found or inactive.")
+
+        _audit_transaction(
+            connection,
+            "PASSWORD_RESET",
+            user["username"],
+            user_id,
+            {"sessions_invalidated": True},
+        )
+
+        connection.commit()
+
+    except Exception as error:
+        connection.rollback()
+        if isinstance(error, ValueError):
+            raise HTTPException(status_code=400, detail=str(error))
+        raise
+
+    finally:
+        connection.close()
+
+    # Revoke outstanding persistent tokens for this account.
+    revoke_user_tokens(user_id)
+
+    return {
+        "success": True,
+        "message": "Password updated successfully. Please sign in again.",
+    }
+
+
+# =========================================================
+# ADMIN INVITATION SYSTEM
+# =========================================================
+
+@auth_router.post("/admin-invite")
+async def create_admin_invite(current_admin=Depends(admin_access)):
+    token = secrets.token_urlsafe(40)
+    expires_at = datetime.now(timezone.utc) + timedelta(
+        seconds=ADMIN_INVITE_TTL_SECONDS
+    )
+
+    try:
+        store_token(
+            token,
+            "ADMIN_INVITE",
+            expires_at,
+            created_by_user_id=current_admin["id"],
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to create Admin invitation.",
+        )
+
+    _audit_event(
+        "ADMIN_INVITE_CREATED",
+        actor=current_admin["username"],
+        details={"expires_in_hours": 24},
+    )
+
+    # The raw token is shown only once to the authenticated Admin.
+    # The persistent store must retain only its hash.
+    return {
+        "success": True,
+        "admin_invite_token": token,
+        "expires_in_hours": 24,
+        "instructions": (
+            "Share this token securely. It can be used once "
+            "within 24 hours at POST /auth/register-admin."
+        ),
+    }
+
+
+@auth_router.get("/admin-invite")

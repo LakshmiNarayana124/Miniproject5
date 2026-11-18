@@ -1,0 +1,133 @@
+/* ── Profile Page ─────────────────────────────────────────────────────── */
+.pp-wrap {
+  max-width: 540px;
+  margin: 0 auto;
+  padding: 32px 20px 60px;
+}
+
+/* ── Hero header ── */
+.pp-hero {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #252837;
+  margin-bottom: 8px;
+}
+
+.pp-avatar {
+  width: 56px; height: 56px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #aa3bff, #7c3aed);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; font-weight: 800; color: #fff;
+  box-shadow: 0 2px 14px #aa3bff22;
+  flex-shrink: 0;
+}
+
+.pp-hero-text { flex: 1; }
+.pp-name { font-size: 20px; font-weight: 800; color: #e8eaf2; margin: 0; line-height: 1.2; }
+.pp-role { font-size: 12px; color: #c4b5fd; font-weight: 600; }
+
+.pp-mode {
+  font-size: 11px; font-weight: 700; padding: 3px 10px;
+  border-radius: 20px; flex-shrink: 0;
+}
+.pp-mode--live { background: #22c55e12; color: #4ade80; }
+.pp-mode--demo { background: #f59e0b12; color: #fbbf24; }
+
+/* ── Section headers ── */
+.pp-section {
+  font-size: 10px; font-weight: 700; color: #4a5070;
+  letter-spacing: .8px; text-transform: uppercase;
+  margin: 22px 0 6px;
+}
+
+/* ── Detail rows ── */
+.pp-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 2px;
+  border-bottom: 1px solid #1a1d28;
+}
+.pp-label { font-size: 13px; color: #6b7280; font-weight: 500; }
+.pp-val { font-size: 14px; color: #e8eaf2; font-weight: 600; }
+
+/* ── Tags ── */
+.pp-tag {
+  font-size: 12px; font-weight: 700; padding: 2px 9px;
+  border-radius: 20px;
+}
+.pp-tag--ok { background: #22c55e12; color: #4ade80; }
+.pp-tag--warn { background: #ef444412; color: #f87171; }
+
+/* ── Link button ── */
+.pp-link {
+  background: none; border: none; font-family: inherit;
+  font-size: 13px; color: #aa3bff; cursor: pointer;
+  padding: 12px 2px; font-weight: 600;
+  transition: color .15s;
+}
+.pp-link:hover { color: #c77dff; }
+
+/* ── Password form ── */
+.pp-pw-form { padding: 14px 0 4px; display: flex; flex-direction: column; gap: 10px; }
+.pp-input {
+  width: 100%; background: #0d0f14; border: 1px solid #252837;
+  border-radius: 10px; padding: 11px 14px; font-size: 14px; color: #e8eaf2;
+  font-family: inherit; outline: none; box-sizing: border-box;
+  transition: border-color .2s, box-shadow .2s;
+}
+.pp-input:focus { border-color: #aa3bff; box-shadow: 0 0 0 3px #aa3bff20; }
+.pp-input::placeholder { color: #4a5070; }
+
+.pp-err { font-size: 12px; color: #f87171; margin: 0; }
+.pp-ok { font-size: 12px; color: #4ade80; margin: 0; }
+
+.pp-pw-btns { display: flex; gap: 10px; margin-top: 4px; }
+
+/* ── Buttons ── */
+.pp-btn {
+  padding: 10px 18px; background: transparent;
+  border: 1px solid #252837; border-radius: 10px;
+  color: #a0a8c0; font-family: inherit; font-size: 13px; font-weight: 700;
+  cursor: pointer; transition: all .18s;
+}
+.pp-btn:hover { border-color: #aa3bff30; color: #e8eaf2; }
+
+.pp-btn--primary {
+  background: linear-gradient(135deg, #aa3bff, #7c3aed);
+  border: none; color: #fff;
+}
+.pp-btn--primary:hover { opacity: .9; color: #fff; }
+
+.pp-btn--danger { border-color: #e0555530; color: #f87171; }
+.pp-btn--danger:hover { background: #e055550e; border-color: #e0555550; color: #ef4444; }
+
+/* ── Logout ── */
+.pp-logout { display: flex; justify-content: center; padding-top: 28px; }
+
+/* ── Mobile ── */
+@media (max-width: 520px) {
+  .pp-wrap { padding: 24px 14px 40px; }
+  .pp-avatar { width: 48px; height: 48px; font-size: 22px; border-radius: 12px; }
+  .pp-name { font-size: 18px; }
+}
+
+/* ── Light mode ── */
+.light .pp-name { color: #1a1a2e; }
+.light .pp-role { color: #6d28d9; }
+.light .pp-section { color: #9ca3af; }
+.light .pp-row { border-bottom-color: #e5e7eb; }
+.light .pp-label { color: #6b7280; }
+.light .pp-val { color: #1a1a2e; }
+.light .pp-input {
+  background: #fff; border-color: #d1d5db; color: #1a1a2e;
+}
+.light .pp-input::placeholder { color: #9ca3af; }
+.light .pp-input:focus { border-color: #7c3aed; box-shadow: 0 0 0 3px #7c3aed20; }
+.light .pp-btn { background: #f3f4f6; border-color: #d1d5db; color: #4b5563; }
+.light .pp-btn:hover { border-color: #7c3aed40; color: #1a1a2e; }
+.light .pp-err { color: #dc2626; }
+.light .pp-ok { color: #16a34a; }
+.light .pp-link { color: #7c3aed; }
+.light .pp-link:hover { color: #6d28d9; }

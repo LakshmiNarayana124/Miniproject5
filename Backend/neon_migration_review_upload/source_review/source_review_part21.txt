@@ -1,0 +1,584 @@
+app.include_router(chatbot_router)
+
+
+# ============================================================
+# GLOBAL SINGLETONS
+# ============================================================
+
+_controller = None
+_iot_layer = None
+_learning_system = None
+_brain = None
+
+_status_clients: set = set()
+_sensor_clients: list = []
+
+_brain_lock = threading.Lock()
+
+_assessment_lock = threading.Lock()
+_latest_assessments = {}
+
+try:
+    SENSOR_STALE_SECONDS = max(
+        3.0,
+        float(
+            os.environ.get(
+                "INTELLIWATCH_SENSOR_STALE_SECONDS",
+                "10",
+            )
+        ),
+    )
+except (TypeError, ValueError):
+    SENSOR_STALE_SECONDS = 10.0
+
+
+EXPECTED_SENSORS = (
+    "vibration",
+    "temperature",
+    "current",
+)
+
+DEFAULT_SENSOR_UNITS = {
+    "vibration": "g",
+    "temperature": "°C",
+    "current": "A",
+}
+
+VALID_SENSOR_QUALITIES = {
+    "GOOD",
+    "VALID",
+    "WARNING",
+    "DEGRADED",
+}
+
+
+# ============================================================
+# HARDWARE SENSOR HELPERS
+# ============================================================
+
+def _unavailable_sensor_record(unit):
+    return {
+        "value": None,
+        "unit": unit,
+        "quality": "UNAVAILABLE",
+        "metadata": {
+            "source": "hardware",
+        },
+        "source": "hardware",
+    }
+
+
+def _get_hardware_snapshot():
+    """
+    Return the latest validated IoT hardware snapshot.
+
+    A stale reading is not treated as a current reading.
+    No synthetic or fallback values are generated here.
+    """
+
+    if _iot_layer is None:
+        return None
+
+    try:
+        return _iot_layer.get_latest_sensor_snapshot(
+            max_age_seconds=SENSOR_STALE_SECONDS,
+        )
+    except Exception:
+        return None
+
+
+def _get_snapshot_record(snapshot, sensor_key):
+    """
+    Return a sensor record while preserving its real value and unit.
+
+    Missing, invalid, stale, or unavailable measurements are returned
+    as None rather than being substituted with artificial values.
+    """
+
+    unit = DEFAULT_SENSOR_UNITS[sensor_key]
+
+    if not isinstance(snapshot, dict):
+        return _unavailable_sensor_record(unit)
+
+    record = snapshot.get(sensor_key)
+
+    if not isinstance(record, dict):
+        return _unavailable_sensor_record(unit)
+
+    value = record.get("value")
+    quality = str(
+        record.get("quality", "UNAVAILABLE")
+    ).upper()
+
+    if (
+        value is None
+        or quality not in VALID_SENSOR_QUALITIES
+    ):
+        result = _unavailable_sensor_record(
+            record.get("unit") or unit
+        )
+
+        if quality in {"ERROR", "UNAVAILABLE"}:
+            result["quality"] = quality
+
+        return result
+
+    metadata = record.get("metadata", {})
+
+    if not isinstance(metadata, dict):
+        metadata = {}
+
+    result = deepcopy(record)
+
+    result["value"] = float(value)
+    result["unit"] = record.get("unit") or unit
+    result["quality"] = quality
+    result["metadata"] = deepcopy(metadata)
+    result["metadata"]["source"] = "hardware"
+    result["source"] = "hardware"
+
+    return result
+
+
+def _build_sensor_stream_payload(snapshot):
+    """Build the frontend-compatible sensor streaming payload."""
+
+    now_ms = int(time.time() * 1000)
+
+    if snapshot:
+        try:
+            timestamp_ms = int(
+                float(snapshot.get("timestamp", time.time())) * 1000
+            )
+        except (TypeError, ValueError):
+            timestamp_ms = now_ms
+
+        device_id = snapshot.get("device_id")
+        status_value = "ok"
+    else:
+        timestamp_ms = now_ms
+        device_id = None
+        status_value = "unavailable"
+
+    records = {
+        key: _get_snapshot_record(snapshot, key)
+        for key in EXPECTED_SENSORS
+    }
+
+    if not any(
+        record.get("value") is not None
+        for record in records.values()
+    ):
+        status_value = "unavailable"
+
+    payload = {
+        "ts": timestamp_ms,
+        "timestamp": timestamp_ms / 1000,
+        "source": "hardware",
+        "device_id": device_id,
+        "status": status_value,
+        "vibration": records["vibration"],
+        "temperature": records["temperature"],
+        "current": records["current"],
+    }
+
+    return payload
+
+
+def _unavailable_assessment(message=None):
+    """Structured unavailable response when no assessment exists."""
+
+    return {
+        "success": False,
+        "message": message or (
+            "Awaiting valid hardware sensor readings. "
+            "No synthetic values were substituted."
+        ),
+        "sensor_readings_saved": 0,
+        "sensor_statuses": {
+            "vibration": "UNAVAILABLE",
+            "temperature": "UNAVAILABLE",
+            "current": "UNAVAILABLE",
+        },
+        "overall_system_status": "UNAVAILABLE",
+    }
+
+
+# ============================================================
+# IOT-TO-BRAIN INFERENCE CALLBACK
+# ============================================================
+
+def _handle_iot_inference_payload(device_id, raw_payload):
+    """
+    Process a validated hardware payload exactly once after ingestion.
+    """
+
+    if _brain is None:
+        return
+
+    try:
+        if not isinstance(raw_payload, bytes):
+            raise ValueError(
+                "IoT payload must be bytes."
+            )
+
+        decoded = json.loads(
+            raw_payload.decode("utf-8")
+        )
+
+        if not isinstance(decoded, dict):
+            raise ValueError(
+                "IoT payload must contain a JSON object."
+            )
+
+        source_readings = decoded.get(
+            "readings",
+            decoded,
+        )
+
+        if not isinstance(source_readings, dict):
+            raise ValueError(
+                "Sensor readings must be a JSON object."
+            )
+
+        readings = {}
+
+        for sensor_key in EXPECTED_SENSORS:
+            record = source_readings.get(sensor_key)
+
+            if not isinstance(record, dict):
+                continue
+
+            clean_record = deepcopy(record)
+
+            metadata = clean_record.get(
+                "metadata",
+                {},
+            )
+
+            if not isinstance(metadata, dict):
+                metadata = {}
+
+            metadata["source"] = "hardware"
+
+            clean_record["metadata"] = metadata
+            clean_record["source"] = "hardware"
+
+            readings[sensor_key] = clean_record
+
+        if not readings:
+            raise ValueError(
+                "No recognised sensor records were received."
+            )
+
+        with _brain_lock:
+            result = _brain.run_cycle(
+                mode="automatic",
+                readings=readings,
+            )
+
+        with _assessment_lock:
+            _latest_assessments[device_id] = {
+                "processed_at": time.time(),
+                "result": result,
+            }
+
+        logger_message = (
+            result.get("overall_system_status", "UNKNOWN")
+            if isinstance(result, dict)
+            else "UNKNOWN"
+        )
+
+        print(
+            f"[IoT] Brain processed hardware snapshot "
+            f"from '{device_id}': {logger_message}"
+        )
+
+    except Exception as error:
+        print(
+            f"[IoT] Brain processing failed for "
+            f"'{device_id}': {error}"
+        )
+
+
+# ============================================================
+# WEBSOCKET AUTHENTICATION
+# ============================================================
+
+WEBSOCKET_ALLOWED_ROLES = {
+    "ADMIN",
+    "OPERATOR",
+    "MAINTENANCE_ENGINEER",
+}
+
+
+async def _authenticate_websocket(websocket):
+    token = websocket.query_params.get("token")
+
+    if not token:
+        await websocket.close(
+            code=1008,
+            reason="Authentication required",
+        )
+        return None
+
+    credentials = HTTPAuthorizationCredentials(
+        scheme="Bearer",
+        credentials=token,
+    )
+
+    try:
+        user = await get_current_user(credentials)
+
+    except HTTPException:
+        await websocket.close(
+            code=1008,
+            reason="Invalid or expired authentication token",
+        )
+        return None
+
+    except Exception:
+        await websocket.close(
+            code=1011,
+            reason="Authentication service unavailable",
+        )
+        return None
+
+    if user.get("role") not in WEBSOCKET_ALLOWED_ROLES:
+        await websocket.close(
+            code=1008,
+            reason="Insufficient permissions",
+        )
+        return None
+
+    return user
+
+
+# ============================================================
+# STARTUP / SHUTDOWN
+# ============================================================
+
+@app.on_event("startup")
+async def startup():
+    global _controller
+    global _iot_layer
+    global _learning_system
+    global _brain
+
+    database.initialize_database()
+    initialize_auth_security()
+
+    print(
+        "[startup] Authentication security storage ready"
+    )
+
+    try:
+        from intelliwatch_brain import IntelliWatchBrain
+
+        _brain = IntelliWatchBrain(
+            auto_calibrate=False,
+        )
+
+        print("[startup] IntelliWatchBrain ready")
+
+    except Exception as error:
+        print(
+            f"[startup] IntelliWatchBrain init warning: {error}"
+        )
+
+    try:
+        from iot_layer import IoTIntegrationLayer
+
+        _iot_layer = IoTIntegrationLayer(
+            inference_callback=_handle_iot_inference_payload,
+        )
+
+        _iot_layer.start_heartbeat()
+
+        print(
+            "[startup] IoTIntegrationLayer ready "
+            "with hardware inference callback"
+        )
+
+    except Exception as error:
+        print(
+            f"[startup] IoT layer init warning: {error}"
+        )
+
+    try:
+        from equipment_controller import EquipmentController
+
+        _controller = EquipmentController(
+            iot_layer=_iot_layer
+        )
+
+        _controller.add_alert_listener(
+            _broadcast_alert
+        )
+
+    except Exception as error:
+        print(
+            f"[startup] EquipmentController init warning: {error}"
+        )
+
+    try:
+        from learning_system import LearningSystem
+
+        _learning_system = LearningSystem()
+
+    except Exception as error:
+        print(
+            f"[startup] LearningSystem init warning: {error}"
+        )
+
+    try:
+        from explorer_ml import train_explorer_model
+        from model_registry import registry
+
+        if registry.active_model("explorer") is None:
+            train_explorer_model()
+
+    except Exception as error:
+        print(
+            f"[startup] Explorer model init warning: {error}"
+        )
+
+    try:
+        obs_service.check_model_degradation()
+    except Exception as error:
+        print(
+            f"[startup] Model degradation check warning: {error}"
+        )
+
+
+@app.on_event("shutdown")
+async def shutdown():
+    if _iot_layer:
+        try:
+            _iot_layer.stop_heartbeat()
+        except Exception:
+            pass
+
+    for ws in list(_sensor_clients):
+        try:
+            await ws.close()
+        except Exception:
+            pass
+
+    for ws in list(_status_clients):
+        try:
+            await ws.close()
+        except Exception:
+            pass
+
+
+# ============================================================
+# STATUS BROADCAST
+# ============================================================
+
+def _broadcast_alert(alert):
+    msg = json.dumps(
+        alert,
+        default=str,
+    )
+
+    async def _send_all():
+        for ws in list(_status_clients):
+            try:
+                await ws.send_text(msg)
+            except Exception:
+                _status_clients.discard(ws)
+
+    try:
+        loop = asyncio.get_event_loop()
+
+        if loop.is_running():
+            asyncio.run_coroutine_threadsafe(
+                _send_all(),
+                loop,
+            )
+
+    except Exception:
+        pass
+
+
+# ============================================================
+# PERMISSIONS
+# ============================================================
+
+sensor_access = require_roles(
+    "ADMIN",
+    "OPERATOR",
+    "MAINTENANCE_ENGINEER",
+)
+
+admin_access = require_roles("ADMIN")
+
+actuation_access = require_roles(
+    "ADMIN",
+    "MAINTENANCE_ENGINEER",
+)
+
+operator_access = require_roles(
+    "OPERATOR",
+    "MAINTENANCE_ENGINEER",
+)
+
+label_access = require_roles(
+    "ADMIN",
+    "OPERATOR",
+    "MAINTENANCE_ENGINEER",
+)
+
+
+# ============================================================
+# EQUIPMENT VISION — IMAGE ANALYSIS
+# ============================================================
+
+@app.post(
+    "/vision/analyse",
+    tags=["Vision"],
+)
+async def analyse_equipment(
+    image: UploadFile = File(...),
+    language: str = Form(default="en"),
+    user=Depends(sensor_access),
+):
+    """
+    Analyse one manually captured equipment image.
+
+    Supported languages:
+        en - English
+        hi - Hindi
+        kn - Kannada
+        ta - Tamil
+        te - Telugu
+    """
+
+    allowed_types = {
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+    }
+
+    supported_languages = {
+        "en",
+        "hi",
+        "kn",
+        "ta",
+        "te",
+    }
+
+    language = str(language).strip().lower()
+
+    if language not in supported_languages:
+        await image.close()
+
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Unsupported language. "
+                "Use en, hi, kn, ta or te."
+            ),
+        )
+

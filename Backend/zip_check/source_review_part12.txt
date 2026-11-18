@@ -1,0 +1,494 @@
+                    max(row["maximum_value"], value),
+                    now,
+                    row["sensor_profile_id"]
+                ))
+
+            else:
+
+                connection.execute("""
+                    INSERT INTO sensor_knowledge_profiles (
+                        sensor_name,
+                        feature_name,
+                        label,
+                        sample_count,
+                        mean_value,
+                        m2_value,
+                        minimum_value,
+                        maximum_value,
+                        created_at,
+                        updated_at
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    sensor_name,
+                    feature_name,
+                    label,
+                    1,
+                    value,
+                    0.0,
+                    value,
+                    value,
+                    now,
+                    now
+                ))
+
+    # ========================================================
+    # 9. VERIFIED KNOWLEDGE REGISTRATION
+    # ========================================================
+
+    def learn_from_verified_pattern(
+        self,
+        readings,
+        label,
+        verified_by
+    ):
+
+        label = normalise_name(label)
+
+        if label not in ("normal", "abnormal"):
+            raise ValueError(
+                "Label must be normal or abnormal."
+            )
+
+        if not str(verified_by).strip():
+            raise ValueError(
+                "Verification identity required."
+            )
+
+        result = normalise_readings(readings)
+
+        features = result["features"]
+
+        now = current_timestamp()
+
+        with self.connect() as connection:
+
+            connection.execute("""
+                INSERT INTO knowledge_profiles (
+                    label,
+                    feature_names,
+                    sample_count,
+                    means,
+                    m2_values,
+                    minimums,
+                    maximums,
+                    created_at,
+                    updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                label,
+                safe_json(list(features.keys())),
+                1,
+                safe_json(features),
+                safe_json({
+                    key: 0.0 for key in features
+                }),
+                safe_json(features),
+                safe_json(features),
+                now,
+                now
+            ))
+
+        for feature_name, value in features.items():
+
+            group = sensor_group(feature_name)
+
+            if group == "other":
+                continue
+
+            self.learn_sensor_feature(
+                group,
+                feature_name,
+                value,
+                label
+            )
+
+        with self.connect() as connection:
+
+            connection.execute("""
+                INSERT INTO analysis_events (
+                    timestamp,
+                    analysis_mode,
+                    decision,
+                    explanation,
+                    manual_note
+                )
+                VALUES (?, ?, ?, ?, ?)
+            """, (
+                now,
+                "verified_registration",
+                label,
+                "Verified combined and individual sensor knowledge registered.",
+                f"Verified by: {verified_by}"
+            ))
+
+        return {
+            "success": True,
+            "stored_as": label,
+            "features": features
+        }
+
+    # ========================================================
+    # 10. SENSOR-WISE STATUS ANALYSIS
+    # ========================================================
+
+    def get_sensor_limit(self, feature_name):
+
+        return self.operating_limits.get(
+            feature_name,
+            {}
+        )
+
+    def analyse_sensor(self, feature_name, value):
+
+        group = sensor_group(feature_name)
+
+        if group == "other":
+
+            return {
+                "sensor": feature_name,
+                "sensor_key": group,
+                "feature": feature_name,
+                "value": value,
+                "status": "UNKNOWN",
+                "classification": "UNKNOWN",
+                "explanation": (
+                    "No sensor-specific analysis configured."
+                )
+            }
+
+        profiles = self.get_sensor_profiles(
+            group,
+            feature_name
+        )
+
+        normal_matches = []
+        abnormal_matches = []
+
+        for profile in profiles:
+
+            count = profile["sample_count"]
+
+            variance = (
+                profile["m2_value"] / (count - 1)
+                if count > 1 else 0
+            )
+
+            scale = max(
+                math.sqrt(max(variance, 0)),
+                abs(profile["mean_value"]) * 0.05,
+                0.05
+            )
+
+            distance = abs(
+                value - profile["mean_value"]
+            ) / scale
+
+            item = {
+                "distance": distance,
+                "profile": profile
+            }
+
+            if profile["label"] == "normal":
+                normal_matches.append(item)
+
+            elif profile["label"] == "abnormal":
+                abnormal_matches.append(item)
+
+        nearest_normal = (
+            min(
+                normal_matches,
+                key=lambda item: item["distance"]
+            )
+            if normal_matches else None
+        )
+
+        nearest_abnormal = (
+            min(
+                abnormal_matches,
+                key=lambda item: item["distance"]
+            )
+            if abnormal_matches else None
+        )
+
+        limits = self.get_sensor_limit(
+            feature_name
+        )
+
+        critical_min = limits.get(
+            "critical_minimum"
+        )
+
+        critical_max = limits.get(
+            "critical_maximum"
+        )
+
+        if (
+            critical_min is not None
+            and value < critical_min
+        ) or (
+            critical_max is not None
+            and value > critical_max
+        ):
+
+            status = "CRITICAL"
+            classification = "ABNORMAL"
+
+            explanation = (
+                "Configured critical operating limit exceeded."
+            )
+
+        else:
+
+            warning_min = limits.get(
+                "warning_minimum"
+            )
+
+            warning_max = limits.get(
+                "warning_maximum"
+            )
+
+            outside_warning = (
+                warning_min is not None
+                and value < warning_min
+            ) or (
+                warning_max is not None
+                and value > warning_max
+            )
+
+            if outside_warning:
+
+                status = "WARNING"
+                classification = "ABNORMAL"
+
+                explanation = (
+                    "Configured warning operating limit exceeded."
+                )
+
+            elif (
+                nearest_abnormal
+                and nearest_abnormal["distance"]
+                <= KNOWN_PATTERN_DISTANCE
+                and (
+                    not nearest_normal
+                    or nearest_abnormal["distance"]
+                    < nearest_normal["distance"]
+                )
+            ):
+
+                status = "WARNING"
+                classification = "ABNORMAL"
+
+                explanation = (
+                    "Sensor behaviour resembles established abnormal knowledge."
+                )
+
+            elif (
+                nearest_normal
+                and nearest_normal["distance"]
+                <= KNOWN_PATTERN_DISTANCE
+            ):
+
+                status = "NORMAL"
+                classification = "NORMAL"
+
+                explanation = (
+                    "Sensor behaviour matches established normal knowledge."
+                )
+
+            else:
+
+                status = "UNKNOWN"
+                classification = "UNKNOWN"
+
+                explanation = (
+                    "Insufficient sensor-specific knowledge to classify behaviour."
+                )
+
+        result = {
+            "sensor": SENSOR_NAMES.get(group, group),
+            "sensor_key": group,
+            "feature": feature_name,
+            "value": value,
+            "status": status,
+            "classification": classification,
+            "explanation": explanation
+        }
+
+        self.save_sensor_status(result)
+
+        return result
+
+    # ========================================================
+    # 11. SENSOR FEATURE AGGREGATION
+    # ========================================================
+
+    def aggregate_sensor_results(self, feature_results):
+        """
+        Preserve every feature result while producing one
+        consolidated status for each physical sensor.
+
+        The most severe feature status determines the
+        consolidated physical sensor status.
+        """
+
+        grouped = {}
+
+        for feature_name, result in feature_results.items():
+
+            group = sensor_group(feature_name)
+
+            if group == "other":
+                continue
+
+            grouped.setdefault(group, []).append(result)
+
+        sensor_statuses = {}
+
+        for group, results in grouped.items():
+
+            representative = max(
+                results,
+                key=lambda item: STATUS_PRIORITY.get(
+                    item["status"],
+                    1
+                )
+            )
+
+            status = representative["status"]
+
+            explanations = [
+                (
+                    f"{item['feature']}: "
+                    f"{item['status']} - "
+                    f"{item['explanation']}"
+                )
+                for item in results
+                if item["status"] != "NORMAL"
+            ]
+
+            if not explanations:
+
+                explanation = (
+                    "All analysed features of this sensor are normal."
+                )
+
+            else:
+
+                explanation = "; ".join(
+                    explanations
+                )
+
+            sensor_statuses[group] = {
+                "sensor": SENSOR_NAMES[group],
+                "sensor_key": group,
+                "status": status,
+                "classification": representative[
+                    "classification"
+                ],
+                "value": representative["value"],
+                "representative_feature": representative[
+                    "feature"
+                ],
+                "feature_count": len(results),
+                "feature_results": results,
+                "explanation": explanation
+            }
+
+        return sensor_statuses
+
+    def add_unavailable_sensors(self, sensor_statuses):
+        """
+        Missing physical sensors must not silently disappear
+        or be treated as normal.
+        """
+
+        for sensor_key in EXPECTED_SENSORS:
+
+            if sensor_key not in sensor_statuses:
+
+                sensor_statuses[sensor_key] = {
+                    "sensor": SENSOR_NAMES[sensor_key],
+                    "sensor_key": sensor_key,
+                    "status": "UNAVAILABLE",
+                    "classification": "UNKNOWN",
+                    "value": None,
+                    "representative_feature": None,
+                    "feature_count": 0,
+                    "feature_results": [],
+                    "explanation": (
+                        "No valid reading was received from this sensor."
+                    )
+                }
+
+        return sensor_statuses
+
+    # ========================================================
+    # 12. SENSOR STATUS HISTORY
+    # ========================================================
+
+    def save_sensor_status(self, result):
+
+        with self.connect() as connection:
+
+            connection.execute("""
+                INSERT INTO sensor_status_history (
+                    timestamp,
+                    sensor_name,
+                    feature_name,
+                    sensor_value,
+                    status,
+                    classification,
+                    explanation
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (
+                current_timestamp(),
+                result["sensor_key"],
+                result["feature"],
+                result["value"],
+                result["status"],
+                result["classification"],
+                result["explanation"]
+            ))
+
+    def get_sensor_history(
+        self,
+        sensor_name,
+        limit=50
+    ):
+
+        with self.connect() as connection:
+
+            rows = connection.execute("""
+                SELECT * FROM sensor_status_history
+                WHERE sensor_name = ?
+                ORDER BY history_id DESC
+                LIMIT ?
+            """, (
+                normalise_name(sensor_name),
+                limit
+            )).fetchall()
+
+        return [
+            dict(row)
+            for row in rows
+        ]
+
+    # ========================================================
+    # 13. UNKNOWN COMBINED PATTERNS
+    # ========================================================
+
+    def get_unknown_patterns(self):
+
+        with self.connect() as connection:
+
+            rows = connection.execute("""
+                SELECT * FROM unknown_patterns
+                WHERE status = 'investigating'
+            """).fetchall()
+
+        return [
+            {
+                "pattern_id": row["pattern_id"],
