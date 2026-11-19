@@ -135,4 +135,40 @@ The Pi pushes readings to `POST /iot/data/{device_id}` with `X-Device-Credential
 
 ---
 
+---
+
+## Important URLs
+
+| Resource | Link |
+|---|---|
+| **Frontend (Live)** | https://frontend-alpha-tawny-49.vercel.app |
+| **Backend API (Live)** | https://intelliwatch-backend-production.up.railway.app |
+| **Backend Health Check** | https://intelliwatch-backend-production.up.railway.app/health |
+| **API Docs (Swagger)** | https://intelliwatch-backend-production.up.railway.app/docs |
+| **Database (Neon)** | https://console.neon.tech/app/projects/gentle-snow-07661904 |
+| **GitHub — Miniproject5** | https://github.com/LakshmiNarayana124/Miniproject5 |
+| **GitHub — IntelliWatch Private** | https://github.com/LakshmiNarayana124/IntelliWatch-Private |
+| **Railway Dashboard** | https://railway.com/project/2f8ca63a-580d-42ba-84e3-f2006b1789d7 |
+| **Vercel Dashboard** | https://vercel.com/n0t7h1in-g/frontend |
+
+---
+
+## Research References
+
+This project is grounded in published research from IEEE, arXiv, and MDPI:
+
+1. **Predictive Maintenance via IoT + ML** — Samatas et al., *Predictive Maintenance: Bridging Artificial Intelligence and IoT*, arXiv 2021. Establishes the framework of combining sensor streams with ML for proactive fault detection. [arXiv:2103.11148](https://arxiv.org/abs/2103.11148)
+
+2. **Real-Time Anomaly Detection in Industrial IoT** — *Real-Time Adaptive Anomaly Detection in Industrial IoT Environments*, arXiv 2026. Covers adaptive ML methods for multi-dimensional IoT sensor data, directly applicable to vibration + temperature + current fusion used in IntelliWatch. [arXiv:2601.03085](https://arxiv.org/abs/2601.03085)
+
+3. **ML-Based Rotary Machine Fault Detection** — Givnan et al., Liverpool John Moores University. Proposes a traffic-light severity system (normal / warning / critical) for industrial anomaly detection — the same NORMAL / WARNING / CRITICAL classification model IntelliWatch implements. [arXiv:2110.01447](https://arxiv.org/abs/2110.01447)
+
+4. **Multi-Sensor Fault Signatures** — IEEE Technology Navigator, *Machine learning for predictive maintenance using IoT sensor data*. Demonstrates that combining vibration, temperature, and current signals provides richer fault signatures than any single sensor, enabling earlier failure detection. [IEEE TechNav](https://technav.ieee.org/topic/predictive-maintenance)
+
+5. **TinyML Anomaly Detection at the Edge** — MDPI Sensors, *An Adaptable and Unsupervised TinyML Anomaly Detection System for Extreme Industrial Environments*, 2023. Covers end-to-end IoT + edge computing for industrial anomaly detection, relevant to IntelliWatch's edge-device architecture. [MDPI:2344](https://www.mdpi.com/1424-8220/23/4/2344)
+
+6. **AI-Driven Predictive Maintenance (Industry 4.0)** — Deshmukh & Dere, Terna Engineering College / University of Mumbai, IJCRT 2024. Addresses the shift from reactive to proactive maintenance using IoT sensor data and ML in Industry 4.0 environments. [IJCRT:2401033](https://ijcrt.org/papers/IJCRT2401033.pdf)
+
+---
+
 _IntelliWatch — software + hardware, end to end._
