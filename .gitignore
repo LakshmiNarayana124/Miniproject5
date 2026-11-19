@@ -1,4 +1,4 @@
-# Python
+﻿# Python
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -34,3 +34,11 @@ KAIST/inspection/0Nm_Normal.tdms
 certs/
 *.key
 *.pem
+
+
+
+# Local Python environment
+Backend/.venv312/
+
+# Test coverage output
+.coverage

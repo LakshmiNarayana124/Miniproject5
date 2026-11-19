@@ -2,12 +2,13 @@
 import sqlite3
 import json
 import hashlib
+
 from pathlib import Path
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 
 # =====================================================
-# INTELLIWATCH DATABASE CONFIGURATION
+# DATABASE CONFIGURATION
 # =====================================================
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -19,29 +20,94 @@ DATABASE_DIR.mkdir(parents=True, exist_ok=True)
 VALID_ROLES = {
     "ADMIN",
     "OPERATOR",
-    "MAINTENANCE_ENGINEER"
+    "MAINTENANCE_ENGINEER",
 }
+
+EXPLORER_HISTORY_MAX_ROWS = 500
+DEFAULT_RETENTION_DAYS = 365
 
 
 def get_connection():
-    """Create a configured SQLite connection."""
-
-    connection = sqlite3.connect(
-        DATABASE_PATH,
-        timeout=30
-    )
-
+    connection = sqlite3.connect(DATABASE_PATH, timeout=30)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON")
     connection.execute("PRAGMA busy_timeout = 30000")
-
     return connection
 
 
 def current_timestamp():
-    """Return a timezone-aware UTC timestamp."""
-
     return datetime.now(timezone.utc).isoformat()
+
+
+def _begin_transaction(connection):
+    connection.execute("BEGIN IMMEDIATE")
+
+
+def _insert_audit_entry(
+    connection,
+    category,
+    detail_json,
+    actor=None,
+    target=None,
+    hash_value=None,
+):
+    """Insert an audit entry using the current transaction."""
+
+    timestamp = current_timestamp()
+
+    if hash_value is None:
+        previous = connection.execute("""
+            SELECT hash
+            FROM audit_entries
+            ORDER BY id DESC
+            LIMIT 1
+        """).fetchone()
+
+        previous_hash = previous["hash"] if previous else ""
+
+        chain_input = "|".join((
+            str(previous_hash),
+            timestamp,
+            str(category),
+            str(actor),
+            str(target),
+            str(detail_json),
+        ))
+
+        hash_value = hashlib.sha256(
+            chain_input.encode("utf-8")
+        ).hexdigest()
+
+    cursor = connection.execute("""
+        INSERT INTO audit_entries (
+            timestamp,
+            category,
+            actor,
+            target,
+            detail_json,
+            hash
+        )
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (
+        timestamp,
+        category,
+        actor,
+        str(target) if target is not None else None,
+        detail_json,
+        hash_value,
+    ))
+
+    return cursor.lastrowid
+
+
+def _audit_details(connection, category, actor, target, details):
+    return _insert_audit_entry(
+        connection,
+        category,
+        json.dumps(details or {}, default=str),
+        actor=actor,
+        target=target,
+    )
 
 
 # =====================================================
@@ -49,7 +115,6 @@ def current_timestamp():
 # =====================================================
 
 def initialize_database():
-
     connection = get_connection()
 
     try:
@@ -173,7 +238,34 @@ def initialize_database():
                 is_active INTEGER NOT NULL DEFAULT 1
                     CHECK (is_active IN (0, 1)),
                 created_at TEXT NOT NULL,
-                last_login TEXT
+                last_login TEXT,
+                is_deleted INTEGER NOT NULL DEFAULT 0
+                    CHECK (is_deleted IN (0, 1)),
+                deleted_at TEXT,
+                deleted_by TEXT,
+                deletion_reason TEXT,
+                deleted_was_active INTEGER NOT NULL DEFAULT 1
+                    CHECK (deleted_was_active IN (0, 1))
+            )
+        """)
+
+        # 7A. USER PERMISSIONS
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS user_permissions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                permission_key TEXT NOT NULL,
+                is_granted INTEGER NOT NULL
+                    CHECK (is_granted IN (0, 1)),
+                updated_by INTEGER,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (user_id)
+                    REFERENCES users(id)
+                    ON DELETE CASCADE,
+                FOREIGN KEY (updated_by)
+                    REFERENCES users(id)
+                    ON DELETE SET NULL,
+                UNIQUE (user_id, permission_key)
             )
         """)
 
@@ -310,96 +402,163 @@ def initialize_database():
             )
         """)
 
+        # 17. ADMIN PROMOTION REQUESTS
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS admin_promotion_requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                request_reason TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'PENDING'
+                    CHECK (
+                        status IN (
+                            'PENDING',
+                            'APPROVED',
+                            'REJECTED'
+                        )
+                    ),
+                reviewed_by INTEGER,
+                review_remarks TEXT,
+                requested_at TEXT NOT NULL,
+                reviewed_at TEXT,
+                FOREIGN KEY (user_id)
+                    REFERENCES users(id)
+                    ON DELETE CASCADE,
+                FOREIGN KEY (reviewed_by)
+                    REFERENCES users(id)
+                    ON DELETE SET NULL
+            )
+        """)
+
+        # 18. ACCOUNT RECOVERY REQUESTS
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS account_recovery_requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                recovery_reason TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'PENDING'
+                    CHECK (
+                        status IN (
+                            'PENDING',
+                            'APPROVED',
+                            'REJECTED'
+                        )
+                    ),
+                reviewed_by INTEGER,
+                review_remarks TEXT,
+                requested_at TEXT NOT NULL,
+                reviewed_at TEXT,
+                FOREIGN KEY (user_id)
+                    REFERENCES users(id)
+                    ON DELETE CASCADE,
+                FOREIGN KEY (reviewed_by)
+                    REFERENCES users(id)
+                    ON DELETE SET NULL
+            )
+        """)
+
+        # MIGRATE EXISTING DATABASES
+        user_columns = {
+            column["name"]
+            for column in cursor.execute(
+                "PRAGMA table_info(users)"
+            ).fetchall()
+        }
+
+        lifecycle_columns = {
+            "is_deleted": (
+                "INTEGER NOT NULL DEFAULT 0 "
+                "CHECK (is_deleted IN (0, 1))"
+            ),
+            "deleted_at": "TEXT",
+            "deleted_by": "TEXT",
+            "deletion_reason": "TEXT",
+            "deleted_was_active": (
+                "INTEGER NOT NULL DEFAULT 1 "
+                "CHECK (deleted_was_active IN (0, 1))"
+            ),
+        }
+
+        for name, definition in lifecycle_columns.items():
+            if name not in user_columns:
+                cursor.execute(
+                    f"ALTER TABLE users ADD COLUMN {name} {definition}"
+                )
+
         # PERFORMANCE INDEXES
+        indexes = (
+            ("idx_sensor_timestamp", "sensor_readings(timestamp)"),
+            (
+                "idx_sensor_name_timestamp",
+                "sensor_readings(sensor_name, timestamp)",
+            ),
+            (
+                "idx_analytics_sensor_window",
+                "sensor_analytics(sensor_name, window_end)",
+            ),
+            (
+                "idx_assessment_timestamp",
+                "machine_assessments(timestamp)",
+            ),
+            (
+                "idx_anomaly_severity_timestamp",
+                "anomaly_events(severity, timestamp)",
+            ),
+            (
+                "idx_recommendation_assessment",
+                "recommendations(assessment_id)",
+            ),
+            ("idx_users_role_active", "users(role, is_active)"),
+            (
+                "idx_user_permissions_user_id",
+                "user_permissions(user_id)",
+            ),
+            ("idx_ml_models_active", "ml_models(family, is_active)"),
+            (
+                "idx_verified_model_ts",
+                "verified_labels(model_version, verified_at)",
+            ),
+            (
+                "idx_trend_model_time",
+                "accuracy_trend(model_id, measured_at)",
+            ),
+            (
+                "idx_control_intent_ts",
+                "control_signals(intent, timestamp)",
+            ),
+            (
+                "idx_audit_category_ts",
+                "audit_entries(category, timestamp)",
+            ),
+            ("idx_edge_status", "edge_devices(status)"),
+            (
+                "idx_queue_device_delivered",
+                "control_signal_queue(device_id, delivered_at)",
+            ),
+            ("idx_explorer_ts", "explorer_history(timestamp)"),
+            (
+                "idx_users_deleted_active",
+                "users(is_deleted, is_active)",
+            ),
+        )
 
+        for index_name, expression in indexes:
+            cursor.execute(
+                f"CREATE INDEX IF NOT EXISTS {index_name} ON {expression}"
+            )
+
+        # ONE PENDING REQUEST PER USER
         cursor.execute("""
-            CREATE INDEX IF NOT EXISTS
-            idx_sensor_timestamp
-            ON sensor_readings(timestamp)
+            CREATE UNIQUE INDEX IF NOT EXISTS
+            idx_one_pending_admin_promotion
+            ON admin_promotion_requests(user_id)
+            WHERE status = 'PENDING'
         """)
 
         cursor.execute("""
-            CREATE INDEX IF NOT EXISTS
-            idx_sensor_name_timestamp
-            ON sensor_readings(sensor_name, timestamp)
-        """)
-
-        cursor.execute("""
-            CREATE INDEX IF NOT EXISTS
-            idx_analytics_sensor_window
-            ON sensor_analytics(sensor_name, window_end)
-        """)
-
-        cursor.execute("""
-            CREATE INDEX IF NOT EXISTS
-            idx_assessment_timestamp
-            ON machine_assessments(timestamp)
-        """)
-
-        cursor.execute("""
-            CREATE INDEX IF NOT EXISTS
-            idx_anomaly_severity_timestamp
-            ON anomaly_events(severity, timestamp)
-        """)
-
-        cursor.execute("""
-            CREATE INDEX IF NOT EXISTS
-            idx_recommendation_assessment
-            ON recommendations(assessment_id)
-        """)
-
-        cursor.execute("""
-            CREATE INDEX IF NOT EXISTS
-            idx_users_role_active
-            ON users(role, is_active)
-        """)
-
-        cursor.execute("""
-            CREATE INDEX IF NOT EXISTS
-            idx_ml_models_active
-            ON ml_models(family, is_active)
-        """)
-
-        cursor.execute("""
-            CREATE INDEX IF NOT EXISTS
-            idx_verified_model_ts
-            ON verified_labels(model_version, verified_at)
-        """)
-
-        cursor.execute("""
-            CREATE INDEX IF NOT EXISTS
-            idx_trend_model_time
-            ON accuracy_trend(model_id, measured_at)
-        """)
-
-        cursor.execute("""
-            CREATE INDEX IF NOT EXISTS
-            idx_control_intent_ts
-            ON control_signals(intent, timestamp)
-        """)
-
-        cursor.execute("""
-            CREATE INDEX IF NOT EXISTS
-            idx_audit_category_ts
-            ON audit_entries(category, timestamp)
-        """)
-
-        cursor.execute("""
-            CREATE INDEX IF NOT EXISTS
-            idx_edge_status
-            ON edge_devices(status)
-        """)
-
-        cursor.execute("""
-            CREATE INDEX IF NOT EXISTS
-            idx_queue_device_delivered
-            ON control_signal_queue(device_id, delivered_at)
-        """)
-
-        cursor.execute("""
-            CREATE INDEX IF NOT EXISTS
-            idx_explorer_ts
-            ON explorer_history(timestamp)
+            CREATE UNIQUE INDEX IF NOT EXISTS
+            idx_one_pending_account_recovery
+            ON account_recovery_requests(user_id)
+            WHERE status = 'PENDING'
         """)
 
         connection.commit()
@@ -417,40 +576,35 @@ def initialize_database():
 
 
 # =====================================================
-# 8. SAVE RAW SENSOR READINGS
+# 8. SENSOR READINGS AND ANALYTICS
 # =====================================================
 
 def save_sensor_readings(readings):
-
     if not readings:
         return 0
 
     timestamp = current_timestamp()
-    records = []
 
-    for reading in readings:
-        records.append((
-            reading.get("timestamp", timestamp),
-            reading["sensor_name"],
-            reading["value"],
-            reading["unit"],
-            reading.get("axis"),
-            reading.get("quality", "VALID"),
-            json.dumps(reading.get("metadata", {}))
-        ))
+    records = [
+        (
+            item.get("timestamp", timestamp),
+            item["sensor_name"],
+            item["value"],
+            item["unit"],
+            item.get("axis"),
+            item.get("quality", "VALID"),
+            json.dumps(item.get("metadata", {})),
+        )
+        for item in readings
+    ]
 
     connection = get_connection()
 
     try:
         connection.executemany("""
             INSERT INTO sensor_readings (
-                timestamp,
-                sensor_name,
-                value,
-                unit,
-                axis,
-                quality,
-                metadata_json
+                timestamp, sensor_name, value, unit,
+                axis, quality, metadata_json
             )
             VALUES (?, ?, ?, ?, ?, ?, ?)
         """, records)
@@ -466,31 +620,16 @@ def save_sensor_readings(readings):
         connection.close()
 
 
-# =====================================================
-# 9. SAVE SENSOR ANALYTICS
-# =====================================================
-
 def save_sensor_analytics(analytics):
-
     connection = get_connection()
 
     try:
         cursor = connection.execute("""
             INSERT INTO sensor_analytics (
-                sensor_name,
-                window_start,
-                window_end,
-                sample_count,
-                minimum,
-                maximum,
-                average,
-                rms,
-                standard_deviation,
-                anomaly_count,
-                anomaly_rate,
-                trend,
-                status,
-                created_at
+                sensor_name, window_start, window_end,
+                sample_count, minimum, maximum, average,
+                rms, standard_deviation, anomaly_count,
+                anomaly_rate, trend, status, created_at
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
@@ -507,7 +646,7 @@ def save_sensor_analytics(analytics):
             analytics.get("anomaly_rate", 0),
             analytics.get("trend"),
             analytics.get("status"),
-            current_timestamp()
+            current_timestamp(),
         ))
 
         connection.commit()
@@ -522,24 +661,18 @@ def save_sensor_analytics(analytics):
 
 
 # =====================================================
-# 10. SAVE MACHINE ASSESSMENT
+# 9. MACHINE HEALTH AND ANOMALIES
 # =====================================================
 
 def save_machine_assessment(assessment):
-
     connection = get_connection()
 
     try:
         cursor = connection.execute("""
             INSERT INTO machine_assessments (
-                timestamp,
-                overall_status,
-                confidence_score,
-                anomaly_rate,
-                health_score,
-                probable_causes_json,
-                sensor_summary_json,
-                assessment_notes
+                timestamp, overall_status, confidence_score,
+                anomaly_rate, health_score, probable_causes_json,
+                sensor_summary_json, assessment_notes
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (
@@ -550,7 +683,7 @@ def save_machine_assessment(assessment):
             assessment.get("health_score"),
             json.dumps(assessment.get("probable_causes", [])),
             json.dumps(assessment.get("sensor_summary", {})),
-            assessment.get("assessment_notes")
+            assessment.get("assessment_notes"),
         ))
 
         connection.commit()
@@ -564,26 +697,15 @@ def save_machine_assessment(assessment):
         connection.close()
 
 
-# =====================================================
-# 11. SAVE ANOMALY EVENTS
-# =====================================================
-
 def save_anomaly_event(event):
-
     connection = get_connection()
 
     try:
         cursor = connection.execute("""
             INSERT INTO anomaly_events (
-                timestamp,
-                sensor_name,
-                severity,
-                observed_value,
-                expected_min,
-                expected_max,
-                deviation,
-                probable_cause,
-                description,
+                timestamp, sensor_name, severity,
+                observed_value, expected_min, expected_max,
+                deviation, probable_cause, description,
                 assessment_id
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -597,7 +719,7 @@ def save_anomaly_event(event):
             event.get("deviation"),
             event.get("probable_cause"),
             event.get("description"),
-            event.get("assessment_id")
+            event.get("assessment_id"),
         ))
 
         connection.commit()
@@ -611,20 +733,14 @@ def save_anomaly_event(event):
         connection.close()
 
 
-# =====================================================
-# 12. SAVE RECOMMENDATIONS
-# =====================================================
-
 def save_recommendations(recommendations):
-
     if not recommendations:
         return 0
 
     timestamp = current_timestamp()
-    records = []
 
-    for item in recommendations:
-        records.append((
+    records = [
+        (
             item.get("timestamp", timestamp),
             item.get("assessment_id"),
             item["category"],
@@ -632,22 +748,19 @@ def save_recommendations(recommendations):
             item["recommendation"],
             item.get("reason"),
             item.get("sensor_name"),
-            item.get("action_status", "PENDING")
-        ))
+            item.get("action_status", "PENDING"),
+        )
+        for item in recommendations
+    ]
 
     connection = get_connection()
 
     try:
         connection.executemany("""
             INSERT INTO recommendations (
-                timestamp,
-                assessment_id,
-                category,
-                priority,
-                recommendation,
-                reason,
-                sensor_name,
-                action_status
+                timestamp, assessment_id, category,
+                priority, recommendation, reason,
+                sensor_name, action_status
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, records)
@@ -664,29 +777,19 @@ def save_recommendations(recommendations):
 
 
 # =====================================================
-# 13. MACHINE CONFIGURATION
+# 10. MACHINE CONFIGURATION
 # =====================================================
 
-def set_machine_config(
-    name,
-    value,
-    unit=None,
-    description=None
-):
-
+def set_machine_config(name, value, unit=None, description=None):
     connection = get_connection()
 
     try:
         connection.execute("""
             INSERT INTO machine_config (
-                parameter_name,
-                parameter_value,
-                unit,
-                description,
-                updated_at
+                parameter_name, parameter_value,
+                unit, description, updated_at
             )
             VALUES (?, ?, ?, ?, ?)
-
             ON CONFLICT(parameter_name)
             DO UPDATE SET
                 parameter_value = excluded.parameter_value,
@@ -698,7 +801,7 @@ def set_machine_config(
             str(value),
             unit,
             description,
-            current_timestamp()
+            current_timestamp(),
         ))
 
         connection.commit()
@@ -712,34 +815,31 @@ def set_machine_config(
 
 
 def get_machine_config(name):
-
     connection = get_connection()
 
     try:
-        result = connection.execute("""
+        row = connection.execute("""
             SELECT parameter_value
             FROM machine_config
             WHERE parameter_name = ?
         """, (name,)).fetchone()
 
-        return result["parameter_value"] if result else None
+        return row["parameter_value"] if row else None
 
     finally:
         connection.close()
 
 
 # =====================================================
-# 14. RETRIEVE HISTORICAL DATA
+# 11. HISTORICAL DATA RETRIEVAL
 # =====================================================
 
 def get_recent_sensor_readings(sensor_name, limit=100):
-
     limit = max(1, min(int(limit), 10000))
-
     connection = get_connection()
 
     try:
-        results = connection.execute("""
+        rows = connection.execute("""
             SELECT *
             FROM sensor_readings
             WHERE sensor_name = ?
@@ -747,57 +847,57 @@ def get_recent_sensor_readings(sensor_name, limit=100):
             LIMIT ?
         """, (sensor_name, limit)).fetchall()
 
-        return [dict(row) for row in results]
+        return [dict(row) for row in rows]
 
     finally:
         connection.close()
 
 
 def get_recent_assessments(limit=50):
-
     limit = max(1, min(int(limit), 10000))
-
     connection = get_connection()
 
     try:
-        results = connection.execute("""
+        rows = connection.execute("""
             SELECT *
             FROM machine_assessments
             ORDER BY timestamp DESC, id DESC
             LIMIT ?
         """, (limit,)).fetchall()
 
-        return [dict(row) for row in results]
+        return [dict(row) for row in rows]
 
     finally:
         connection.close()
 
 
 def get_recent_anomalies(limit=50):
-
     limit = max(1, min(int(limit), 10000))
-
     connection = get_connection()
 
     try:
-        results = connection.execute("""
+        rows = connection.execute("""
             SELECT *
             FROM anomaly_events
             ORDER BY timestamp DESC, id DESC
             LIMIT ?
         """, (limit,)).fetchall()
 
-        return [dict(row) for row in results]
+        return [dict(row) for row in rows]
 
     finally:
         connection.close()
 
 
 # =====================================================
-# 15. USER ACCOUNT MANAGEMENT
+# 12. USER ACCOUNT MANAGEMENT
 # =====================================================
 
 def create_user(username, full_name, password_hash, role):
+    if not all(isinstance(value, str) for value in (
+        username, full_name, password_hash, role
+    )):
+        raise ValueError("All user details must be strings.")
 
     username = username.strip()
     full_name = full_name.strip()
@@ -814,11 +914,8 @@ def create_user(username, full_name, password_hash, role):
     try:
         cursor = connection.execute("""
             INSERT INTO users (
-                username,
-                full_name,
-                password_hash,
-                role,
-                created_at
+                username, full_name, password_hash,
+                role, created_at
             )
             VALUES (?, ?, ?, ?, ?)
         """, (
@@ -826,7 +923,7 @@ def create_user(username, full_name, password_hash, role):
             full_name,
             password_hash,
             role,
-            current_timestamp()
+            current_timestamp(),
         ))
 
         connection.commit()
@@ -841,72 +938,65 @@ def create_user(username, full_name, password_hash, role):
 
 
 def get_user_by_username(username):
-
     connection = get_connection()
 
     try:
-        result = connection.execute("""
+        row = connection.execute("""
             SELECT *
             FROM users
             WHERE username = ?
         """, (username.strip(),)).fetchone()
 
-        return dict(result) if result else None
+        return dict(row) if row else None
 
     finally:
         connection.close()
 
 
 def get_user_by_id(user_id):
-
     connection = get_connection()
 
     try:
-        result = connection.execute("""
+        row = connection.execute("""
             SELECT
-                id,
-                username,
-                full_name,
-                role,
-                is_active,
-                created_at,
-                last_login
+                id, username, full_name, role,
+                is_active, created_at, last_login,
+                is_deleted, deleted_at
             FROM users
             WHERE id = ?
         """, (user_id,)).fetchone()
 
-        return dict(result) if result else None
+        return dict(row) if row else None
 
     finally:
         connection.close()
 
 
-def get_all_users():
-
+def get_all_users(include_deleted=False):
     connection = get_connection()
 
     try:
-        results = connection.execute("""
+        query = """
             SELECT
-                id,
-                username,
-                full_name,
-                role,
-                is_active,
-                created_at,
-                last_login
+                id, username, full_name, role,
+                is_active, created_at, last_login,
+                is_deleted, deleted_at
             FROM users
-            ORDER BY id
-        """).fetchall()
+        """
 
-        return [dict(row) for row in results]
+        if not include_deleted:
+            query += " WHERE is_deleted = 0"
+
+        query += " ORDER BY id"
+
+        rows = connection.execute(query).fetchall()
+        return [dict(row) for row in rows]
 
     finally:
         connection.close()
 
 
 def update_last_login(user_id):
-
     connection = get_connection()
 
     try:
@@ -914,6 +1004,8 @@ def update_last_login(user_id):
             UPDATE users
             SET last_login = ?
             WHERE id = ?
+              AND is_active = 1
+              AND is_deleted = 0
         """, (current_timestamp(), user_id))
 
         connection.commit()
@@ -926,16 +1018,66 @@ def update_last_login(user_id):
         connection.close()
 
 
-def set_user_active(user_id, is_active):
+def set_user_active(user_id, is_active, actor=None):
+    """
+    Activate or deactivate an account transactionally.
+
+    The last active Admin cannot be deactivated.
+    """
 
     connection = get_connection()
 
     try:
+        _begin_transaction(connection)
+
+        target = connection.execute("""
+            SELECT id, username, role, is_active, is_deleted
+            FROM users
+            WHERE id = ?
+        """, (user_id,)).fetchone()
+
+        if not target or target["is_deleted"]:
+            connection.rollback()
+            return False
+
+        active = int(bool(is_active))
+
+        if (
+            target["role"] == "ADMIN"
+            and target["is_active"]
+            and not active
+        ):
+            count = connection.execute("""
+                SELECT COUNT(*) AS total
+                FROM users
+                WHERE role = 'ADMIN'
+                  AND is_active = 1
+                  AND is_deleted = 0
+            """).fetchone()["total"]
+
+            if count <= 1:
+                raise ValueError(
+                    "The last active administrator cannot be deactivated."
+                )
+
         cursor = connection.execute("""
             UPDATE users
             SET is_active = ?
-            WHERE id = ?
-        """, (int(bool(is_active)), user_id))
+            WHERE id = ? AND is_deleted = 0
+        """, (active, user_id))
+
+        if cursor.rowcount:
+            _audit_details(
+                connection,
+                "USER_UNLOCKED" if active else "USER_LOCKED",
+                actor,
+                user_id,
+                {
+                    "username": target["username"],
+                    "role": target["role"],
+                    "is_active": bool(active),
+                },
+            )
 
         connection.commit()
         return cursor.rowcount > 0
@@ -949,35 +1091,175 @@ def set_user_active(user_id, is_active):
 
 
 # =====================================================
-# 16. PERMANENT USER DELETION
+# 13. ACCOUNT LIFECYCLE
 # =====================================================
 
-def delete_user(user_id: int) -> bool:
+def delete_user(user_id: int, deleted_by=None, reason=None) -> bool:
     """
-    Permanently delete an Operator or Maintenance Engineer.
+    Temporarily delete an Operator or Maintenance Engineer.
 
-    Administrator accounts are protected.
-
-    Returns:
-        True: Account deleted.
-        False: Account not found or deletion not permitted.
+    The user record, permissions and related history are preserved.
     """
 
     connection = get_connection()
 
     try:
-        cursor = connection.execute("""
-            DELETE FROM users
+        _begin_transaction(connection)
+
+        target = connection.execute("""
+            SELECT *
+            FROM users
             WHERE id = ?
-            AND role IN (
-                'OPERATOR',
-                'MAINTENANCE_ENGINEER'
-            )
-        """, (user_id,))
+        """, (user_id,)).fetchone()
+
+        if (
+            not target
+            or target["is_deleted"]
+            or target["role"] == "ADMIN"
+        ):
+            connection.rollback()
+            return False
+
+        connection.execute("""
+            UPDATE users
+            SET is_deleted = 1,
+                is_active = 0,
+                deleted_at = ?,
+                deleted_by = ?,
+                deletion_reason = ?,
+                deleted_was_active = is_active
+            WHERE id = ?
+        """, (
+            current_timestamp(),
+            str(deleted_by) if deleted_by is not None else None,
+            reason,
+            user_id,
+        ))
+
+        _audit_details(
+            connection,
+            "USER_TEMPORARILY_DELETED",
+            deleted_by,
+            user_id,
+            {
+                "username": target["username"],
+                "role": target["role"],
+                "reason": reason,
+                "previously_active": bool(target["is_active"]),
+            },
+        )
 
         connection.commit()
+        return True
 
-        return cursor.rowcount == 1
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+def restore_user(user_id: int, restored_by=None) -> bool:
+    """Restore a temporarily deleted account and its previous active state."""
+
+    connection = get_connection()
+
+    try:
+        _begin_transaction(connection)
+
+        target = connection.execute("""
+            SELECT *
+            FROM users
+            WHERE id = ?
+        """, (user_id,)).fetchone()
+
+        if not target or not target["is_deleted"]:
+            connection.rollback()
+            return False
+
+        connection.execute("""
+            UPDATE users
+            SET is_deleted = 0,
+                is_active = deleted_was_active,
+                deleted_at = NULL,
+                deleted_by = NULL,
+                deletion_reason = NULL,
+                deleted_was_active = 1
+            WHERE id = ?
+        """, (user_id,))
+
+        _audit_details(
+            connection,
+            "USER_RESTORED",
+            restored_by,
+            user_id,
+            {
+                "username": target["username"],
+                "previous_role": target["role"],
+            },
+        )
+
+        connection.commit()
+        return True
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+def permanently_delete_user(user_id: int, deleted_by=None) -> bool:
+    """
+    Permanently delete a previously soft-deleted non-Admin account.
+
+    The permanent-deletion audit entry is inserted before the account
+    is removed. Audit history is intentionally independent of users.
+    """
+
+    connection = get_connection()
+
+    try:
+        _begin_transaction(connection)
+
+        target = connection.execute("""
+            SELECT *
+            FROM users
+            WHERE id = ?
+        """, (user_id,)).fetchone()
+
+        if (
+            not target
+            or not target["is_deleted"]
+            or target["role"] == "ADMIN"
+        ):
+            connection.rollback()
+            return False
+
+        _audit_details(
+            connection,
+            "USER_PERMANENTLY_DELETED",
+            deleted_by,
+            user_id,
+            {
+                "username": target["username"],
+                "full_name": target["full_name"],
+                "role": target["role"],
+                "deleted_at": target["deleted_at"],
+                "reason": target["deletion_reason"],
+                "permanently_deleted_at": current_timestamp(),
+            },
+        )
+
+        connection.execute(
+            "DELETE FROM users WHERE id = ?",
+            (user_id,),
+        )
+
+        connection.commit()
+        return True
 
     except Exception:
         connection.rollback()
@@ -988,20 +1270,14 @@ def delete_user(user_id: int) -> bool:
 
 
 # =====================================================
-# 17. AIML PERSISTENCE HELPERS
+# 14. CONTROL ACKNOWLEDGEMENTS
 # =====================================================
 
-def save_control_ack(control_signal_id, ack_timestamp, resulting_equipment_state):
-    """
-    Record a control-signal acknowledgement.
-
-    Updates the matching control_signals row with the acknowledgement
-    timestamp and the resulting equipment state (Req 3.8).
-
-    Returns:
-        True when a row was updated, False otherwise.
-    """
-
+def save_control_ack(
+    control_signal_id,
+    ack_timestamp,
+    resulting_equipment_state,
+):
     connection = get_connection()
 
     try:
@@ -1013,7 +1289,7 @@ def save_control_ack(control_signal_id, ack_timestamp, resulting_equipment_state
         """, (
             ack_timestamp,
             resulting_equipment_state,
-            control_signal_id
+            control_signal_id,
         ))
 
         connection.commit()
@@ -1027,67 +1303,41 @@ def save_control_ack(control_signal_id, ack_timestamp, resulting_equipment_state
         connection.close()
 
 
-def record_audit_entry(category, detail_json, actor=None, target=None, hash_value=None):
+# =====================================================
+# 15. AUDIT LOG
+# =====================================================
+
+def record_audit_entry(
+    category,
+    detail_json,
+    actor=None,
+    target=None,
+    hash_value=None,
+):
     """
-    Append an immutable audit entry to the audit log (Req 13.1).
+    Append an audit entry.
 
-    When no hash is supplied, a tamper-evident chain hash is computed from
-    the previous entry's hash chained with the current row content. Passing
-    an explicit hash_value bypasses the chain computation.
-
-    Returns:
-        The id of the inserted audit entry.
+    Generated hashes are chained transactionally. The optional explicit
+    hash parameter is retained for compatibility with existing callers
+    and test_database_helpers.py.
     """
-
-    timestamp = current_timestamp()
 
     connection = get_connection()
 
     try:
-        if hash_value is None:
-            previous = connection.execute("""
-                SELECT hash
-                FROM audit_entries
-                ORDER BY id DESC
-                LIMIT 1
-            """).fetchone()
+        _begin_transaction(connection)
 
-            previous_hash = previous["hash"] if previous else ""
-
-            chain_input = "|".join([
-                str(previous_hash),
-                timestamp,
-                str(category),
-                str(actor),
-                str(target),
-                str(detail_json)
-            ])
-
-            hash_value = hashlib.sha256(
-                chain_input.encode("utf-8")
-            ).hexdigest()
-
-        cursor = connection.execute("""
-            INSERT INTO audit_entries (
-                timestamp,
-                category,
-                actor,
-                target,
-                detail_json,
-                hash
-            )
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (
-            timestamp,
+        entry_id = _insert_audit_entry(
+            connection,
             category,
+            detail_json,
             actor,
             target,
-            detail_json,
-            hash_value
-        ))
+            hash_value,
+        )
 
         connection.commit()
-        return cursor.lastrowid
+        return entry_id
 
     except Exception:
         connection.rollback()
@@ -1097,27 +1347,24 @@ def record_audit_entry(category, detail_json, actor=None, target=None, hash_valu
         connection.close()
 
 
-def save_verified_label(event_id, label, feature_vector_json, model_version, verified_by):
-    """
-    Persist an operator-verified label alongside its originating feature
-    vector, the model version that produced the original decision, and the
-    verification timestamp (Req 8.1/8.2).
+# =====================================================
+# 16. ML LABELS AND ACCURACY
+# =====================================================
 
-    Returns:
-        The id of the inserted verified_labels row.
-    """
-
+def save_verified_label(
+    event_id,
+    label,
+    feature_vector_json,
+    model_version,
+    verified_by,
+):
     connection = get_connection()
 
     try:
         cursor = connection.execute("""
             INSERT INTO verified_labels (
-                event_id,
-                label,
-                feature_vector_json,
-                model_version,
-                verified_by,
-                verified_at
+                event_id, label, feature_vector_json,
+                model_version, verified_by, verified_at
             )
             VALUES (?, ?, ?, ?, ?, ?)
         """, (
@@ -1126,7 +1373,7 @@ def save_verified_label(event_id, label, feature_vector_json, model_version, ver
             feature_vector_json,
             model_version,
             verified_by,
-            current_timestamp()
+            current_timestamp(),
         ))
 
         connection.commit()
@@ -1141,28 +1388,18 @@ def save_verified_label(event_id, label, feature_vector_json, model_version, ver
 
 
 def append_accuracy_trend(model_id, f1_score):
-    """
-    Append an F1-score measurement to the accuracy trend for a model
-    (Req 8.5).
-
-    Returns:
-        The id of the inserted accuracy_trend row.
-    """
-
     connection = get_connection()
 
     try:
         cursor = connection.execute("""
             INSERT INTO accuracy_trend (
-                model_id,
-                f1_score,
-                measured_at
+                model_id, f1_score, measured_at
             )
             VALUES (?, ?, ?)
         """, (
             model_id,
             f1_score,
-            current_timestamp()
+            current_timestamp(),
         ))
 
         connection.commit()
@@ -1176,37 +1413,38 @@ def append_accuracy_trend(model_id, f1_score):
         connection.close()
 
 
+# =====================================================
+# 17. EXPLORER HISTORY
+# =====================================================
+
+def _evict_explorer_history(connection):
+    connection.execute("""
+        DELETE FROM explorer_history
+        WHERE id NOT IN (
+            SELECT id
+            FROM explorer_history
+            ORDER BY timestamp DESC, id DESC
+            LIMIT ?
+        )
+    """, (EXPLORER_HISTORY_MAX_ROWS,))
+
+
 def save_explorer_history_entry(
     entry_type,
     active_user=None,
     arrangement_json=None,
     classification_label=None,
     confidence=None,
-    model_version=None
+    model_version=None,
 ):
-    """
-    Persist a 3D Sensor Explorer workspace state change or ML classification
-    to the explorer history log (Req 6.1/6.2).
-
-    After each insert, evicts the oldest entries beyond the retention cap
-    (Req 6.5/6.6) so the log never grows unbounded.
-
-    Returns:
-        The id of the inserted explorer_history row.
-    """
-
     connection = get_connection()
 
     try:
         cursor = connection.execute("""
             INSERT INTO explorer_history (
-                timestamp,
-                entry_type,
-                active_user,
-                arrangement_json,
-                classification_label,
-                confidence,
-                model_version
+                timestamp, entry_type, active_user,
+                arrangement_json, classification_label,
+                confidence, model_version
             )
             VALUES (?, ?, ?, ?, ?, ?, ?)
         """, (
@@ -1216,10 +1454,9 @@ def save_explorer_history_entry(
             arrangement_json,
             classification_label,
             confidence,
-            model_version
+            model_version,
         ))
 
-        # Evict oldest entries beyond the retention cap (Req 6.5/6.6).
         _evict_explorer_history(connection)
 
         connection.commit()
@@ -1233,74 +1470,74 @@ def save_explorer_history_entry(
         connection.close()
 
 
-# Maximum number of explorer history rows retained (Req 6.5/6.6).
-EXPLORER_HISTORY_MAX_ROWS = 500
+def get_explorer_history(limit=100):
+    limit = max(1, min(int(limit), 10000))
+    connection = get_connection()
 
-# Default data retention period in days (Req 13.4).
-DEFAULT_RETENTION_DAYS = 365
-
-
-def _evict_explorer_history(connection):
-    """Evict oldest explorer_history rows beyond the retention cap.
-
-    Retains the most recent ``EXPLORER_HISTORY_MAX_ROWS`` entries and
-    deletes the rest so the log is capped at 500 rows (Req 6.5/6.6).
-    """
-
-    connection.execute("""
-        DELETE FROM explorer_history
-        WHERE id NOT IN (
-            SELECT id
+    try:
+        rows = connection.execute("""
+            SELECT *
             FROM explorer_history
             ORDER BY timestamp DESC, id DESC
             LIMIT ?
-        )
-    """, (EXPLORER_HISTORY_MAX_ROWS,))
+        """, (limit,)).fetchall()
 
+        return [dict(row) for row in rows]
+
+    finally:
+        connection.close()
+
+
+def get_explorer_history_entry(entry_id):
+    connection = get_connection()
+
+    try:
+        row = connection.execute("""
+            SELECT *
+            FROM explorer_history
+            WHERE id = ?
+        """, (entry_id,)).fetchone()
+
+        return dict(row) if row else None
+
+    finally:
+        connection.close()
+
+
+# =====================================================
+# 18. DATA RETENTION
+# =====================================================
 
 def cleanup_old_records(retention_days=None):
     """
-    Delete records older than a configurable retention period (Req 13.4).
+    Retain sensor and anomaly data for the configured period.
 
-    Removes rows from ``sensor_readings``, ``anomaly_events``, and
-    ``audit_entries`` whose timestamp is older than ``retention_days``
-    (default 365).  The cutoff is computed from the current UTC time.
-
-    Parameters
-    ----------
-    retention_days : int | None
-        Number of days to retain.  Defaults to
-        ``DEFAULT_RETENTION_DAYS`` (365).
-
-    Returns
-    -------
-    dict
-        Counts of deleted rows per table.
+    Audit entries are deliberately excluded to preserve security history.
     """
 
-    if retention_days is None:
-        retention_days = DEFAULT_RETENTION_DAYS
-
-    retention_days = max(1, int(retention_days))
+    days = (
+        DEFAULT_RETENTION_DAYS
+        if retention_days is None
+        else max(1, int(retention_days))
+    )
 
     cutoff = (
-        datetime.now(timezone.utc) - _timedelta(days=retention_days)
+        datetime.now(timezone.utc) - timedelta(days=days)
     ).isoformat()
 
     deleted = {}
     connection = get_connection()
 
     try:
-        for table, ts_column in (
-            ("sensor_readings", "timestamp"),
-            ("anomaly_events", "timestamp"),
-            ("audit_entries", "timestamp"),
-        ):
+        for table in ("sensor_readings", "anomaly_events"):
             cursor = connection.execute(
-                f"DELETE FROM {table} WHERE {ts_column} < ?",
-                (cutoff,)
+                f"DELETE FROM {table} WHERE timestamp < ?",
+                (cutoff,),
             )
+
             deleted[table] = cursor.rowcount
+
+        deleted["audit_entries"] = 0
 
         connection.commit()
         return deleted
@@ -1313,76 +1550,25 @@ def cleanup_old_records(retention_days=None):
         connection.close()
 
 
-def _timedelta(days):
-    """Return a timedelta without importing the name at module level."""
-    from datetime import timedelta
-    return timedelta(days=days)
+# =====================================================
+# 19. EDGE DEVICE MANAGEMENT
+# =====================================================
 
-
-def get_explorer_history(limit=100):
-    """
-    Return recent explorer history entries in reverse-chronological order
-    (Req 6.3).
-    """
-
-    limit = max(1, min(int(limit), 10000))
-
-    connection = get_connection()
-
-    try:
-        results = connection.execute("""
-            SELECT *
-            FROM explorer_history
-            ORDER BY timestamp DESC, id DESC
-            LIMIT ?
-        """, (limit,)).fetchall()
-
-        return [dict(row) for row in results]
-
-    finally:
-        connection.close()
-
-
-def get_explorer_history_entry(entry_id):
-    """
-    Return a single explorer history entry by id (Req 6.4).
-    """
-
-    connection = get_connection()
-
-    try:
-        result = connection.execute("""
-            SELECT *
-            FROM explorer_history
-            WHERE id = ?
-        """, (entry_id,)).fetchone()
-
-        return dict(result) if result else None
-
-    finally:
-        connection.close()
-
-
-def save_edge_device(device_id, protocol, capabilities_json=None, status='offline'):
-    """
-    Upsert an edge device registration. Inserts a new device or updates the
-    protocol, capabilities, and status of an existing device while keeping
-    the original registration timestamp.
-    """
-
+def save_edge_device(
+    device_id,
+    protocol,
+    capabilities_json=None,
+    status="offline",
+):
     connection = get_connection()
 
     try:
         connection.execute("""
             INSERT INTO edge_devices (
-                device_id,
-                protocol,
-                capabilities_json,
-                status,
-                registered_at
+                device_id, protocol, capabilities_json,
+                status, registered_at
             )
             VALUES (?, ?, ?, ?, ?)
-
             ON CONFLICT(device_id)
             DO UPDATE SET
                 protocol = excluded.protocol,
@@ -1393,7 +1579,7 @@ def save_edge_device(device_id, protocol, capabilities_json=None, status='offlin
             protocol,
             capabilities_json,
             status,
-            current_timestamp()
+            current_timestamp(),
         ))
 
         connection.commit()
@@ -1406,38 +1592,25 @@ def save_edge_device(device_id, protocol, capabilities_json=None, status='offlin
         connection.close()
 
 
-def update_edge_device_status(device_id, status, last_known_state_json=None):
-    """
-    Update an edge device's status and, optionally, its last known state
-    (Req 4.6).
-
-    Returns:
-        True when a row was updated, False otherwise.
-    """
-
+def update_edge_device_status(
+    device_id,
+    status,
+    last_known_state_json=None,
+):
     connection = get_connection()
 
     try:
-        if last_known_state_json is not None:
-            cursor = connection.execute("""
-                UPDATE edge_devices
-                SET status = ?,
-                    last_known_state_json = ?
-                WHERE device_id = ?
-            """, (
-                status,
-                last_known_state_json,
-                device_id
-            ))
-        else:
-            cursor = connection.execute("""
-                UPDATE edge_devices
-                SET status = ?
-                WHERE device_id = ?
-            """, (
-                status,
-                device_id
-            ))
+        cursor = connection.execute("""
+            UPDATE edge_devices
+            SET status = ?,
+                last_known_state_json =
+                    COALESCE(?, last_known_state_json)
+            WHERE device_id = ?
+        """, (
+            status,
+            last_known_state_json,
+            device_id,
+        ))
 
         connection.commit()
         return cursor.rowcount > 0
@@ -1450,31 +1623,24 @@ def update_edge_device_status(device_id, status, last_known_state_json=None):
         connection.close()
 
 
+# =====================================================
+# 20. CONTROL SIGNAL QUEUE
+# =====================================================
+
 def queue_control_signal(device_id, intent, priority):
-    """
-    Queue an outbound control signal for an edge device while it is
-    temporarily disconnected (Req 12.3).
-
-    Returns:
-        The id of the inserted control_signal_queue row.
-    """
-
     connection = get_connection()
 
     try:
         cursor = connection.execute("""
             INSERT INTO control_signal_queue (
-                device_id,
-                intent,
-                priority,
-                queued_at
+                device_id, intent, priority, queued_at
             )
             VALUES (?, ?, ?, ?)
         """, (
             device_id,
             intent,
             priority,
-            current_timestamp()
+            current_timestamp(),
         ))
 
         connection.commit()
@@ -1489,45 +1655,28 @@ def queue_control_signal(device_id, intent, priority):
 
 
 def get_queued_signals(device_id, undelivered_only=True):
-    """
-    Return queued control signals for a device, ordered by priority
-    (highest first) then queue time (oldest first). When undelivered_only
-    is True, only signals that have not yet been delivered are returned.
-    """
-
     connection = get_connection()
 
     try:
-        if undelivered_only:
-            results = connection.execute("""
-                SELECT *
-                FROM control_signal_queue
-                WHERE device_id = ?
-                  AND delivered_at IS NULL
-                ORDER BY priority DESC, queued_at ASC, id ASC
-            """, (device_id,)).fetchall()
-        else:
-            results = connection.execute("""
-                SELECT *
-                FROM control_signal_queue
-                WHERE device_id = ?
-                ORDER BY priority DESC, queued_at ASC, id ASC
-            """, (device_id,)).fetchall()
+        query = """
+            SELECT *
+            FROM control_signal_queue
+            WHERE device_id = ?
+        """
 
-        return [dict(row) for row in results]
+        if undelivered_only:
+            query += " AND delivered_at IS NULL"
+
+        query += " ORDER BY priority DESC, queued_at ASC, id ASC"
+
+        rows = connection.execute(query, (device_id,)).fetchall()
+        return [dict(row) for row in rows]
 
     finally:
         connection.close()
 
 
 def mark_signal_delivered(queue_id):
-    """
-    Mark a queued control signal as delivered (Req 12.3).
-
-    Returns:
-        True when a row was updated, False otherwise.
-    """
-
     connection = get_connection()
 
     try:
@@ -1537,7 +1686,7 @@ def mark_signal_delivered(queue_id):
             WHERE id = ?
         """, (
             current_timestamp(),
-            queue_id
+            queue_id,
         ))
 
         connection.commit()
@@ -1552,11 +1701,101 @@ def mark_signal_delivered(queue_id):
 
 
 # =====================================================
-# 18. DATABASE STARTUP
+# 21. USER PERMISSION MANAGEMENT
+# =====================================================
+
+def get_user_permission_overrides(user_id):
+    connection = get_connection()
+
+    try:
+        rows = connection.execute("""
+            SELECT permission_key, is_granted
+            FROM user_permissions
+            WHERE user_id = ?
+        """, (user_id,)).fetchall()
+
+        return {
+            row["permission_key"]: bool(row["is_granted"])
+            for row in rows
+        }
+
+    finally:
+        connection.close()
+
+
+def set_user_permission(
+    user_id,
+    permission_key,
+    is_granted,
+    updated_by=None,
+):
+    if not isinstance(permission_key, str) or not permission_key.strip():
+        raise ValueError("A valid permission key is required.")
+
+    if type(is_granted) is not bool:
+        raise ValueError("is_granted must be a boolean.")
+
+    connection = get_connection()
+
+    try:
+        connection.execute("""
+            INSERT INTO user_permissions (
+                user_id, permission_key, is_granted,
+                updated_by, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(user_id, permission_key)
+            DO UPDATE SET
+                is_granted = excluded.is_granted,
+                updated_by = excluded.updated_by,
+                updated_at = excluded.updated_at
+        """, (
+            user_id,
+            permission_key.strip(),
+            int(is_granted),
+            updated_by,
+            current_timestamp(),
+        ))
+
+        connection.commit()
+        return True
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+def clear_user_permission_override(user_id, permission_key):
+    connection = get_connection()
+
+    try:
+        cursor = connection.execute("""
+            DELETE FROM user_permissions
+            WHERE user_id = ?
+              AND permission_key = ?
+        """, (
+            user_id,
+            permission_key,
+        ))
+
+        connection.commit()
+        return cursor.rowcount > 0
+
+    except Exception:
+        connection.rollback()
+        raise
+
+    finally:
+        connection.close()
+
+
+# =====================================================
+# 22. DATABASE STARTUP
 # =====================================================
 
 if __name__ == "__main__":
-
     initialize_database()
-
     print(f"Database location: {DATABASE_PATH}")
