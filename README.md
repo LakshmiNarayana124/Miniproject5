@@ -2,77 +2,137 @@
 
 **Intelligent condition-monitoring and safety-actuation system for industrial equipment.**
 
-IntelliWatch reads live sensor data from physical equipment (vibration, temperature, electrical current), runs it through a machine-learning inference engine to classify equipment health, and when something is wrong it does more than raise an alarm: it dispatches a control signal that can shut the machine down or de-rate it, and drives an LCD display and relay module so the action is both visible and physical.
-
-> This is the **private** working copy (`IntelliWatch-Private`).
+IntelliWatch reads live sensor data (vibration, temperature, current), classifies equipment health via ML, and automatically acts on anomalies — dispatching control signals that shut down or de-rate equipment, switching physical relay channels, and updating an LCD display in real time.
 
 ---
 
-## What it does
+## Live Deployment
 
-- **Hardware → App (telemetry in):** edge devices (e.g. a Raspberry Pi with sensors) push readings to the backend over HTTP. Readings are authenticated and validated before they ever touch the inference engine or dashboard.
-- **Anomaly detection:** an ML "brain" classifies each snapshot as `NORMAL`, `WARNING`, or `CRITICAL`.
-- **App → Hardware (control out):** the detected status maps to a control signal — `CRITICAL → SHUTDOWN`, `WARNING → DE_RATE`, `NORMAL → RUN` — and is relayed to physical actuators: relay channels switch and an LCD shows the live status.
-- **Automated safety:** when the brain itself flags a critical anomaly, the system acts immediately under a system identity rather than waiting for a human.
+| Component | Platform | URL |
+|---|---|---|
+| Frontend | Vercel | https://frontend-alpha-tawny-49.vercel.app |
+| Backend | Railway | https://intelliwatch-backend-production.up.railway.app |
+| Database | Neon Postgres | 19 tables, persistent |
+
+---
 
 ## Architecture
 
-Three layers that talk over HTTP:
+```
+Sensors (Pi) → HTTP → Railway Backend → ML Brain → Control Signal
+                                                        ↓
+                                              Relay Module + LCD Display
+                                                        ↓
+                                              Neon Postgres (audit + data)
+                                                        ↓
+                                              Vercel Frontend (live dashboard)
+```
 
-1. **Edge hardware** — sensors + an LCD character display + a relay board (HD44780 over I2C / PCF8574, multi-channel GPIO relays).
-2. **Backend** — a Python FastAPI server:
-   - `iot_layer.py` — IoT integration layer: edge-device protocol, MQTT/HTTP adapters, device registration, credential auth, payload validation, heartbeat, control-signal relay.
-   - `intelliwatch_brain.py` — ML inference engine.
-   - `equipment_controller.py` — status → control-signal dispatch, CRITICAL latching, retry, fail-safe alerts, immutable audit trail.
-   - `lcd_relay_module.py` — LCD + relay actuator (fail-safe defaults, graceful software-shadow mode when hardware libs are absent).
-   - `auth.py`, `database.py`, `learning_system.py`, `vision_service.py`, `chatbot_api.py`, and more.
-3. **Frontend** — React (Vite): live sensor dashboard, control-signal banner, alert log, ML status panel, sensor explorer, chatbot, user management, login.
+Three layers:
 
-## Role-based access
+1. **Edge Hardware** — Raspberry Pi with sensors, HD44780 LCD (I2C), multi-channel relay board
+2. **Backend** (Python FastAPI on Railway)
+   - `iot_layer.py` — device registration, auth, payload validation, MQTT/HTTP adapters
+   - `intelliwatch_brain.py` — ML inference engine (NORMAL / WARNING / CRITICAL)
+   - `equipment_controller.py` — anomaly → control signal (SHUTDOWN / DE_RATE / RUN), CRITICAL latching, audit trail
+   - `lcd_relay_module.py` — LCD + relay actuator, fail-safe defaults, software shadow mode
+   - `database.py` — dual Postgres/SQLite driver (Neon in production, SQLite locally)
+   - `auth.py`, `learning_system.py`, `vision_service.py`, `chatbot_api.py`
+3. **Frontend** (React/Vite on Vercel) — live sensor dashboard, control-signal banner, alert log, ML status panel, chatbot, user management
 
-| Role | See anomalies (read) | Act (dispatch a control signal) | Manage |
+---
+
+## Role-Based Access
+
+| Role | See anomalies | Act (dispatch control) | Manage |
 |---|---|---|---|
-| **Operator** | yes — including *why* a device stopped | no | — |
-| **Maintenance Engineer** | yes | yes — SHUTDOWN / DE_RATE / RUN | — |
-| **Admin** | yes | yes | yes — device registration, users |
+| **Operator** | ✅ including reason device stopped | ❌ | — |
+| **Maintenance Engineer** | ✅ | ✅ SHUTDOWN / DE_RATE / RUN | — |
+| **Admin** | ✅ | ✅ | ✅ devices + users |
 
-The manual dispatch path is role-gated (engineer / admin); the automated safety path runs under a system identity so emergency shutdowns are never blocked on a human.
+Automated safety path runs under a system identity — anomalies trigger shutdown instantly without waiting for a human.
 
-## Safety design
+---
 
-- **Fail-safe defaults:** relays de-energize on startup and on any `SHUTDOWN` or unknown intent.
-- **Data integrity:** payload size limits, finite-value checks, quality enums, and rejection of simulation-tagged sources; credentials checked with constant-time comparison.
-- **Audit:** every control dispatch is recorded immutably.
-- **Graceful degradation:** hardware libraries are optional; the backend imports and runs anywhere with no errors.
+## IoT Integration
 
-> ⚠️ For real machinery, software fail-safe is necessary but not sufficient. Verify relay polarity with a meter on first bring-up, ensure relays drop out on power loss, and keep a hardwired emergency stop in series with the main relay.
-
-## Tech stack
-
-- **Backend:** Python, FastAPI, WebSocket streams, SQLite (Neon-migratable), paho-mqtt / httpx (optional).
-- **Frontend:** React, Vite, Recharts.
-- **Edge:** Raspberry Pi, I2C LCD, GPIO relays, smbus2 / RPi.GPIO.
-
-## Running
-
-- **Backend:** start the FastAPI server from `Backend/` (see `RUN_ON_WINDOWS.bat` / `startup.txt` for the project's startup commands).
-- **Frontend:** from `frontend/`, `npm install` then `npm run dev` (Vite dev server).
-- HTTPS / reverse-proxy config is in `Caddyfile`.
-
-## IoT integration
-
-The LCD + relay actuator registers automatically at backend startup and rides the existing control-signal delivery path:
+The LCD + relay actuator registers at backend startup and rides the existing control-signal delivery path:
 
 ```python
 from lcd_relay_module import LCDRelayEdgeAdapter, create_lcd_relay_actuator
 
-adapter = LCDRelayEdgeAdapter(device_id="lcd-relay-01", actuator=create_lcd_relay_actuator())
+adapter = LCDRelayEdgeAdapter(device_id="lcd-relay-01",
+                               actuator=create_lcd_relay_actuator())
 hs = iot_layer.register_device(adapter)
 iot_layer.authenticate(hs.device_id, hs.device_credential)
 ```
 
-Every `equipment_controller.dispatch(...)` then flows out to the relays and display automatically.
+Intent → relay + LCD mapping:
+
+| Intent | Relays | LCD |
+|---|---|---|
+| RUN | MAIN on, INDICATOR on | `SYSTEM : RUN / STATUS : NORMAL` |
+| DE_RATE | MAIN + DERATE on | `SYSTEM : DERATE / STATUS : WARNING` |
+| SHUTDOWN | All off (fail-safe) | `SYSTEM : STOP / STATUS : CRITICAL` |
 
 ---
 
-_Status: private working copy._
+## Safety Design
+
+- Relays de-energize on startup and on any SHUTDOWN (fail-safe default)
+- Data integrity: payload size limits, finite-value checks, credential constant-time comparison
+- Every control dispatch recorded immutably in audit trail
+- Hardware libs (`smbus2`, `RPi.GPIO`) optional — backend imports cleanly anywhere
+
+> ⚠️ Verify relay polarity with a meter on first bring-up. Keep a hardwired e-stop in series with the main relay.
+
+---
+
+## Tech Stack
+
+- **Backend:** Python 3.11, FastAPI, psycopg2, WebSockets, paho-mqtt / httpx
+- **Frontend:** React 19, Vite 8, Recharts, Three.js
+- **Database:** Neon Postgres (production) / SQLite (local)
+- **Edge:** Raspberry Pi, smbus2, RPi.GPIO
+
+---
+
+## Running Locally
+
+```bash
+# Backend
+cd Backend
+pip install -r requirements.txt
+uvicorn server:app --reload --port 8000
+
+# Frontend
+cd frontend
+npm install
+npm run dev
+```
+
+Set `INTELLIWATCH_SECRET_KEY` in `Backend/.env` before starting.
+
+---
+
+## Connecting Edge Hardware (Pi)
+
+Change the device push URL to the live backend:
+```
+https://intelliwatch-backend-production.up.railway.app
+```
+The Pi pushes readings to `POST /iot/data/{device_id}` with `X-Device-Credential` header — the backend validates, brain classifies, and control signals flow back to relays and LCD automatically.
+
+---
+
+## Branches
+
+| Branch | Purpose |
+|---|---|
+| `main` | Full source with all integrations |
+| `clean-start` | Production deploy branch (Vercel + Railway) |
+| `feature/iot-lcd-relay-integration` | IoT feature branch |
+
+---
+
+_IntelliWatch — software + hardware, end to end._
