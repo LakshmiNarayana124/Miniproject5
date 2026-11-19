@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: intelliwatch-backend
+    runtime: python
+    rootDir: Backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    plan: free
+    disk:
+      name: intelliwatch-db
+      mountPath: /data/intelliwatch
+      sizeGB: 1
+    envVars:
+      - key: INTELLIWATCH_SECRET_KEY
+        generateValue: true
+      - key: INTELLIWATCH_CORS_ORIGINS
+        sync: false
+      - key: INTELLIWATCH_DB_PATH
+        value: /data/intelliwatch/intelliwatch.db

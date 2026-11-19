@@ -1,4 +1,5 @@
 
+import os
 import sqlite3
 import json
 import hashlib
@@ -12,8 +13,17 @@ from datetime import datetime, timezone, timedelta
 # =====================================================
 
 BASE_DIR = Path(__file__).resolve().parent
-DATABASE_DIR = BASE_DIR / "database"
-DATABASE_PATH = DATABASE_DIR / "intelliwatch.db"
+
+# Allow an environment variable to override the DB path so the same
+# codebase works on a local dev machine (SQLite in repo) and on Render
+# (SQLite on a persistent disk mounted at /data/intelliwatch).
+_env_db_path = os.getenv("INTELLIWATCH_DB_PATH", "").strip()
+if _env_db_path:
+    DATABASE_PATH = Path(_env_db_path)
+    DATABASE_DIR = DATABASE_PATH.parent
+else:
+    DATABASE_DIR = BASE_DIR / "database"
+    DATABASE_PATH = DATABASE_DIR / "intelliwatch.db"
 
 DATABASE_DIR.mkdir(parents=True, exist_ok=True)
 
