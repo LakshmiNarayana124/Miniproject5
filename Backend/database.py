@@ -14,9 +14,20 @@ from datetime import datetime, timezone, timedelta
 
 BASE_DIR = Path(__file__).resolve().parent
 
-# Allow an environment variable to override the DB path so the same
-# codebase works on a local dev machine (SQLite in repo) and on Render
-# (SQLite on a persistent disk mounted at /data/intelliwatch).
+# When DATABASE_URL is set (e.g. Neon on Railway), use Postgres.
+# Otherwise fall back to SQLite (local dev or persistent-disk Railway).
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+_USE_POSTGRES = bool(DATABASE_URL)
+
+if _USE_POSTGRES:
+    try:
+        import psycopg2
+        import psycopg2.extras
+    except ImportError:
+        _USE_POSTGRES = False
+        DATABASE_URL = ""
+
+# SQLite fallback path
 _env_db_path = os.getenv("INTELLIWATCH_DB_PATH", "").strip()
 if _env_db_path:
     DATABASE_PATH = Path(_env_db_path)
@@ -25,7 +36,20 @@ else:
     DATABASE_DIR = BASE_DIR / "database"
     DATABASE_PATH = DATABASE_DIR / "intelliwatch.db"
 
-DATABASE_DIR.mkdir(parents=True, exist_ok=True)
+if not _USE_POSTGRES:
+    DATABASE_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def get_connection():
+    if _USE_POSTGRES:
+        conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
+        conn.autocommit = False
+        return conn
+    connection = sqlite3.connect(DATABASE_PATH, timeout=30)
+    connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA foreign_keys = ON")
+    connection.execute("PRAGMA busy_timeout = 30000")
+    return connection
 
 VALID_ROLES = {
     "ADMIN",
