@@ -6,14 +6,17 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
     plan: free
+    healthCheckPath: /auth/registration-status
     envVars:
       - key: INTELLIWATCH_SECRET_KEY
-        generateValue: true
+        value: 21e6fcb4a0b72b7cd18df256701cf6cc41d1f27d577e05a4ee958241caf900c9795c6220ede8020267c568c59f0ec537fe39145c0910ecb01fd9902f56657713
       - key: DATABASE_URL
-        sync: false          # paste Neon connection string in Render dashboard
+        value: postgresql://neondb_owner:npg_7RJNQ3VdwqUj@ep-frosty-star-bdzt6r2n-pooler.c-8.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require
       - key: INTELLIWATCH_CORS_ORIGINS
-        sync: false          # paste Vercel frontend URL after it deploys
+        value: https://intelliwatch-iw.vercel.app
       - key: FIREBASE_PROJECT_ID
         value: intelliwatch-66ad0
+      - key: INTELLIWATCH_HOST
+        value: "0.0.0.0"
       - key: PYTHON_VERSION
         value: "3.11.9"
