@@ -1,171 +1,116 @@
-# IntelliWatch
+# 👁️ IntelliWatch
 
-Real-time industrial condition monitoring and anomaly detection. Edge sensors on a Raspberry Pi stream vibration, temperature, and current readings to a FastAPI ML backend. A React dashboard shows live charts, ISO severity classifications, fault signatures, RUL forecasts, and a 3D interactive hardware model.
+> **Real-time industrial machine health monitoring — from a Raspberry Pi sensor all the way to a cloud dashboard, with ML anomaly detection built in.**
+
+A Raspberry Pi reads vibration, temperature and current from physical sensors every second. Those readings travel over MQTT to a FastAPI backend that runs a four-model ML ensemble, classifies each reading against ISO industrial standards, and streams the results live to a React dashboard. The dashboard shows charts, fault signatures, a remaining-useful-life countdown, a 3D interactive hardware model, and an AI equipment inspector — all in the browser, on any device.
 
 ---
 
-## Live URLs
+## ⚡ Quick Access
 
-| Service | URL |
+| | |
 |---|---|
-| **Frontend** | https://intelliwatch-iw.vercel.app |
+| **Live App** | https://intelliwatch-iw.vercel.app |
 | **Backend API** | https://intelliwatch-backend.onrender.com |
 | **API Docs** | https://intelliwatch-backend.onrender.com/docs |
-| **Database** | Neon Postgres (serverless, free) |
+| **GitHub** | https://github.com/LakshmiNarayana124/Miniproject5 |
+| **Neon DB** | https://console.neon.tech |
+| **Render** | https://dashboard.render.com |
+| **Vercel** | https://vercel.com/dashboard |
+| **Firebase** | https://console.firebase.google.com |
 
-> Render free tier sleeps after 15 min idle. First request after sleep takes ~30 s — just wait and retry.
+> Render free tier sleeps after 15 min idle. First login after sleep takes ~30 s — just wait.
 
 ---
 
-## Architecture
+## 🗂️ Branches
+
+| Branch | Purpose |
+|---|---|
+| `main` | Production — auto-deploys to Vercel + Render |
+| `feature/iot-lcd-relay-integration` | IoT hardware layer — LCD display + relay control |
+| `clean-start` | Clean baseline with Postgres/Neon DB layer |
+| `master` | Original Miniproject5 merge point |
+
+---
+
+## 🏗️ How It Works
 
 ```
-Browser
-  └── React 19 + Vite SPA  (Vercel CDN)
-         │ HTTPS / WSS
-         └── FastAPI + Python 3.11  (Render free)
-                │ SQL
-                └── Neon Postgres  (serverless free)
-
-Firebase  →  Google Sign-In (free Spark plan)
-
-Raspberry Pi  (optional hardware)
-  └── ADXL345 · DS18B20 · ACS712
-         │ MQTT / HTTP POST
-         └── /iot/ingest
+Raspberry Pi  ──MQTT/HTTP──►  FastAPI Backend  ──SQL──►  Neon Postgres
+  ADXL345 (vibration)            (Render)                 (serverless)
+  DS18B20 (temperature)              │
+  ACS712 (current)                   │ WebSocket
+                                     ▼
+                             React Dashboard
+                               (Vercel CDN)
+                                     │
+                             Firebase Auth
+                          (Google Sign-In / OTP)
 ```
 
 **Cost: $0/month** — Vercel Hobby + Render Free + Neon Free + Firebase Spark
 
 ---
 
-## Features
+## 🔬 What the ML Does
 
-### Sensor Monitoring
-Three channels stream from a Raspberry Pi:
-- **Vibration** — ADXL345 accelerometer (m/s² RMS)
-- **Temperature** — DS18B20 probe (°C)
-- **Current** — ACS712 + ADS1115 ADC (Amps)
+The backend runs four models trained on the **KAIST bearing fault dataset**:
 
-Each reading is classified against **ISO 10816-3 / IEC 60034-1** severity zones: `normal → warning → critical`
-
-### ML Anomaly Detection
-Four-model ensemble trained on the **KAIST bearing fault dataset**:
-
-| Model | Role |
+| Model | Does |
 |---|---|
-| XGBoost | Primary tabular classifier |
-| Isolation Forest | Unsupervised outlier detection |
-| ONNX GRU | Sequence-pattern anomaly |
-| Scikit-learn Pipeline | Feature extraction + scaling |
+| XGBoost | Classifies each reading into Normal / Warning / Critical |
+| Isolation Forest | Catches unusual readings that don't fit any known pattern |
+| ONNX GRU | Detects anomalies across a sequence of readings over time |
+| Scikit-learn Pipeline | Extracts signal features and scales them for the other models |
 
-### Fault Signatures
-Seven fault types scored per ISO 10816-3 / ISO 13373-1: bearing wear, imbalance, thermal overload, electrical overload, misalignment, looseness, compound faults.
+The combined output is mapped to **ISO 10816-3** severity zones and shown as a live status badge on the dashboard. Seven fault types are scored in real time — bearing wear, imbalance, thermal overload, electrical overload, misalignment, looseness, compound faults.
 
-### RUL Forecast
-Least-squares slope on rolling anomaly score projects time to critical threshold (ISO 13381-1). States: Stable / Warning <72 h / Soon <24 h / Imminent <4 h.
-
-### Authentication
-- Username + password (Argon2, JWT, 30-min expiry, auto-refresh)
-- Google Sign-In (Firebase OAuth → backend token exchange)
-- Phone OTP (Firebase SMS — requires Blaze plan)
-- Offline Demo mode (no backend, synthetic data)
-- Roles: `ADMIN`, `MAINTENANCE_ENGINEER`, `OPERATOR`
-
-### Pages
-
-| Route | Page |
-|---|---|
-| `/` | Home — sensor cards, system overview, ML panel, alert log |
-| `/vibration` `/temperature` `/current` | Individual sensor detail + history |
-| `/explorer` | 3D interactive hardware model (Three.js) |
-| `/vision` | Equipment image analysis (Gemini Vision AI) |
-| `/profile` | User profile and settings |
-| `/about` | Project overview |
-| `/admin/users` | User management (ADMIN only) |
-
-### Other
-- PWA — installable on Android/iOS
-- 10 languages (EN, TE, HI, ES, FR, DE, JA, KO, ZH, AR)
-- Dark / Light theme
-- IoT mode (live hardware) and Simulation mode (synthetic)
-- Audit export CSV + JSON (IEC 62443)
-- Dify-powered chatbot
-- Operator feedback leaderboard
+A **Remaining Useful Life** estimate projects when the machine will hit the critical threshold, shown as a banner: Stable / Warning <72 h / Soon <24 h / Imminent <4 h.
 
 ---
 
-## Repository Structure
+## 🖥️ Dashboard Pages
 
-```
-IntelliWatch/
-├── Backend/
-│   ├── server.py                  # FastAPI app, all routes
-│   ├── auth.py                    # JWT, Firebase login, roles
-│   ├── database.py                # Postgres/SQLite layer
-│   ├── intelliwatch_brain.py      # ML ensemble orchestration
-│   ├── intelliwatch_engine.py     # Anomaly scoring, ISO zones
-│   ├── feature_extractor.py       # Signal feature extraction
-│   ├── sensor_reader.py           # Raspberry Pi hardware I/O
-│   ├── sensor_config.py           # ISO 10816-3 thresholds
-│   ├── iot_layer.py               # MQTT + HTTP IoT ingestion
-│   ├── vision_service.py          # Gemini Vision
-│   ├── equipment_detection_service.py  # YOLO detection
-│   ├── chatbot_api.py             # Dify proxy
-│   ├── requirements.txt
-│   ├── nixpacks.toml              # Build config
-│   ├── Procfile
-│   └── runtime.txt                # Python 3.11.9
-│
-├── frontend/
-│   ├── src/
-│   │   ├── App.jsx                # Root, routing, auth state
-│   │   ├── firebase.js            # Firebase init
-│   │   ├── apiConfig.js           # API + WS URL helpers
-│   │   ├── sensors.js             # Sensor definitions
-│   │   ├── i18n.js                # 10-language translations
-│   │   ├── useSensorData.js       # WebSocket + polling hook
-│   │   ├── useTokenRefresh.js     # JWT auto-refresh
-│   │   └── components/
-│   │       ├── LoginPage.jsx      # Login (password/Google/OTP)
-│   │       ├── Navbar.jsx
-│   │       ├── SensorPage.jsx
-│   │       ├── SensorExplorer.jsx # 3D Three.js model
-│   │       ├── VisionEquipment.jsx
-│   │       ├── ProfilePage.jsx
-│   │       ├── UserManagement.jsx
-│   │       └── ...
-│   ├── public/
-│   │   ├── sw.js                  # PWA service worker
-│   │   └── manifest.json
-│   ├── vite.config.js
-│   └── package.json
-│
-├── render.yaml                    # Render deploy config
-├── deploy_render.ps1              # Render deploy script (secrets via env)
-├── vercel.json                    # Vercel SPA routing + cache headers
-├── DEPLOYMENT.md                  # Full deployment reference
-└── README.md
-```
+| Route | What you see |
+|---|---|
+| `/` | Live sensor cards, system status, ML fault panel, alert log |
+| `/vibration` | Vibration history chart + ISO zone markers |
+| `/temperature` | Temperature history + anomaly dots |
+| `/current` | Current draw history + fault signatures |
+| `/explorer` | 3D interactive hardware model — click any component for ML history |
+| `/vision` | Upload a photo of equipment → Gemini AI analyses it |
+| `/profile` | Your account, timezone, session info |
+| `/about` | Project overview, standards, team |
+| `/admin/users` | Create / manage users, roles, invitations (Admin only) |
 
 ---
 
-## Running Locally
+## 🔐 Login Options
 
-**Requirements:** Python 3.11, Node.js 22, Git
+| Method | How |
+|---|---|
+| **Offline Demo** | Click "Offline Demo" — works with no backend, synthetic data |
+| **Google Sign-In** | Click Google button → pick role (Operator / Engineer / Admin) |
+| **Username + Password** | Register via API docs, then log in |
+| **Phone OTP** | Enter number → SMS code (requires Firebase Blaze plan) |
 
-### Backend (Terminal 1)
+---
 
+## 🚀 Run Locally
+
+**You need:** Python 3.11, Node.js 22, Git
+
+### Backend
 ```powershell
 cd Backend
-python -m venv .venv
-.venv\Scripts\Activate.ps1
+python -m venv .venv && .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
 Create `Backend\.env`:
 ```
-INTELLIWATCH_SECRET_KEY=<run: python -c "import secrets; print(secrets.token_hex(32))">
+INTELLIWATCH_SECRET_KEY=<python -c "import secrets; print(secrets.token_hex(32))">
 DATABASE_URL=postgresql://...your-neon-url...
 INTELLIWATCH_CORS_ORIGINS=http://localhost:5173
 FIREBASE_PROJECT_ID=intelliwatch-66ad0
@@ -173,14 +118,12 @@ FIREBASE_PROJECT_ID=intelliwatch-66ad0
 
 ```powershell
 uvicorn server:app --host 0.0.0.0 --port 8000 --reload
-# API docs: http://localhost:8000/docs
+# Docs at http://localhost:8000/docs
 ```
 
-### Frontend (Terminal 2)
-
+### Frontend
 ```powershell
-cd frontend
-npm install
+cd frontend && npm install
 ```
 
 Create `frontend\.env.local`:
@@ -196,97 +139,67 @@ VITE_FIREBASE_APP_ID=1:174724193863:web:e09ddbd891e2cc547d5b62
 
 ```powershell
 npm run dev
-# Open: http://localhost:5173
+# Open http://localhost:5173
 ```
-
-### Login Options
-
-| Method | How |
-|---|---|
-| Offline Demo | Click "Offline Demo" — no backend needed |
-| Google Sign-In | Click Google button — requires internet |
-| Username/Password | Register at `/docs` → `POST /auth/register` |
-| Phone OTP | Requires Firebase Blaze SMS plan |
 
 ---
 
-## Deployment
+## ☁️ Deployment
 
-### Services
+Push to `main` — both services redeploy automatically.
 
-| Service | Tier | Purpose |
-|---|---|---|
-| Vercel | Hobby (free) | Frontend CDN |
-| Render | Free Web Service | Backend FastAPI |
-| Neon | Free (0.5 GB) | Postgres database |
-| Firebase | Spark (free) | Google Sign-In |
+```powershell
+git add .
+git commit -m "your change"
+git push origin main
+# Vercel: ~1 min  |  Render: ~3 min  |  Neon: always on
+```
 
 ### Environment Variables
 
-**Render (Backend):**
+**Render (Backend)**
 ```
-INTELLIWATCH_SECRET_KEY    — 64-char hex string
-DATABASE_URL               — Neon connection string
-INTELLIWATCH_CORS_ORIGINS  — https://intelliwatch-iw.vercel.app
-FIREBASE_PROJECT_ID        — intelliwatch-66ad0
-```
-
-**Vercel (Frontend):**
-```
-VITE_API_URL                       — Render backend URL
-VITE_FIREBASE_API_KEY              — from Firebase Console
-VITE_FIREBASE_AUTH_DOMAIN          — intelliwatch-66ad0.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID           — intelliwatch-66ad0
-VITE_FIREBASE_STORAGE_BUCKET       — intelliwatch-66ad0.firebasestorage.app
-VITE_FIREBASE_MESSAGING_SENDER_ID  — 174724193863
-VITE_FIREBASE_APP_ID               — 1:174724193863:web:e09ddbd891e2cc547d5b62
+INTELLIWATCH_SECRET_KEY    64-char hex
+DATABASE_URL               Neon connection string
+INTELLIWATCH_CORS_ORIGINS  https://intelliwatch-iw.vercel.app
+FIREBASE_PROJECT_ID        intelliwatch-66ad0
 ```
 
-### Auto-deploy
-Push to `main` → Vercel and Render both redeploy automatically.
+**Vercel (Frontend)**
+```
+VITE_API_URL                       https://intelliwatch-backend.onrender.com
+VITE_FIREBASE_API_KEY              from Firebase Console
+VITE_FIREBASE_AUTH_DOMAIN          intelliwatch-66ad0.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID           intelliwatch-66ad0
+VITE_FIREBASE_STORAGE_BUCKET       intelliwatch-66ad0.firebasestorage.app
+VITE_FIREBASE_MESSAGING_SENDER_ID  174724193863
+VITE_FIREBASE_APP_ID               1:174724193863:web:e09ddbd891e2cc547d5b62
+```
 
 ---
 
-## API Reference
+## 🔌 Hardware Wiring (Raspberry Pi)
 
-Full docs at `/docs` (Swagger) and `/redoc`.
-
-| Method | Path | Description |
+| Sensor | Interface | Pins |
 |---|---|---|
-| GET | `/health` | Health check |
-| GET | `/auth/registration-status` | Backend probe |
-| POST | `/auth/login` | Username + password |
-| POST | `/auth/firebase-login` | Google / Phone OTP |
-| POST | `/auth/register` | Register user |
-| POST | `/auth/refresh` | Refresh JWT |
-| WS | `/stream/sensors` | Live sensor stream |
-| WS | `/stream/status` | Live system status |
-| POST | `/iot/ingest` | IoT device ingestion |
-| GET | `/models/status` | ML model status |
-| POST | `/learning/feedback` | Operator feedback |
-| POST | `/vision/analyse` | Gemini image analysis |
-| GET | `/audit/export` | Audit log CSV/JSON |
+| ADXL345 (vibration) | I2C | SDA=GPIO2, SCL=GPIO3 |
+| DS18B20 (temperature) | 1-Wire | GPIO4 |
+| ACS712 + ADS1115 (current) | I2C | SDA=GPIO2, SCL=GPIO3 (addr 0x48) |
 
 ---
 
-## Tech Stack
+## 🛠️ Tech Stack
 
-**Frontend:** React 19, Vite 8, React Router 7, Recharts, Three.js, Firebase JS SDK v13, PWA
+**Frontend:** React 19, Vite 8, React Router 7, Recharts, Three.js, Firebase JS SDK, PWA
 
-**Backend:** FastAPI 0.115, Uvicorn, Pydantic v2, scikit-learn 1.6, XGBoost 2.1, ONNX Runtime 1.31, Argon2-cffi, PyJWT, psycopg2-binary, Paho MQTT, Google GenAI (Gemini)
+**Backend:** FastAPI, Uvicorn, scikit-learn, XGBoost, ONNX Runtime, Argon2, PyJWT, psycopg2, Paho MQTT, Google GenAI
 
-**Infrastructure:** Vercel, Render, Neon, Firebase, GitHub
+**Infrastructure:** Vercel, Render, Neon, Firebase
 
----
-
-## Background
-
-Built as a final-year mini-project demonstrating end-to-end IoT pipeline from physical sensors to cloud dashboard, ML-based predictive maintenance, and industrial standards compliance (ISO 10816-3, ISO 13373-1, ISO 13381-1, IEC 60034-1, IEC 62443) — deployed at zero cloud cost.
-
-KAIST bearing fault dataset used for ML training, covering normal operation and six bearing fault types under varying load conditions.
+**Standards:** ISO 10816-3, ISO 13373-1, ISO 13381-1, IEC 60034-1, IEC 62443
 
 ---
 
-## License
+## 📄 License
 
 MIT
