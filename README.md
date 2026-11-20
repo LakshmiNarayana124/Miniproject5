@@ -10,8 +10,8 @@ IntelliWatch reads live sensor data (vibration, temperature, current), classifie
 
 | Component | Platform | URL |
 |---|---|---|
-| Frontend | Vercel | https://frontend-alpha-tawny-49.vercel.app |
-| Backend | Railway | https://intelliwatch-backend-production.up.railway.app |
+| Frontend | Vercel | https://intelliwatch-iw.vercel.app |
+| Backend | Render | https://intelliwatch-backend.onrender.com |
 | Database | Neon Postgres | 19 tables, persistent |
 
 ---
@@ -19,7 +19,7 @@ IntelliWatch reads live sensor data (vibration, temperature, current), classifie
 ## Architecture
 
 ```
-Sensors (Pi) → HTTP → Railway Backend → ML Brain → Control Signal
+Sensors (Pi) → HTTP → Render Backend → ML Brain → Control Signal
                                                         ↓
                                               Relay Module + LCD Display
                                                         ↓
@@ -31,7 +31,7 @@ Sensors (Pi) → HTTP → Railway Backend → ML Brain → Control Signal
 Three layers:
 
 1. **Edge Hardware** — Raspberry Pi with sensors, HD44780 LCD (I2C), multi-channel relay board
-2. **Backend** (Python FastAPI on Railway)
+2. **Backend** (Python FastAPI on Render)
    - `iot_layer.py` — device registration, auth, payload validation, MQTT/HTTP adapters
    - `intelliwatch_brain.py` — ML inference engine (NORMAL / WARNING / CRITICAL)
    - `equipment_controller.py` — anomaly → control signal (SHUTDOWN / DE_RATE / RUN), CRITICAL latching, audit trail
@@ -119,7 +119,7 @@ Set `INTELLIWATCH_SECRET_KEY` in `Backend/.env` before starting.
 
 Change the device push URL to the live backend:
 ```
-https://intelliwatch-backend-production.up.railway.app
+https://intelliwatch-backend.onrender.com
 ```
 The Pi pushes readings to `POST /iot/data/{device_id}` with `X-Device-Credential` header — the backend validates, brain classifies, and control signals flow back to relays and LCD automatically.
 
@@ -130,7 +130,7 @@ The Pi pushes readings to `POST /iot/data/{device_id}` with `X-Device-Credential
 | Branch | Purpose |
 |---|---|
 | `main` | Full source with all integrations |
-| `clean-start` | Production deploy branch (Vercel + Railway) |
+| `clean-start` | Production deploy branch (Vercel + Render) |
 | `feature/iot-lcd-relay-integration` | IoT feature branch |
 
 ---
@@ -141,14 +141,14 @@ The Pi pushes readings to `POST /iot/data/{device_id}` with `X-Device-Credential
 
 | Resource | Link |
 |---|---|
-| **Frontend (Live)** | https://frontend-alpha-tawny-49.vercel.app |
-| **Backend API (Live)** | https://intelliwatch-backend-production.up.railway.app |
-| **Backend Health Check** | https://intelliwatch-backend-production.up.railway.app/health |
-| **API Docs (Swagger)** | https://intelliwatch-backend-production.up.railway.app/docs |
+| **Frontend (Live)** | https://intelliwatch-iw.vercel.app |
+| **Backend API (Live)** | https://intelliwatch-backend.onrender.com |
+| **Backend Health Check** | https://intelliwatch-backend.onrender.com/health |
+| **API Docs (Swagger)** | https://intelliwatch-backend.onrender.com/docs |
 | **Database (Neon)** | https://console.neon.tech/app/projects/gentle-snow-07661904 |
 | **GitHub — Miniproject5** | https://github.com/LakshmiNarayana124/Miniproject5 |
 | **GitHub — IntelliWatch Private** | https://github.com/LakshmiNarayana124/IntelliWatch-Private |
-| **Railway Dashboard** | https://railway.com/project/2f8ca63a-580d-42ba-84e3-f2006b1789d7 |
+| **Render Dashboard** | https://dashboard.render.com |
 | **Vercel Dashboard** | https://vercel.com/n0t7h1in-g/frontend |
 
 ---
