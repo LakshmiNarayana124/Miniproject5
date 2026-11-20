@@ -14,7 +14,7 @@ Edge sensors on a Raspberry Pi stream vibration, temperature, and current readin
 | **API Docs** | https://intelliwatch-backend.onrender.com/docs |
 | **Database** | Neon Postgres (serverless, free tier) |
 
-> **Note:** The Render free tier spins down after 15 min of inactivity. The first request after idle takes ~30 seconds to wake. Subsequent requests are fast.
+> **Note:** The Render free tier spins down after 15 min of inactivity. The first request after idle takes ~30 s to wake — click any login button and wait a moment. Subsequent requests are instant.
 
 ---
 
