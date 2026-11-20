@@ -4,6 +4,7 @@ import { mlEngine } from '../mlEngine'
 import { SENSORS } from '../sensors'
 import { t } from '../i18n'
 import useLang from '../useLang'
+import { classifyFaultForSensor, FAULT_SEVERITY_COLOR } from '../faultSignatures'
 
 import './MLStatusPanel.css'
 
@@ -470,6 +471,12 @@ export default function MLStatusPanel({
               ? `${state.learnedNormal.min.toFixed(2)} – ${state.learnedNormal.max.toFixed(2)} ${sensor.unit}`
               : '—'
 
+            const faultHint = classifyFaultForSensor(
+              key,
+              state.lastValue ?? null,
+              state
+            )
+
             return (
               <div
                 key={key}
@@ -535,6 +542,28 @@ export default function MLStatusPanel({
                         : tl('awaiting', lang)}
                     </span>
                   </div>
+
+                  {faultHint && (
+                    <div className="ml-metric ml-metric-full ml-fault-hint">
+                      <span className="ml-metric-label">
+                        Fault signature
+                      </span>
+                      <span
+                        className="ml-fault-chip"
+                        style={{
+                          borderColor: `${FAULT_SEVERITY_COLOR[faultHint.severity]}60`,
+                          background:  `${FAULT_SEVERITY_COLOR[faultHint.severity]}12`,
+                          color:        FAULT_SEVERITY_COLOR[faultHint.severity],
+                        }}
+                        title={`${faultHint.description} (${faultHint.standard}) — ${faultHint.confidence}% match`}
+                      >
+                        {faultHint.label}
+                        <span className="ml-fault-conf">
+                          {faultHint.confidence}%
+                        </span>
+                      </span>
+                    </div>
+                  )}
 
                 </div>
 

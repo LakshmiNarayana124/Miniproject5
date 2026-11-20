@@ -17,6 +17,7 @@ import {
 
 import AlertLog from './AlertLog'
 import MLStatusPanel from './MLStatusPanel'
+import useRUL from '../useRUL'
 
 import { t } from '../i18n'
 import useLang from '../useLang'
@@ -428,6 +429,13 @@ export default function SensorPage({
 }) {
   const lang = useLang()
 
+  const mlSource =
+    operatingMode === 'simulation' ? 'simulation' :
+    sessionStorage.getItem('iw_token') === 'demo-offline' ? 'offline-demo' :
+    'hardware'
+
+  const rul = useRUL(mlSource)
+
   const sensor = SENSORS[sensorKey]
 
   if (!sensor) {
@@ -539,6 +547,62 @@ export default function SensorPage({
         status={hasLiveReading ? status : null}
         lang={lang}
       />
+
+
+      {/* RUL / Maintenance window estimate */}
+
+      {rul.status !== 'cold' && rul.status !== 'stable' && (
+        <div
+          className="rul-banner"
+          style={{
+            background:
+              rul.status === 'imminent' || rul.status === 'exceeded'
+                ? '#ef444412'
+                : rul.status === 'soon'
+                ? '#f59e0b10'
+                : '#3b82f610',
+            borderColor:
+              rul.status === 'imminent' || rul.status === 'exceeded'
+                ? '#ef444440'
+                : rul.status === 'soon'
+                ? '#f59e0b35'
+                : '#3b82f640',
+          }}
+        >
+          <span className="rul-icon">
+            {rul.status === 'imminent' || rul.status === 'exceeded'
+              ? '🔴'
+              : rul.status === 'soon'
+              ? '🟡'
+              : '🔵'}
+          </span>
+          <div className="rul-body">
+            <span className="rul-title"
+              style={{
+                color:
+                  rul.status === 'imminent' || rul.status === 'exceeded'
+                    ? '#ef4444'
+                    : rul.status === 'soon'
+                    ? '#f59e0b'
+                    : '#60a5fa',
+              }}
+            >
+              {rul.status === 'exceeded'
+                ? 'Critical threshold exceeded'
+                : rul.status === 'imminent'
+                ? `Maintenance required within ~${rul.hoursUntilCritical}h`
+                : rul.status === 'soon'
+                ? `Maintenance recommended within ~${rul.hoursUntilCritical}h`
+                : `Projected maintenance window: ~${rul.hoursUntilCritical}h`}
+            </span>
+            <span className="rul-sub">
+              {rul.dominantSensor
+                ? `Trend on ${SENSORS[rul.dominantSensor]?.label ?? rul.dominantSensor} · ISO 13381-1 RUL estimate · ${rul.confidence}% confidence`
+                : `ISO 13381-1 RUL estimate · ${rul.confidence}% confidence`}
+            </span>
+          </div>
+        </div>
+      )}
 
 
       {/* Awaiting hardware */}

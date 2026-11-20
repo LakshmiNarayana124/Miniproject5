@@ -205,6 +205,68 @@ export default function AlertLog({
 
 
   // ==================================================
+  // EXPORT — CSV + JSON (ISO traceability)
+  // Implements IEC 62443 / ISO 55000 audit trail
+  // export.  No backend round-trip; runs entirely
+  // in the browser using the Blob / anchor trick.
+  // ==================================================
+
+  function exportAlerts() {
+    if (!alerts.length) return
+
+    const ts   = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+    const user = (() => {
+      try { return JSON.parse(sessionStorage.getItem('iw_user') || '{}').username || 'unknown' }
+      catch { return 'unknown' }
+    })()
+
+    // ---- CSV ----
+    const csvHeader = 'timestamp,sensor,value,unit,status,ml_score,model_version,source\n'
+    const csvRows = alerts.map(a => [
+      a.time ?? '',
+      a.sensor ?? '',
+      a.value !== undefined ? a.value : '',
+      a.unit   ?? '',
+      a.status ?? '',
+      a.score  !== undefined ? a.score  : '',
+      a.model_version ?? 'browser-v1',
+      a.source  ?? '',
+    ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
+
+    const csvBlob = new Blob(
+      [csvHeader + csvRows],
+      { type: 'text/csv;charset=utf-8;' }
+    )
+    const csvUrl = URL.createObjectURL(csvBlob)
+    const csvLink = document.createElement('a')
+    csvLink.href = csvUrl
+    csvLink.download = `IntelliWatch_AlertLog_${user}_${ts}.csv`
+    csvLink.click()
+    URL.revokeObjectURL(csvUrl)
+
+    // ---- JSON ----
+    const jsonPayload = {
+      export_timestamp: new Date().toISOString(),
+      exported_by: user,
+      standard: 'IEC 62443 / ISO 55000 audit trail',
+      model_version: 'browser-v1',
+      alert_count: alerts.length,
+      alerts,
+    }
+    const jsonBlob = new Blob(
+      [JSON.stringify(jsonPayload, null, 2)],
+      { type: 'application/json' }
+    )
+    const jsonUrl = URL.createObjectURL(jsonBlob)
+    const jsonLink = document.createElement('a')
+    jsonLink.href = jsonUrl
+    jsonLink.download = `IntelliWatch_AlertLog_${user}_${ts}.json`
+    jsonLink.click()
+    URL.revokeObjectURL(jsonUrl)
+  }
+
+
+  // ==================================================
   // RENDER
   // ==================================================
 
@@ -231,13 +293,24 @@ export default function AlertLog({
           )}
 
           {alerts.length > 0 && (
-            <button
-              className="clear-btn"
-              onClick={onClear}
-              type="button"
-            >
-              {t('alert_clear', lang)}
-            </button>
+            <>
+              <button
+                className="export-btn"
+                onClick={exportAlerts}
+                type="button"
+                title="Export alert log as CSV + JSON (IEC 62443 audit trail)"
+              >
+                ⬇ Export
+              </button>
+
+              <button
+                className="clear-btn"
+                onClick={onClear}
+                type="button"
+              >
+                {t('alert_clear', lang)}
+              </button>
+            </>
           )}
         </div>
       </div>

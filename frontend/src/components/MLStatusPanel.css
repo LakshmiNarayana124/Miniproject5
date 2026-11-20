@@ -181,3 +181,28 @@
   color: #94a3b8;
 }
 .ml-backend-info strong { color: #cbd5e1; }
+
+/* -- Fault Signature Chip -------------------------------------------------- */
+.ml-fault-hint {
+  margin-top: 4px;
+}
+
+.ml-fault-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 9px;
+  border-radius: 20px;
+  border: 1px solid;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: default;
+  transition: opacity 0.2s;
+}
+
+.ml-fault-conf {
+  font-size: 10px;
+  font-weight: 500;
+  opacity: 0.75;
+}
