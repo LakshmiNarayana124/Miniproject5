@@ -403,6 +403,31 @@ def _handle_iot_inference_payload(device_id, raw_payload):
             f"from '{device_id}': {logger_message}"
         )
 
+        # Act on the detected anomaly, not merely read it: map the brain's
+        # system status to a control signal and dispatch it so the relays and
+        # LCD respond automatically. Only dispatch on status *change* (dedup
+        # via the controller's latched status) to avoid re-firing every
+        # snapshot. A system session authorises SHUTDOWN / DE_RATE.
+        if (
+            _controller is not None
+            and logger_message in ("NORMAL", "WARNING", "CRITICAL")
+            and logger_message != _controller.latched_status
+        ):
+            try:
+                _controller.on_status(
+                    logger_message,
+                    trace=result,
+                    session={
+                        "role": "MAINTENANCE_ENGINEER",
+                        "username": "system-auto-actuation",
+                    },
+                )
+            except Exception as act_error:
+                print(
+                    f"[IoT] Auto-actuation failed for "
+                    f"'{device_id}': {act_error}"
+                )
+
     except Exception as error:
         print(
             f"[IoT] Brain processing failed for "
@@ -528,6 +553,43 @@ async def startup():
     except Exception as error:
         print(
             f"[startup] EquipmentController init warning: {error}"
+        )
+
+    try:
+        from lcd_relay_module import (
+            LCDRelayEdgeAdapter,
+            create_lcd_relay_actuator,
+        )
+
+        # Flow 2 (app -> hardware): register the LCD + relay actuator as an
+        # HTTP edge device and authenticate it so EquipmentController
+        # dispatches reach the physical relays and display via relay().
+        _lcd_relay_adapter = LCDRelayEdgeAdapter(
+            device_id="lcd-relay-01",
+            actuator=create_lcd_relay_actuator(),
+        )
+
+        _lcd_handshake = _iot_layer.register_device(
+            _lcd_relay_adapter
+        )
+
+        if not _lcd_handshake.success:
+            print(
+                f"[startup] LCD+relay actuator registration failed: "
+                f"{_lcd_handshake.reason}"
+            )
+        else:
+            _iot_layer.authenticate(
+                _lcd_handshake.device_id,
+                _lcd_handshake.device_credential,
+            )
+            print(
+                "[startup] LCD+relay actuator registered & "
+                "authenticated (app->hardware control flow ready)"
+            )
+    except Exception as error:
+        print(
+            f"[startup] LCD+relay actuator init warning: {error}"
         )
 
     try:

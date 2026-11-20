@@ -1,6 +1,6 @@
-﻿
+
 # ============================================================
-# IntelliWatch â€” Backend Dependencies
+# IntelliWatch — Backend Dependencies
 # ============================================================
 
 # Core API
@@ -13,9 +13,6 @@ python-jose[cryptography]==3.5.0
 PyJWT
 argon2-cffi==23.1.0
 
-# Firebase Authentication (Google Sign-In + Phone OTP token verification)
-# Required only if FIREBASE_SERVICE_ACCOUNT_JSON is configured.
-firebase-admin>=6.5.0
 # Machine Learning / Data Science
 scikit-learn==1.6.1
 pandas==2.2.3
@@ -45,4 +42,4 @@ hypothesis==6.131.10
 # torch==2.6.0
 onnxruntime==1.31.1
 Pillow==13.0.0
-
+psycopg2-binary>=2.9.9
