@@ -1903,6 +1903,9 @@ export default function LoginPage({ onLogin }) {
     setPassword('')
     setError('')
     setAuthMethod('password')
+    // keep activeRole in sync with the tab
+    if (nextMode === 'admin') setActiveRole('ADMIN')
+    else setActiveRole('OPERATOR')
   }
 
   function switchActiveRole(nextRole) {
@@ -2414,7 +2417,7 @@ export default function LoginPage({ onLogin }) {
                 loading={loading}
                 setLoading={setLoading}
                 timezone={timezone}
-                selectedRole={mode === 'admin' ? 'ADMIN' : activeRole}
+                selectedRole={activeRole}
               />
             </>
           )}
@@ -2433,7 +2436,7 @@ export default function LoginPage({ onLogin }) {
                 loading={loading}
                 setLoading={setLoading}
                 timezone={timezone}
-                selectedRole={mode === 'admin' ? 'ADMIN' : activeRole}
+                selectedRole={activeRole}
               />
             </>
           )}
