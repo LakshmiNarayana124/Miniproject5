@@ -1,359 +1,274 @@
 # IntelliWatch
-### Intelligent Condition Monitoring, Predictive Maintenance & Automated Safety-Actuation System
 
-**IntelliWatch** is an end-to-end industrial equipment monitoring and intelligent safety-actuation system that integrates IoT, Machine Learning, real-time data processing, cloud infrastructure, and physical hardware control.
+**Real-Time Industrial Condition Monitoring & Anomaly Detection**
 
-The system continuously monitors industrial equipment using multiple sensor inputs, including vibration, temperature, and electrical current. Its ML-based intelligence engine analyzes incoming sensor data, identifies abnormal operating conditions, classifies equipment health, and generates appropriate control decisions.
-
-Based on the detected equipment condition, IntelliWatch can automatically execute safety responses such as normal operation, controlled de-rating, or emergency shutdown. These decisions are communicated through the IoT communication layer to physical relay channels and an LCD display, while sensor readings, alerts, device activity, and control actions are maintained in a persistent database.
-
-The project combines edge-level hardware interaction with a cloud-hosted backend and a real-time web dashboard, providing an integrated approach to industrial condition monitoring, predictive maintenance, and automated equipment protection.
-
-**Implementation Status:** All major project components and integrations have been implemented, including the frontend, backend, ML processing, database, authentication, IoT communication, control logic, and LCD-relay integration.
+A full-stack predictive maintenance platform combining live IoT sensor data, ML-based anomaly detection, Firebase authentication, and a PWA-ready React frontend.
 
 ---
 
-## 1. Project Overview
+## Live URLs
 
-IntelliWatch addresses the limitations of conventional industrial monitoring systems, where equipment abnormalities may require manual observation and intervention.
+| Service | URL |
+|---|---|
+| **Frontend** (Vercel) | https://intelliwatch.vercel.app |
+| **Backend API** (Railway) | https://intelliwatch-backend.up.railway.app |
+| **API Docs** | https://intelliwatch-backend.up.railway.app/docs |
+| **Database** | Neon Postgres (serverless) |
 
-Its objective is to move beyond passive monitoring by combining intelligent condition assessment with automated safety responses.
+---
+
+## What It Does
+
+IntelliWatch monitors industrial equipment in real time using three sensor channels — vibration (ADXL345), temperature (DS18B20), and current (ACS712) — running on a Raspberry Pi edge device. Readings stream to a FastAPI backend that runs ensemble ML inference (XGBoost + LightGBM + Isolation Forest + LSTM/GRU) and returns anomaly status, ISO severity zone, fault signature, and a remaining useful life estimate to the React dashboard.
 
 ### Core Capabilities
 
-- **Real-time condition monitoring:** Collects vibration, temperature, and current readings.
-- **Machine Learning intelligence:** Analyzes sensor measurements and classifies equipment health.
-- **Multi-level anomaly detection:** Identifies NORMAL, WARNING, and CRITICAL operating conditions.
-- **Automated safety actuation:** Generates RUN, DE_RATE, and SHUTDOWN control decisions.
-- **Physical hardware integration:** Interfaces with Raspberry Pi, multi-channel relays, and an HD44780 LCD.
-- **Cloud deployment:** Runs the frontend and backend on separate cloud platforms.
-- **Persistent data management:** Stores equipment readings, device information, alerts, and audit records.
-- **Role-based access control:** Provides separate operational permissions for operators, maintenance engineers, and administrators.
-- **Real-time visualization:** Displays equipment conditions, sensor readings, control signals, and alerts through a web dashboard.
-- **Intelligent assistance:** Includes a chatbot and supporting equipment-information capabilities.
-
-## 2. System Architecture
-
-```text
-       INDUSTRIAL EQUIPMENT
-                |
-                v
-       SENSOR ACQUISITION
-    Vibration | Temperature | Current
-                |
-                v
-        RASPBERRY PI EDGE
-                |
-          HTTP / IoT
-                |
-                v
-       RAILWAY BACKEND
-                |
-        IoT Communication
-                |
-                v
-        ML INTELLIGENCE
-                |
-       Equipment Classification
-                |
-       NORMAL / WARNING / CRITICAL
-                |
-                v
-      EQUIPMENT CONTROLLER
-                |
-       RUN / DE_RATE / SHUTDOWN
-                |
-          +-----+------+
-          |            |
-          v            v
-      RELAY BOARD    LCD DISPLAY
-          |            |
-          v            v
-    Physical Control  Live Status
-          |
-          v
-      NEON POSTGRES
-   Sensor Data / Audit / Records
-          |
-          v
-      VERCEL FRONTEND
-   Real-Time Monitoring Dashboard
-```
-
-### Three-Layer Architecture
-
-**Layer 1 — Edge Hardware**
-
-- Raspberry Pi-based sensor acquisition.
-- Vibration, temperature, and current monitoring.
-- HD44780 LCD with I2C communication.
-- Multi-channel relay interface.
-- Edge-to-cloud communication through HTTP/IoT adapters.
-
-**Layer 2 — Backend Intelligence and Processing**
-
-- Python 3.11 and FastAPI.
-- IoT device registration and authentication.
-- ML-based equipment condition classification.
-- Automated control-decision generation.
-- Relay and LCD actuator integration.
-- Database operations and audit logging.
-- JWT authentication and role-based authorization.
-- WebSocket-based real-time communication.
-
-**Layer 3 — Cloud Dashboard and Visualization**
-
-- React 19 and Vite 8.
-- Live sensor monitoring.
-- Equipment condition and anomaly visualization.
-- Control-signal notifications.
-- Alert history.
-- ML status information.
-- Chatbot interface.
-- User and device management.
-
-## 3. Live Cloud Deployment
-
-The application is deployed using separate cloud services for the frontend, backend, and database.
-
-| Component | Platform | Deployment |
-|---|---|---|
-| Frontend | Vercel | Live |
-| Backend | Railway | Live |
-| Database | Neon PostgreSQL | Persistent |
-| API | FastAPI | Cloud-hosted |
-| Dashboard | React + Vite | Cloud-hosted |
-
-### Deployment Links
-
-- Frontend: https://frontend-alpha-tawny-49.vercel.app
-- Backend: https://intelliwatch-backend-production.up.railway.app
-- Health Check: https://intelliwatch-backend-production.up.railway.app/health
-- Swagger API Documentation: https://intelliwatch-backend-production.up.railway.app/docs
-- Neon Database Console: https://console.neon.tech/app/projects/gentle-snow-07661904
-
-The production database contains 19 tables for application data and persistent records.
-
-## 4. Backend Implementation
-
-The backend is developed using FastAPI and Python.
-
-| Component | Responsibility |
-|---|---|
-| `server.py` | Backend application and API orchestration |
-| `iot_layer.py` | Device registration, authentication, validation, HTTP/MQTT adapters |
-| `intelliwatch_brain.py` | ML inference and equipment health classification |
-| `equipment_controller.py` | Control decisions, shutdown latching, dispatch, audit trail |
-| `lcd_relay_module.py` | LCD and relay actuator integration |
-| `database.py` | PostgreSQL/SQLite database abstraction |
-| `auth.py` | Authentication and authorization |
-| `learning_system.py` | Learning and model-support functionality |
-| `vision_service.py` | Vision-related processing |
-| `chatbot_api.py` | Chatbot backend functionality |
-
-## 5. Machine Learning and Intelligent Decision-Making
-
-The intelligence engine processes equipment sensor readings and identifies abnormal operating conditions.
-
-### Equipment Health Classification
-
-| Classification | Meaning | System Response |
-|---|---|---|
-| NORMAL | Equipment operating within configured limits | RUN |
-| WARNING | Abnormal operating condition detected | DE_RATE |
-| CRITICAL | Critical equipment condition detected | SHUTDOWN |
-
-The system uses multiple sensor dimensions to support condition assessment rather than relying exclusively on a single measurement.
-
-The classification output is passed to the equipment controller, which determines and dispatches the corresponding control intent.
-
-## 6. Automated Equipment Safety and Actuation
-
-A key feature of IntelliWatch is its ability to connect software-based anomaly detection with physical actuator control.
-
-The equipment controller translates system decisions into actuator commands.
-
-| Control Intent | Relay Behaviour | LCD Display |
-|---|---|---|
-| RUN | MAIN ON, INDICATOR ON | SYSTEM: RUN / STATUS: NORMAL |
-| DE_RATE | MAIN + DE-RATE ON | SYSTEM: DERATE / STATUS: WARNING |
-| SHUTDOWN | All channels OFF | SYSTEM: STOP / STATUS: CRITICAL |
-
-### Safety Mechanisms
-
-- Fail-safe relay initialization.
-- De-energized relay state on startup.
-- Critical shutdown latching.
-- Software actuator shadow mode.
-- Control-dispatch audit records.
-- Device authentication and payload validation.
-- Finite-value validation and payload-size limits.
-- Optional hardware libraries for cross-platform backend compatibility.
-
-Automated safety decisions operate through a system-level identity, independently of human dashboard interaction.
-
-A physical emergency-stop circuit should remain independent of software control and be wired appropriately in series with the equipment safety circuit.
-
-## 7. IoT Hardware Integration
-
-The edge integration connects the Raspberry Pi to the existing backend IoT communication and control-dispatch architecture.
-
-Hardware components:
-
-- Raspberry Pi.
-- Vibration sensor.
-- Temperature sensor.
-- Current sensor.
-- HD44780 LCD with I2C interface.
-- Multi-channel relay module.
-
-The LCD-relay actuator is integrated through the `LCDRelayEdgeAdapter` and `create_lcd_relay_actuator` interfaces.
-
-The device registers and authenticates with the IoT layer, enabling the existing control-signal delivery mechanism to communicate with the actuator.
-
-### Communication Flow
-
-1. Sensors acquire equipment measurements.
-2. Raspberry Pi sends readings to the backend.
-3. Backend validates device credentials and payload.
-4. ML engine evaluates equipment condition.
-5. Equipment controller generates the appropriate control intent.
-6. IoT layer dispatches the control signal.
-7. Relay channels and LCD respond to the command.
-8. Database records relevant readings, events, and control activity.
-
-## 8. Role-Based Access Control
-
-IntelliWatch implements separate permissions for three operational roles.
-
-| Capability | Operator | Maintenance Engineer | Admin |
-|---|:---:|:---:|:---:|
-| View sensor readings | Yes | Yes | Yes |
-| View anomalies | Yes | Yes | Yes |
-| Understand shutdown reasons | Yes | Yes | Yes |
-| Dispatch control commands | No | Yes | Yes |
-| Manage devices | No | No | Yes |
-| Manage users | No | No | Yes |
-
-Automated safety actuation is handled through the system identity rather than depending on the permissions of an individual logged-in user.
-
-## 9. Database and Data Management
-
-IntelliWatch uses a dual-database architecture:
-
-- **Production:** Neon PostgreSQL.
-- **Local development:** SQLite.
-
-The production database currently contains 19 tables.
-
-The database layer supports persistent application records, including equipment information, device data, sensor measurements, alerts, and control-related audit records.
-
-## 10. Frontend and User Interface
-
-The frontend is developed using React 19 and Vite 8.
-
-Major interface capabilities include:
-
-- Authentication and login interface.
-- Live equipment sensor dashboard.
-- Sensor status and anomaly visualization.
-- Control-signal status banner.
-- Alert and event history.
-- ML status panel.
-- Chatbot interface.
-- Device and user management.
-- Equipment visualization and 3D exploration.
-
-The interface uses Recharts for data visualization and Three.js for 3D visualization.
-
-## 11. Technology Stack
-
-| Category | Technologies |
-|---|---|
-| Programming Language | Python 3.11, JavaScript |
-| Backend | FastAPI |
-| Frontend | React 19, Vite 8 |
-| Machine Learning | Python ML ecosystem |
-| Database | Neon PostgreSQL, SQLite |
-| Communication | HTTP, WebSockets, MQTT adapters |
-| Authentication | JWT, password hashing |
-| Hardware | Raspberry Pi |
-| Sensors | Vibration, Temperature, Current |
-| Actuation | Multi-channel Relay |
-| Display | HD44780 LCD, I2C |
-| Visualization | Recharts, Three.js |
-| Cloud Deployment | Railway, Vercel, Neon |
-| Hardware Libraries | smbus2, RPi.GPIO |
-
-## 12. Implementation Status
-
-The major IntelliWatch development components have been implemented and integrated into the overall system.
-
-| Project Component | Status |
-|---|---|
-| Frontend development | Implemented |
-| Backend API development | Implemented |
-| Authentication | Implemented |
-| Role-based access control | Implemented |
-| ML intelligence engine | Implemented |
-| Anomaly classification | Implemented |
-| Equipment control logic | Implemented |
-| IoT communication layer | Implemented |
-| LCD-relay actuator module | Implemented |
-| Database integration | Implemented |
-| Cloud backend deployment | Deployed |
-| Cloud frontend deployment | Deployed |
-| Persistent production database | Configured |
-| Chatbot integration | Implemented |
-| Hardware integration interfaces | Implemented |
-
-**Overall Project Scope:** IntelliWatch combines software engineering, artificial intelligence, cloud computing, database management, IoT communication, and hardware actuation into one integrated industrial monitoring and safety system.
-
-Implementation, deployment, integration, and physical validation are distinct milestones; actual hardware behaviour must be verified on the connected equipment before operational use.
-
-## 13. Research Foundations
-
-The project draws on published research and established approaches in predictive maintenance, industrial IoT, and ML-based anomaly detection.
-
-1. Samatas et al. — *Predictive Maintenance: Bridging Artificial Intelligence and IoT*. [arXiv:2103.11148](https://arxiv.org/abs/2103.11148)
-
-2. *Real-Time Adaptive Anomaly Detection in Industrial IoT Environments*. [arXiv:2601.03085](https://arxiv.org/abs/2601.03085)
-
-3. Givnan et al. — *ML-Based Rotary Machine Fault Detection*. [arXiv:2110.01447](https://arxiv.org/abs/2110.01447)
-
-4. IEEE Technology Navigator — *Machine Learning for Predictive Maintenance Using IoT Sensor Data*. [IEEE TechNav](https://technav.ieee.org/topic/predictive-maintenance)
-
-5. *An Adaptable and Unsupervised TinyML Anomaly Detection System for Extreme Industrial Environments*. [MDPI Sensors, 2023](https://www.mdpi.com/1424-8220/23/4/2344)
-
-6. Deshmukh and Dere — *AI-Driven Predictive Maintenance (Industry 4.0)*. [IJCRT:2401033](https://ijcrt.org/papers/IJCRT2401033.pdf)
-
-## 14. Source Code and Project Repositories
-
-| Repository | Purpose |
-|---|---|
-| [Miniproject5](https://github.com/LakshmiNarayana124/Miniproject5) | Project repository |
-| [IntelliWatch-Private](https://github.com/LakshmiNarayana124/IntelliWatch-Private) | Main private development repository |
-
-### Development Branches
-
-| Branch | Purpose |
-|---|---|
-| `main` | Main integrated source |
-| `clean-start` | Production deployment branch |
-| `feature/iot-lcd-relay-integration` | LCD and relay integration |
+**Monitoring**
+- Live sensor dashboard — Vibration, Temperature, Current with real-time area charts
+- Anomaly detection with ISO 10816-3 / IEC 60034-1 severity zones
+- Fault Signature Library — 7-fault catalogue (Bearing Wear, Mechanical Imbalance, Thermal Overload, Electrical Overload, Shaft Misalignment, Mechanical Looseness, Compound Fault) with confidence scoring per ISO 10816-3 / ISO 13373-1
+- Remaining Useful Life (RUL) estimate — ISO 13381-1 prognostics, least-squares trend projection with maintenance window banner
+- Alert log with per-sensor history, operator feedback (confirm / dismiss), and IEC 62443 / ISO 55000 audit-trail export (CSV + JSON)
+- 3D Sensor Explorer — interactive hardware component viewer with ML classification and history replay
+
+**ML / AI**
+- Trained on KAIST bearing fault dataset
+- Tabular (XGBoost / LightGBM), Unsupervised (Isolation Forest), Sequence (LSTM/GRU), Ensemble models
+- Adaptive learning — operator labels retrain the model automatically
+- Model observability — accuracy trend tracking, degradation alerts, sparkline history
+- Frontend adaptive ML engine — per-source (hardware / simulation / demo) rolling-window EMA with feedback learning
+
+**Authentication**
+- Username + Password (Argon2 hashed, JWT sessions)
+- Google Sign-In via Firebase (public-key verification, no service account needed)
+- Phone + OTP via Firebase (Blaze plan required for SMS)
+- Offline Demo mode — no credentials required, full simulation
+- Timezone selector (19 zones), Profile page, Change Password
+
+**IoT**
+- MQTT and HTTP device adapters
+- Device registration, heartbeat, disconnect/reconnect handling
+- Control signal queue (SHUTDOWN / DE_RATE / RUN)
+- LCD + relay actuator integration
+
+**Equipment Vision**
+- Gemini AI image analysis — upload or capture equipment photo, get component identification and monitoring recommendations
+- Live object detection with bounding boxes
+
+**Multilingual AI Assistant**
+- Dify Chatflow integration for authenticated sessions
+- Offline local knowledge base for Demo mode
+- English, Hindi, Kannada, Tamil, Telugu
+- Voice input (Web Speech API) and TTS output
+
+**TenderWatch Leaderboard**
+- Live industry benchmark table — 7 Indian industrial organisations ranked by Health Score (ISO 55000), Uptime % (ISO 22400-2), MTBF (ISO 14224), Anomaly Response latency
+- Backend live data with local simulation fallback
+
+**PWA**
+- Service worker with app-shell caching and offline fallback
+- Installable via Add to Home Screen on Android (Chrome) and iOS (Safari)
 
 ---
 
-## Final Project Summary
+## Architecture
 
-**IntelliWatch — Software + AI + IoT + Cloud + Physical Hardware.**
+```
+┌──────────────────┐    HTTPS     ┌──────────────────┐    SSL      ┌──────────────┐
+│   Vercel         │◀────────────▶│   Railway        │◀───────────▶│    Neon      │
+│  React + Vite    │   REST/WS    │  FastAPI/Uvicorn  │  psycopg2   │  Postgres    │
+│  PWA             │              │  ML Ensemble      │             │  Serverless  │
+└──────────────────┘              └──────────────────┘             └──────────────┘
+         ▲                                  ▲
+         │                                  │
+         │ Firebase Auth                    │ MQTT / HTTP
+         ▼                                  ▼
+┌──────────────────┐              ┌──────────────────┐
+│  Firebase        │              │  Raspberry Pi    │
+│  Google + Phone  │              │  IoT Edge Device │
+│  OTP             │              │  ADXL345 / DS18B20│
+└──────────────────┘              │  ACS712           │
+                                  └──────────────────┘
+```
 
-IntelliWatch demonstrates an integrated industrial condition-monitoring architecture that connects multi-sensor data acquisition, ML-based equipment health assessment, automated safety decisions, physical actuator interfaces, persistent cloud storage, and real-time visualization.
+---
 
-Rather than functioning as a conventional sensor-monitoring dashboard, the system is designed to close the loop between detecting an abnormal condition and initiating an appropriate equipment-control response.
+## Tech Stack
 
-Its architecture brings together edge computing, intelligent decision-making, cloud-based infrastructure, and hardware-level interaction within a single project.
+| Layer | Technology |
+|---|---|
+| Frontend | React 18, Vite, Recharts, React Three Fiber / Drei, React Router |
+| Backend | FastAPI, Uvicorn, Pydantic, Python 3.11 |
+| ML | XGBoost, LightGBM, scikit-learn, ONNX Runtime, NumPy, pandas |
+| Auth | JWT (python-jose), Argon2, Firebase Admin |
+| Database | SQLite (local dev) → Neon Postgres (production) |
+| IoT | paho-mqtt, httpx |
+| Vision AI | Google Gemini (google-genai) |
+| Chatbot | Dify Chatflow |
+| Deployment | Vercel (frontend), Railway (backend), Neon (database) |
+| PWA | Service Worker, Web App Manifest |
 
-**Project Objective:** To develop an intelligent, connected, and safety-oriented equipment monitoring system that supports condition-based maintenance and automated responses to abnormal industrial operating conditions.
+---
 
-*IntelliWatch — From Sensor Intelligence to Automated Equipment Protection.*
+## Dataset
+
+**KAIST Bearing Fault Dataset** — accelerometer recordings from rotating machinery under normal, inner-race fault, outer-race fault, and ball-fault conditions. Used to train the tabular, unsupervised, and sequence models.
+
+References:
+- ISO 10816-3:2009 — Vibration severity zones for industrial machines
+- IEC 60034-1 — Motor winding insulation temperature classes
+- IEC 60947-4-1 / NEMA MG-1 — Motor overcurrent protection
+- ISO 13373-1 — Condition monitoring, vibration measurement
+- ISO 13381-1 — Prognostics, remaining useful life
+- ISO 55000 — Asset management
+- ISO 22400-2 — OEE KPIs
+- ISO 14224 — MTBF / reliability data
+- IEC 62443 — Industrial cybersecurity (audit trail)
+
+---
+
+## Quick Start (Local — HTTPS)
+
+### Prerequisites
+- Python 3.11+, pip
+- Node.js 18+, npm
+- [mkcert](https://github.com/FiloSottile/mkcert) (for trusted local HTTPS)
+
+### 1. Clone
+```bash
+git clone https://github.com/LakshmiNarayana124/Miniproject5.git
+cd Miniproject5
+```
+
+### 2. Generate trusted local certificates
+```bash
+mkcert -install
+cd certs
+mkcert -cert-file intelliwatch-local.crt -key-file intelliwatch-local.key localhost 127.0.0.1
+cd ..
+```
+
+### 3. Backend (HTTPS on port 8000)
+```bash
+cd Backend
+pip install -r requirements.txt
+set INTELLIWATCH_SECRET_KEY=<64-char-hex>
+set INTELLIWATCH_CORS_ORIGINS=https://localhost:5173
+uvicorn server:app --host 0.0.0.0 --port 8000 --reload ^
+  --ssl-certfile ../certs/intelliwatch-local.crt ^
+  --ssl-keyfile ../certs/intelliwatch-local.key
+```
+
+### 4. Frontend (HTTPS on port 5173)
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Vite picks up `certs/intelliwatch-local.crt` automatically. Open **https://localhost:5173**.
+
+---
+
+## Account Registration
+
+Three account types are available when the backend is reachable:
+
+| Role | Access |
+|---|---|
+| **Operator** | Real-time monitoring, anomaly dashboards, alert log, ML feedback |
+| **Maintenance Engineer** | All Operator access + equipment control commands, calibration, maintenance dispatch |
+| **Administrator** | Full system access — requires invitation token from existing admin |
+
+Registration buttons appear on the login page when the backend is online. Use **Enter Offline Demo** at any time for a no-credentials simulation session.
+
+---
+
+## Environment Variables
+
+### Backend (`Backend/.env`)
+
+| Variable | Required | Description |
+|---|---|---|
+| `INTELLIWATCH_SECRET_KEY` | ✅ | 64-char hex string for JWT signing |
+| `DATABASE_URL` | Production | Neon Postgres connection string |
+| `INTELLIWATCH_CORS_ORIGINS` | ✅ | Comma-separated allowed frontend origins |
+| `FIREBASE_PROJECT_ID` | Firebase auth | Firebase project ID |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | Phone OTP | Service account JSON |
+
+### Frontend (`frontend/.env.local`)
+
+| Variable | Required | Description |
+|---|---|---|
+| `VITE_API_URL` | ✅ | Backend URL (`/` for same-origin via Vite proxy) |
+| `VITE_FIREBASE_API_KEY` | Firebase | Firebase web config |
+| `VITE_FIREBASE_AUTH_DOMAIN` | Firebase | Firebase web config |
+| `VITE_FIREBASE_PROJECT_ID` | Firebase | Firebase project ID |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Firebase | Firebase web config |
+| `VITE_FIREBASE_APP_ID` | Firebase | Firebase web config |
+
+---
+
+## Deployment
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for the full Neon → Railway → Vercel setup guide.
+
+**Quick links:**
+- [Neon](https://neon.tech) — create project, copy connection string → `DATABASE_URL` in Railway
+- [Railway](https://railway.app) — New Project → GitHub → `Miniproject5`, Root Directory: `Backend`
+- [Vercel](https://vercel.com) — New Project → GitHub → `Miniproject5`, reads root `vercel.json`
+- [Firebase Console](https://console.firebase.google.com) → Authentication → enable Google + Phone → add Vercel URL to Authorized Domains
+
+---
+
+## Project Structure
+
+```
+Miniproject5/
+├── Backend/                  # FastAPI backend (Railway)
+│   ├── server.py             # Main app — routes, IoT, streaming
+│   ├── auth.py               # JWT + Firebase + registration
+│   ├── database.py           # SQLite / Neon Postgres adapter
+│   ├── inference.py          # ML inference + fault signature
+│   ├── training_pipeline.py  # KAIST model training
+│   ├── learning_system.py    # Adaptive retraining
+│   ├── obs_service.py        # Model observability
+│   ├── iot_layer.py          # MQTT / HTTP IoT adapters
+│   ├── vision_service.py     # Gemini image analysis
+│   ├── requirements.txt
+│   ├── nixpacks.toml         # Railway build config
+│   └── Procfile
+├── frontend/                 # React + Vite (Vercel)
+│   ├── src/
+│   │   ├── App.jsx
+│   │   ├── faultSignatures.js   # 7-fault ISO rule engine
+│   │   ├── useRUL.js            # ISO 13381-1 RUL hook
+│   │   ├── mlEngine.js          # Adaptive frontend ML
+│   │   ├── sensors.js           # ISO threshold config
+│   │   └── components/
+│   │       ├── SensorPage.jsx   # Live charts + RUL banner
+│   │       ├── MLStatusPanel.jsx # ML state + fault hints
+│   │       ├── AlertLog.jsx     # Alerts + export
+│   │       ├── LoginPage.jsx    # Auth + registration
+│   │       ├── TenderLeaderboard.jsx
+│   │       ├── VisionEquipment.jsx
+│   │       └── ...
+│   └── public/
+│       ├── manifest.json        # PWA manifest
+│       └── sw.js                # Service worker
+├── railway.toml              # Railway deployment config
+├── vercel.json               # Vercel SPA config + cache headers
+├── DEPLOYMENT.md             # Full deployment guide
+└── certs/                    # Local HTTPS certificates (gitignored)
+```
+
+---
+
+## Recent Updates
+
+- **Fault Signature Library** — 7-fault catalogue with ISO/IEC rule scoring, shown as confidence chips in ML Status Panel and stored in backend `DetectionTrace.fault_hint`
+- **RUL / Maintenance Window** — ISO 13381-1 least-squares trend projection, coloured banner on sensor pages (imminent / soon / warning / stable)
+- **Audit-trail Export** — one-click CSV + JSON export from Alert Log, IEC 62443 / ISO 55000 compliant field set
+- **Firebase Authentication** — Google Sign-In + Phone OTP with public-key verification
+- **PWA** — installable on Android and iOS
+- **Deployment** — switched from Render to Railway; Neon Postgres replaces SQLite in production

@@ -10,18 +10,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // HTTPS certificate configuration
 const CERT_DIR = path.resolve(__dirname, '..', 'certs')
 
-const certFile = path.join(CERT_DIR, 'intelliwatch-wifi.crt')
-const keyFile = path.join(CERT_DIR, 'intelliwatch-wifi.key')
+// Use mkcert-generated cert (trusted by OS) for local HTTPS dev.
+// Falls back to plain HTTP if certs are missing.
+const certFile = path.join(CERT_DIR, 'intelliwatch-local.crt')
+const keyFile  = path.join(CERT_DIR, 'intelliwatch-local.key')
 
-const hasCerts =
-  fs.existsSync(certFile) &&
-  fs.existsSync(keyFile)
-
-const httpsOptions = hasCerts
-  ? {
-      cert: fs.readFileSync(certFile),
-      key: fs.readFileSync(keyFile),
-    }
+const httpsOptions = fs.existsSync(certFile) && fs.existsSync(keyFile)
+  ? { cert: fs.readFileSync(certFile), key: fs.readFileSync(keyFile) }
   : false
 
 export default defineConfig({
@@ -36,19 +31,20 @@ export default defineConfig({
     // Proxy all API/WS routes to the FastAPI backend so VITE_API_URL=/
     // (same-origin) works for both localhost and network access.
     proxy: {
-      '/auth': 'http://localhost:8000',
-      '/stream': { target: 'http://localhost:8000', ws: true },
-      '/control': 'http://localhost:8000',
-      '/models': 'http://localhost:8000',
-      '/learning': 'http://localhost:8000',
-      '/explorer': 'http://localhost:8000',
-      '/iot': 'http://localhost:8000',
-      '/audit': 'http://localhost:8000',
-      '/sensors': 'http://localhost:8000',
-      '/chatbot': 'http://localhost:8000',
-      '/vision': 'http://localhost:8000',
-      '/docs': 'http://localhost:8000',
-      '/openapi.json': 'http://localhost:8000',
+      '/auth':        { target: 'https://localhost:8000', secure: false },
+      '/stream':      { target: 'https://localhost:8000', ws: true, secure: false },
+      '/control':     { target: 'https://localhost:8000', secure: false },
+      '/models':      { target: 'https://localhost:8000', secure: false },
+      '/learning':    { target: 'https://localhost:8000', secure: false },
+      '/explorer':    { target: 'https://localhost:8000', secure: false },
+      '/iot':         { target: 'https://localhost:8000', secure: false },
+      '/audit':       { target: 'https://localhost:8000', secure: false },
+      '/sensors':     { target: 'https://localhost:8000', secure: false },
+      '/chatbot':     { target: 'https://localhost:8000', secure: false },
+      '/vision':      { target: 'https://localhost:8000', secure: false },
+      '/docs':        { target: 'https://localhost:8000', secure: false },
+      '/openapi.json':{ target: 'https://localhost:8000', secure: false },
+      '/leaderboard': { target: 'https://localhost:8000', secure: false },
     },
   },
 

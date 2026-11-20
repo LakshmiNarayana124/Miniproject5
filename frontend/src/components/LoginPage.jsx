@@ -2332,17 +2332,15 @@ export default function LoginPage({ onLogin }) {
           {/* TIMEZONE SELECTOR */}
 
           <div className="login-field" style={{ marginBottom: 12 }}>
-            <label className="login-label" htmlFor="iw-timezone">Time Zone</label>
-            <div className="login-input-wrap">
-              <span className="login-input-icon">🕐</span>
-              <select
-                id="iw-timezone"
-                className="login-input"
-                value={timezone}
-                onChange={e => setTimezone(e.target.value)}
-                disabled={loading}
-                style={{ cursor: 'pointer', appearance: 'auto' }}
-              >
+            <label className="login-label" htmlFor="iw-timezone">🕐 Time Zone</label>
+            <select
+              id="iw-timezone"
+              className="login-input"
+              value={timezone}
+              onChange={e => setTimezone(e.target.value)}
+              disabled={loading}
+              style={{ cursor: 'pointer', width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text)', fontSize: 13 }}
+            >
                 <option value="Asia/Kolkata">India (IST, UTC+5:30)</option>
                 <option value="Asia/Dubai">Dubai (GST, UTC+4)</option>
                 <option value="Asia/Shanghai">China (CST, UTC+8)</option>
@@ -2364,8 +2362,6 @@ export default function LoginPage({ onLogin }) {
                 <option value="UTC">UTC</option>
               </select>
             </div>
-          </div>
-
 
           {/* AUTH METHOD TABS — only shown when backend is online and
               Firebase is configured */}
