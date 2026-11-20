@@ -212,6 +212,7 @@ function FirebaseRolePicker({ onSelect, loading }) {
   const roles = [
     { key: 'OPERATOR', icon: '📊', label: 'Operator' },
     { key: 'MAINTENANCE_ENGINEER', icon: '🔧', label: 'Engineer' },
+    { key: 'ADMIN', icon: '🛡️', label: 'Admin' },
   ]
 
   return (
@@ -323,7 +324,7 @@ function GoogleSignInPanel({ onLogin, onError, loading, setLoading, timezone, se
     }
   }
 
-  const roleLabel = selectedRole === 'MAINTENANCE_ENGINEER' ? '🔧 Engineer' : '📊 Operator'
+  const roleLabel = selectedRole === 'MAINTENANCE_ENGINEER' ? '🔧 Engineer' : selectedRole === 'ADMIN' ? '🛡️ Admin' : '📊 Operator'
 
   return (
     <div className="phone-otp-wrap">
