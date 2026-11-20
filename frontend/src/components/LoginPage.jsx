@@ -2414,7 +2414,7 @@ export default function LoginPage({ onLogin }) {
                 loading={loading}
                 setLoading={setLoading}
                 timezone={timezone}
-                selectedRole={activeRole}
+                selectedRole={mode === 'admin' ? 'ADMIN' : activeRole}
               />
             </>
           )}
@@ -2433,7 +2433,7 @@ export default function LoginPage({ onLogin }) {
                 loading={loading}
                 setLoading={setLoading}
                 timezone={timezone}
-                selectedRole={activeRole}
+                selectedRole={mode === 'admin' ? 'ADMIN' : activeRole}
               />
             </>
           )}
