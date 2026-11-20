@@ -1979,6 +1979,168 @@ async def refresh_token(current_user=Depends(get_current_user)):
 
 
 # =========================================================
+# FIREBASE AUTHENTICATION  (Google Sign-In + Phone OTP)
+# Verifies a Firebase ID token using Google's public keys.
+# No service account private key needed — only PROJECT_ID.
+# =========================================================
+
+class FirebaseLoginRequest(BaseModel):
+    id_token: str
+    requested_role: str = Field(default="OPERATOR")
+
+
+def _verify_firebase_token(id_token: str) -> dict:
+    """Verify a Firebase ID token using Google's public X.509 certs."""
+    import urllib.request
+    import urllib.error
+
+    FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID", "")
+    if not FIREBASE_PROJECT_ID:
+        raise HTTPException(
+            status_code=503,
+            detail="Firebase authentication is not configured on this server.",
+        )
+
+    CERTS_URL = "https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com"
+
+    try:
+        with urllib.request.urlopen(CERTS_URL, timeout=15) as resp:
+            certs = json.loads(resp.read().decode())
+    except Exception:
+        raise HTTPException(
+            status_code=503,
+            detail="Could not reach Google's certificate endpoint. Try again shortly.",
+        )
+
+    last_error = None
+    for kid, cert_pem in certs.items():
+        try:
+            from cryptography import x509
+            from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+            cert_obj = x509.load_pem_x509_certificate(cert_pem.encode())
+            pub_key = cert_obj.public_key().public_bytes(Encoding.PEM, PublicFormat.SubjectPublicKeyInfo)
+
+            payload = jwt.decode(
+                id_token,
+                pub_key,
+                algorithms=["RS256"],
+                audience=FIREBASE_PROJECT_ID,
+                issuer=f"https://securetoken.google.com/{FIREBASE_PROJECT_ID}",
+                options={"verify_exp": True},
+            )
+            return payload
+        except Exception as e:
+            last_error = e
+            continue
+
+    # Fallback: try without cryptography (pure jwt RS256)
+    try:
+        import base64
+        header_b64 = id_token.split(".")[0]
+        header_b64 += "=" * (-len(header_b64) % 4)
+        header = json.loads(base64.urlsafe_b64decode(header_b64))
+        kid = header.get("kid")
+        if kid and kid in certs:
+            payload = jwt.decode(
+                id_token,
+                certs[kid],
+                algorithms=["RS256"],
+                audience=FIREBASE_PROJECT_ID,
+                issuer=f"https://securetoken.google.com/{FIREBASE_PROJECT_ID}",
+            )
+            return payload
+    except Exception as e:
+        last_error = e
+
+    raise HTTPException(
+        status_code=401,
+        detail=f"Firebase ID token verification failed: {last_error}",
+    )
+
+
+@auth_router.post("/firebase-login")
+async def firebase_login(request: FirebaseLoginRequest, http_request: Request):
+    """Exchange a Firebase ID token for an IntelliWatch JWT session."""
+    rate_key = _enforce_rate_limit(
+        "firebase_login",
+        http_request,
+        request.id_token[:16],
+        max_attempts=10,
+        window_seconds=300,
+    )
+
+    payload = _verify_firebase_token(request.id_token)
+
+    uid        = payload.get("user_id") or payload.get("sub", "")
+    email      = payload.get("email", "")
+    name       = payload.get("name", "") or payload.get("email", uid)
+    provider   = list((payload.get("firebase", {}).get("identities") or {}).keys())
+    is_phone   = "phone" in str(provider)
+
+    # Derive a stable username from email or phone UID
+    if email:
+        username_base = email.split("@")[0].replace(".", "_").replace("+", "_").lower()[:30]
+    else:
+        username_base = f"fb_{uid[:12]}"
+
+    # Ensure role is valid
+    allowed_roles = {"OPERATOR", "MAINTENANCE_ENGINEER"}
+    requested_role = request.requested_role.upper()
+    if requested_role not in allowed_roles:
+        requested_role = "OPERATOR"
+
+    # Find or create the user
+    existing = get_user_by_username(username_base)
+
+    if existing:
+        user = existing
+    else:
+        try:
+            user_id = create_user(
+                username=username_base,
+                full_name=name or username_base,
+                password_hash=hash_password(secrets.token_hex(32)),
+                role=requested_role,
+            )
+            user = get_user_by_id(user_id)
+        except Exception:
+            # Username collision — append uid suffix
+            username_base = f"{username_base}_{uid[:6]}"
+            user_id = create_user(
+                username=username_base,
+                full_name=name or username_base,
+                password_hash=hash_password(secrets.token_hex(32)),
+                role=requested_role,
+            )
+            user = get_user_by_id(user_id)
+
+    if not user or not user.get("is_active"):
+        raise HTTPException(status_code=403, detail="Account is inactive.")
+
+    _clear_failures(rate_key)
+    update_last_login(user["id"])
+
+    _audit_event(
+        "FIREBASE_LOGIN",
+        actor=user["username"],
+        target=user["id"],
+        details={"provider": provider, "uid": uid, "role": requested_role},
+    )
+
+    return {
+        "access_token": create_access_token(user, requested_role),
+        "token_type": "bearer",
+        "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        "user_id": user["id"],
+        "username": user["username"],
+        "full_name": user["full_name"],
+        "role": requested_role,
+        "account_role": user["role"],
+        "is_restricted_session": False,
+    }
+
+
+# =========================================================
 # PUBLIC SELF-REGISTRATION
 # =========================================================
 
