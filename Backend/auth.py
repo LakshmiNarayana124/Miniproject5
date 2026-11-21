@@ -40,6 +40,8 @@ from database import (
     create_user,
     get_user_by_username,
     get_user_by_id,
+    get_firebase_identity_user,
+    link_firebase_admin,
     get_all_users,
     update_last_login,
     get_connection,
@@ -350,7 +352,7 @@ def _enforce_rate_limit(
         window_seconds=window_seconds,
     )
 
-    if not allowed:
+    if not allowed["allowed"]:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many attempts. Please try again later.",
@@ -1986,7 +1988,9 @@ async def refresh_token(current_user=Depends(get_current_user)):
 
 class FirebaseLoginRequest(BaseModel):
     id_token: str
-    requested_role: str = Field(default="OPERATOR")
+    requested_role: Literal["ADMIN", "OPERATOR", "MAINTENANCE_ENGINEER"] = "OPERATOR"
+    admin_username: str | None = Field(default=None, max_length=50)
+    admin_password: str | None = Field(default=None, max_length=128)
 
 
 def _verify_firebase_token(id_token: str) -> dict:
@@ -2026,35 +2030,16 @@ def _verify_firebase_token(id_token: str) -> dict:
                 algorithms=["RS256"],
                 audience=FIREBASE_PROJECT_ID,
                 issuer=f"https://securetoken.google.com/{FIREBASE_PROJECT_ID}",
-                options={"verify_exp": True},
+                options={"require": ["exp", "iat", "sub"]},
             )
             return payload
         except Exception as e:
             last_error = e
             continue
 
-    # Fallback: try without cryptography (pure jwt RS256)
-    try:
-        import base64
-        header_b64 = id_token.split(".")[0]
-        header_b64 += "=" * (-len(header_b64) % 4)
-        header = json.loads(base64.urlsafe_b64decode(header_b64))
-        kid = header.get("kid")
-        if kid and kid in certs:
-            payload = jwt.decode(
-                id_token,
-                certs[kid],
-                algorithms=["RS256"],
-                audience=FIREBASE_PROJECT_ID,
-                issuer=f"https://securetoken.google.com/{FIREBASE_PROJECT_ID}",
-            )
-            return payload
-    except Exception as e:
-        last_error = e
-
     raise HTTPException(
         status_code=401,
-        detail=f"Firebase ID token verification failed: {last_error}",
+        detail="Invalid or expired Firebase ID token.",
     )
 
 
@@ -2071,62 +2056,65 @@ async def firebase_login(request: FirebaseLoginRequest, http_request: Request):
 
     payload = _verify_firebase_token(request.id_token)
 
-    uid        = payload.get("user_id") or payload.get("sub", "")
-    email      = payload.get("email", "")
-    name       = payload.get("name", "") or payload.get("email", uid)
-    provider   = list((payload.get("firebase", {}).get("identities") or {}).keys())
-    is_phone   = "phone" in str(provider)
+    uid = payload.get("sub")
+    if not isinstance(uid, str) or not uid or len(uid) > 128 or payload.get("user_id", uid) != uid:
+        raise HTTPException(status_code=401, detail="Invalid Firebase identity.")
+    requested_role = request.requested_role
+    provider = payload.get("firebase", {}).get("sign_in_provider")
+    is_restricted_session = False
 
-    # Derive a stable username from email or phone UID
-    if email:
-        username_base = email.split("@")[0].replace(".", "_").replace("+", "_").lower()[:30]
+    if requested_role == "ADMIN":
+        if provider != "google.com" or payload.get("email_verified") is not True:
+            raise HTTPException(status_code=403, detail="A verified Google account is required.")
+        user = get_firebase_identity_user(uid)
+        credential_changed = user and not secrets.compare_digest(
+            user["firebase_credential_hash"],
+            hashlib.sha256(user["password_hash"].encode()).hexdigest(),
+        )
+        if not user or credential_changed:
+            if not request.admin_username or not request.admin_password:
+                raise HTTPException(status_code=403, detail={
+                    "code": "ADMIN_LINK_REQUIRED",
+                    "message": "Link your Google account using your existing administrator credentials.",
+                })
+            link_key = _enforce_rate_limit("google_admin_link", http_request, request.admin_username)
+            user = authenticate_user(request.admin_username, request.admin_password)
+            if not user or user["role"] != "ADMIN":
+                _record_failure(link_key)
+                raise HTTPException(status_code=401, detail="Incorrect administrator credentials.")
+            try:
+                link_firebase_admin(uid, user["id"], user["password_hash"])
+            except ValueError as error:
+                raise HTTPException(status_code=409, detail=str(error))
+            _clear_failures(link_key)
+            user = get_firebase_identity_user(uid)
+        if not user or user["role"] != "ADMIN" or not user["is_active"] or user.get("is_deleted"):
+            raise HTTPException(status_code=403, detail="Administrator account is inactive or unavailable.")
     else:
-        username_base = f"fb_{uid[:12]}"
-
-    # Ensure role is valid
-    allowed_roles = {"OPERATOR", "MAINTENANCE_ENGINEER"}
-    requested_role = request.requested_role.upper()
-    if requested_role not in allowed_roles:
-        requested_role = "OPERATOR"
-
-    # Find or create the user
-    existing = get_user_by_username(username_base)
-
-    if existing:
-        user = existing
-    else:
-        try:
-            user_id = create_user(
-                username=username_base,
-                full_name=name or username_base,
-                password_hash=hash_password(secrets.token_hex(32)),
-                role=requested_role,
-            )
-            user = get_user_by_id(user_id)
-        except Exception:
-            # Username collision — append uid suffix
-            username_base = f"{username_base}_{uid[:6]}"
-            user_id = create_user(
-                username=username_base,
-                full_name=name or username_base,
-                password_hash=hash_password(secrets.token_hex(32)),
-                role=requested_role,
-            )
-            user = get_user_by_id(user_id)
-
-    if not user or not user.get("is_active"):
-        raise HTTPException(status_code=403, detail="Account is inactive.")
+        # Preserve existing non-admin registration while rejecting role changes.
+        email = payload.get("email", "")
+        name = payload.get("name", "") or email or uid
+        username_base = (email.split("@")[0].replace(".", "_").replace("+", "_").lower()[:30]
+                         if email else f"fb_{uid[:12]}")
+        user = get_user_by_username(username_base)
+        if not user:
+            try:
+                user_id = create_user(
+                    username=username_base, full_name=name,
+                    password_hash=hash_password(secrets.token_hex(32)), role=requested_role,
+                )
+                user = get_user_by_id(user_id)
+            except (ValueError, sqlite3.IntegrityError):
+                raise HTTPException(status_code=409, detail="Unable to create this account.")
+        if not user or not user.get("is_active") or user.get("is_deleted"):
+            raise HTTPException(status_code=403, detail="Account is inactive.")
+        if user["role"] != requested_role:
+            raise HTTPException(status_code=403, detail="This account is not authorised for the selected role.")
 
     _clear_failures(rate_key)
     update_last_login(user["id"])
-
-    _audit_event(
-        "FIREBASE_LOGIN",
-        actor=user["username"],
-        target=user["id"],
-        details={"provider": provider, "uid": uid, "role": requested_role},
-    )
-
+    _audit_event("FIREBASE_LOGIN", actor=user["username"], target=user["id"],
+                 details={"provider": provider, "uid": uid, "role": requested_role})
     return {
         "access_token": create_access_token(user, requested_role),
         "token_type": "bearer",
@@ -2136,7 +2124,7 @@ async def firebase_login(request: FirebaseLoginRequest, http_request: Request):
         "full_name": user["full_name"],
         "role": requested_role,
         "account_role": user["role"],
-        "is_restricted_session": False,
+        "is_restricted_session": is_restricted_session,
     }
 
 

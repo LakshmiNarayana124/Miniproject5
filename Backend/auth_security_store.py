@@ -2,11 +2,10 @@
 import hashlib
 import sqlite3
 from datetime import datetime, timezone, timedelta
-from pathlib import Path
+import database
 
 
-BASE_DIR = Path(__file__).resolve().parent
-DATABASE_PATH = BASE_DIR / "database" / "intelliwatch.db"
+DATABASE_PATH = database.DATABASE_PATH
 
 TOKEN_TYPES = {"PASSWORD_RESET", "ADMIN_INVITE"}
 
@@ -56,7 +55,34 @@ def _validate_rate_limit_settings(
             raise ValueError("Rate-limit settings must be positive integers.")
 
 
+class _PostgresConnection:
+    """Adapt the security store's parameterized SQLite queries to PostgreSQL."""
+    def __init__(self):
+        self.connection = database.get_connection()
+
+    def execute(self, query, params=()):
+        query = query.replace("BEGIN IMMEDIATE", "BEGIN")
+        query = query.replace("INTEGER PRIMARY KEY AUTOINCREMENT", "SERIAL PRIMARY KEY")
+        if query.strip() == "PRAGMA table_info(users)":
+            query = ("SELECT column_name AS name FROM information_schema.columns "
+                     "WHERE table_schema = 'public' AND table_name = 'users'")
+        cursor = self.connection.cursor()
+        cursor.execute(query.replace("?", "%s"), params)
+        return cursor
+
+    def commit(self):
+        self.connection.commit()
+
+    def rollback(self):
+        self.connection.rollback()
+
+    def close(self):
+        self.connection.close()
+
+
 def _connect():
+    if database._USE_POSTGRES:
+        return _PostgresConnection()
     connection = sqlite3.connect(
         DATABASE_PATH,
         timeout=30,
@@ -183,7 +209,7 @@ def store_token(
     try:
         connection.execute("BEGIN IMMEDIATE")
 
-        cursor = connection.execute("""
+        token_insert = """
             INSERT INTO auth_security_tokens (
                 token_hash,
                 token_type,
@@ -194,7 +220,10 @@ def store_token(
                 metadata_json
             )
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (
+        """
+        if database._USE_POSTGRES:
+            token_insert += " RETURNING id"
+        cursor = connection.execute(token_insert, (
             token_hash,
             token_type,
             user_id,
@@ -204,8 +233,9 @@ def store_token(
             metadata_json,
         ))
 
+        token_id = cursor.fetchone()["id"] if database._USE_POSTGRES else cursor.lastrowid
         connection.commit()
-        return cursor.lastrowid
+        return token_id
 
     except Exception:
         connection.rollback()

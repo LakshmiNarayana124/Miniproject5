@@ -12,6 +12,7 @@ import os
 import re
 import json
 import hashlib
+import secrets
 import sqlite3
 
 from pathlib import Path
@@ -398,6 +399,18 @@ def initialize_database():
                     session_version INTEGER NOT NULL DEFAULT 0
                 )
             """)
+
+        # Google identities are linked only after an administrator proves
+        # ownership of an existing IntelliWatch administrator account.
+        _exec(conn, """
+            CREATE TABLE IF NOT EXISTS firebase_identities (
+                firebase_uid TEXT PRIMARY KEY,
+                user_id INTEGER NOT NULL UNIQUE,
+                credential_hash TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """)
 
         # 7A. USER PERMISSIONS
         _exec(conn, """
@@ -1175,6 +1188,106 @@ def get_user_by_id(user_id):
                    is_deleted, deleted_at
             FROM users WHERE id = %s
         """, (user_id,))
+    finally:
+        conn.close()
+
+
+def get_firebase_identity_user(firebase_uid):
+    conn = get_connection()
+    try:
+        return _fetchone(conn, """
+            SELECT u.*, f.credential_hash AS firebase_credential_hash FROM firebase_identities f
+            JOIN users u ON u.id = f.user_id
+            WHERE f.firebase_uid = %s
+        """, (firebase_uid,))
+    finally:
+        conn.close()
+
+
+def link_firebase_admin(firebase_uid, user_id, verified_password_hash):
+    conn = get_connection()
+    try:
+        _begin_transaction(conn)
+        query = "SELECT id, role, is_active, is_deleted, password_hash FROM users WHERE id = %s"
+        if _USE_POSTGRES:
+            query += " FOR UPDATE"
+        user = _fetchone(conn, query, (user_id,))
+        if (not user or user["role"] != "ADMIN" or not user["is_active"] or user["is_deleted"]
+                or not secrets.compare_digest(user["password_hash"], verified_password_hash)):
+            raise ValueError("Administrator account is inactive or unavailable.")
+        credential_hash = hashlib.sha256(verified_password_hash.encode()).hexdigest()
+        # Never reassign an existing Google identity or an already linked admin.
+        existing = _fetchone(conn, """
+            SELECT firebase_uid, user_id FROM firebase_identities
+            WHERE firebase_uid = %s OR user_id = %s
+        """, (firebase_uid, user_id))
+        if existing:
+            if existing["firebase_uid"] != firebase_uid or existing["user_id"] != user_id:
+                raise ValueError("This Google identity or administrator account is already linked.")
+            _exec(conn, """
+                UPDATE firebase_identities SET credential_hash = %s WHERE firebase_uid = %s
+            """, (credential_hash, firebase_uid))
+        else:
+            inserted = _exec(conn, """
+                INSERT INTO firebase_identities (firebase_uid, user_id, credential_hash, created_at)
+                VALUES (%s, %s, %s, %s) ON CONFLICT DO NOTHING
+            """, (firebase_uid, user_id, credential_hash, current_timestamp()))
+            if inserted.rowcount != 1:
+                raise ValueError("This Google identity or administrator account is already linked.")
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def get_firebase_identity_user(firebase_uid):
+    conn = get_connection()
+    try:
+        return _fetchone(conn, """
+            SELECT u.*, f.credential_hash AS firebase_credential_hash FROM firebase_identities f
+            JOIN users u ON u.id = f.user_id
+            WHERE f.firebase_uid = %s
+        """, (firebase_uid,))
+    finally:
+        conn.close()
+
+
+def link_firebase_admin(firebase_uid, user_id, verified_password_hash):
+    conn = get_connection()
+    try:
+        _begin_transaction(conn)
+        query = "SELECT id, role, is_active, is_deleted, password_hash FROM users WHERE id = %s"
+        if _USE_POSTGRES:
+            query += " FOR UPDATE"
+        user = _fetchone(conn, query, (user_id,))
+        if (not user or user["role"] != "ADMIN" or not user["is_active"] or user["is_deleted"]
+                or not secrets.compare_digest(user["password_hash"], verified_password_hash)):
+            raise ValueError("Administrator account is inactive or unavailable.")
+        credential_hash = hashlib.sha256(verified_password_hash.encode()).hexdigest()
+        # Never reassign an existing Google identity or an already linked admin.
+        existing = _fetchone(conn, """
+            SELECT firebase_uid, user_id FROM firebase_identities
+            WHERE firebase_uid = %s OR user_id = %s
+        """, (firebase_uid, user_id))
+        if existing:
+            if existing["firebase_uid"] != firebase_uid or existing["user_id"] != user_id:
+                raise ValueError("This Google identity or administrator account is already linked.")
+            _exec(conn, """
+                UPDATE firebase_identities SET credential_hash = %s WHERE firebase_uid = %s
+            """, (credential_hash, firebase_uid))
+        else:
+            inserted = _exec(conn, """
+                INSERT INTO firebase_identities (firebase_uid, user_id, credential_hash, created_at)
+                VALUES (%s, %s, %s, %s) ON CONFLICT DO NOTHING
+            """, (firebase_uid, user_id, credential_hash, current_timestamp()))
+            if inserted.rowcount != 1:
+                raise ValueError("This Google identity or administrator account is already linked.")
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
     finally:
         conn.close()
 

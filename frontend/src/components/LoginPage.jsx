@@ -26,6 +26,17 @@ const API = (
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true'
 
 const DEMO_TOKEN = 'demo-offline'
+const PENDING_GOOGLE_ROLE_KEY = 'iw_pending_google_role'
+const GOOGLE_ROLES = ['OPERATOR', 'MAINTENANCE_ENGINEER', 'ADMIN']
+
+function getPendingGoogleRole() {
+  try {
+    const role = sessionStorage.getItem(PENDING_GOOGLE_ROLE_KEY)
+    return GOOGLE_ROLES.includes(role) ? role : null
+  } catch {
+    return null
+  }
+}
 const INTERNET_CHECK_URL =
   import.meta.env.VITE_INTERNET_CHECK_URL ||
   'https://www.gstatic.com/generate_204'
@@ -150,7 +161,7 @@ function firebaseErrorMessage(err, fallback) {
 }
 
 
-async function exchangeFirebaseToken(idToken, requestedRole) {
+async function exchangeFirebaseToken(idToken, requestedRole, adminCredentials) {
   // Use a 15-second timeout — the backend verifies the Firebase ID token
   // with Google's servers, which can take several seconds on first call.
   const controller = new AbortController()
@@ -163,6 +174,7 @@ async function exchangeFirebaseToken(idToken, requestedRole) {
       body: JSON.stringify({
         id_token: idToken,
         requested_role: requestedRole,
+        ...(adminCredentials || {}),
       }),
       signal: controller.signal,
     })
@@ -174,7 +186,9 @@ async function exchangeFirebaseToken(idToken, requestedRole) {
     }
 
     if (!response.ok) {
-      throw new Error(getLoginErrorMessage(data, `Firebase login failed (HTTP ${response.status}).`))
+      const error = new Error(getLoginErrorMessage(data, `Firebase login failed (HTTP ${response.status}).`))
+      error.code = data?.detail?.code
+      throw error
     }
 
     return data
@@ -242,35 +256,45 @@ function FirebaseRolePicker({ onSelect, loading }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function GoogleSignInPanel({ onLogin, onError, loading, setLoading, timezone, selectedRole }) {
-  const [idToken, setIdToken] = useState(null)
-  const [displayName, setDisplayName] = useState('')
+  const redirectChecked = useRef(false)
+  const [pendingAdminToken, setPendingAdminToken] = useState(null)
+  const [adminUsername, setAdminUsername] = useState('')
+  const [adminPassword, setAdminPassword] = useState('')
 
-  // Detect redirect result on mount (for browsers that blocked popup)
+  // The login page restores the role selected before the redirect.
   useEffect(() => {
-    if (!firebaseAuth) return
+    if (!firebaseAuth || redirectChecked.current) return
+    redirectChecked.current = true
+    const pendingRole = getPendingGoogleRole()
     getRedirectResult(firebaseAuth)
       .then(async result => {
+        sessionStorage.removeItem(PENDING_GOOGLE_ROLE_KEY)
         if (!result?.user) return
-        const token = await result.user.getIdToken()
-        setIdToken(token)
-        setDisplayName(result.user.displayName || result.user.email || '')
-        // Auto-exchange token with the selected role
-        await doRoleLogin(token)
+        if (!pendingRole) {
+          throw new Error('Please select your role and sign in with Google again.')
+        }
+        await doRoleLogin(await result.user.getIdToken(), pendingRole)
       })
-      .catch(() => {})
+      .catch(err => {
+        onError(firebaseErrorMessage(err, 'Google sign-in failed. Please try again.'))
+        setLoading(false)
+      })
   }, [])
 
-  async function doRoleLogin(token) {
+  async function doRoleLogin(token, requestedRole = selectedRole, adminCredentials) {
     setLoading(true)
     onError('')
     try {
-      const data = await exchangeFirebaseToken(token, selectedRole)
+      const data = await exchangeFirebaseToken(token, requestedRole, adminCredentials)
       if (
         typeof data.access_token !== 'string' ||
         typeof data.username !== 'string' ||
         typeof data.role !== 'string'
       ) {
         throw new Error('The server returned an incomplete login response.')
+      }
+      if (data.role !== requestedRole) {
+        throw new Error('Your account cannot sign in with the selected role. Contact an administrator.')
       }
       const sessionUser = {
         username: data.username,
@@ -284,10 +308,15 @@ function GoogleSignInPanel({ onLogin, onError, loading, setLoading, timezone, se
         timezone,
       }
       saveSession(data.access_token, sessionUser)
+      setPendingAdminToken(null)
+      setAdminPassword('')
       onLogin({ ...data, is_demo_session: false, session_mode: 'ONLINE', timezone })
     } catch (err) {
+      if (err.code === 'ADMIN_LINK_REQUIRED' && requestedRole === 'ADMIN') {
+        setPendingAdminToken(token)
+      }
+      setAdminPassword('')
       onError(firebaseErrorMessage(err, 'Google login failed. Please try again.'))
-      setIdToken(null)
       setLoading(false)
     }
   }
@@ -295,6 +324,8 @@ function GoogleSignInPanel({ onLogin, onError, loading, setLoading, timezone, se
   async function handleGoogleSignIn() {
     if (!firebaseAuth) return
     onError('')
+    setPendingAdminToken(null)
+    setAdminPassword('')
 
     try {
       const provider = new GoogleAuthProvider()
@@ -308,6 +339,7 @@ function GoogleSignInPanel({ onLogin, onError, loading, setLoading, timezone, se
           popupError.code === 'auth/popup-blocked' ||
           popupError.code === 'auth/popup-closed-by-user'
         ) {
+          sessionStorage.setItem(PENDING_GOOGLE_ROLE_KEY, selectedRole)
           await signInWithRedirect(firebaseAuth, provider)
           return
         }
@@ -315,10 +347,9 @@ function GoogleSignInPanel({ onLogin, onError, loading, setLoading, timezone, se
       }
 
       const token = await result.user.getIdToken()
-      setIdToken(token)
-      setDisplayName(result.user.displayName || result.user.email || '')
       await doRoleLogin(token)
     } catch (err) {
+      sessionStorage.removeItem(PENDING_GOOGLE_ROLE_KEY)
       onError(firebaseErrorMessage(err, 'Google sign-in failed. Please try again.'))
       setLoading(false)
     }
@@ -337,6 +368,24 @@ function GoogleSignInPanel({ onLogin, onError, loading, setLoading, timezone, se
         {loading ? <span className="login-spinner" /> : <GoogleLogo />}
         Sign in as {roleLabel}
       </button>
+      {pendingAdminToken && (
+        <form onSubmit={event => {
+          event.preventDefault()
+          doRoleLogin(pendingAdminToken, 'ADMIN', {
+            admin_username: adminUsername.trim(),
+            admin_password: adminPassword,
+          })
+        }}>
+          <p>Link your Google account with your existing administrator credentials.</p>
+          <label className="login-label" htmlFor="google-admin-username">Admin username</label>
+          <input id="google-admin-username" className="login-input" autoComplete="username"
+            value={adminUsername} onChange={event => setAdminUsername(event.target.value)} required disabled={loading} />
+          <label className="login-label" htmlFor="google-admin-password">Admin password</label>
+          <input id="google-admin-password" className="login-input" type="password" autoComplete="current-password"
+            value={adminPassword} onChange={event => setAdminPassword(event.target.value)} required disabled={loading} />
+          <button className="google-signin-btn" type="submit" disabled={loading}>Link and sign in</button>
+        </form>
+      )}
     </div>
   )
 }
@@ -435,6 +484,9 @@ function PhoneOtpPanel({ onLogin, onError, loading, setLoading, timezone, select
         typeof data.role !== 'string'
       ) {
         throw new Error('The server returned an incomplete login response.')
+      }
+      if (data.role !== requestedRole) {
+        throw new Error('Your account cannot sign in with the selected role. Contact an administrator.')
       }
       const sessionUser = {
         username: data.username,
@@ -1768,12 +1820,13 @@ export default function LoginPage({ onLogin }) {
     }
   }, [])
 
-  const [mode, setMode] = useState('operator')
+  const [pendingGoogleRole] = useState(getPendingGoogleRole)
+  const [mode, setMode] = useState(pendingGoogleRole === 'ADMIN' ? 'admin' : 'operator')
   const [view, setView] = useState('login')
-  const [activeRole, setActiveRole] = useState('OPERATOR')
+  const [activeRole, setActiveRole] = useState(pendingGoogleRole || 'OPERATOR')
 
   // 'password' | 'google' | 'phone'
-  const [authMethod, setAuthMethod] = useState('password')
+  const [authMethod, setAuthMethod] = useState(pendingGoogleRole ? 'google' : 'password')
 
   const [timezone, setTimezone] = useState('Asia/Kolkata')
 
