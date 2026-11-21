@@ -19,6 +19,22 @@ A Raspberry Pi reads vibration, temperature and current from physical sensors ev
 | **Vercel** | https://vercel.com/dashboard |
 | **Firebase** | https://console.firebase.google.com |
 
+> Render free tier sleeps after 15 min idle. First request after sleep takes ~30 s — just wait.
+
+---
+
+## 🔑 Prototype Login Credentials
+
+Pre-seeded accounts for testing and demonstration:
+
+| Username | Role | Login Method |
+|---|---|---|
+| `watchtower_01` | Admin | Password |
+| `operator01` | Operator | Password |
+| `engineer01` | Maintenance Engineer | Password |
+
+> Passwords are set from the original local development database. Use the Password tab on the login page.
+
 > Render free tier sleeps after 15 min idle. First login after sleep takes ~30 s — just wait.
 
 ---
