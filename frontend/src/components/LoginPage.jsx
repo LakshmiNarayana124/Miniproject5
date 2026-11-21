@@ -293,9 +293,6 @@ function GoogleSignInPanel({ onLogin, onError, loading, setLoading, timezone, se
       ) {
         throw new Error('The server returned an incomplete login response.')
       }
-      if (data.role !== requestedRole) {
-        throw new Error('Your account cannot sign in with the selected role. Contact an administrator.')
-      }
       const sessionUser = {
         username: data.username,
         full_name: data.full_name || data.username,
@@ -484,9 +481,6 @@ function PhoneOtpPanel({ onLogin, onError, loading, setLoading, timezone, select
         typeof data.role !== 'string'
       ) {
         throw new Error('The server returned an incomplete login response.')
-      }
-      if (data.role !== requestedRole) {
-        throw new Error('Your account cannot sign in with the selected role. Contact an administrator.')
       }
       const sessionUser = {
         username: data.username,
