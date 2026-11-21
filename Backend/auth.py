@@ -1338,10 +1338,8 @@ async def login(request: LoginRequest, http_request: Request):
         is_restricted_session = True
 
     else:
-        raise HTTPException(
-            status_code=403,
-            detail="This account is not authorised for the selected role tab.",
-        )
+        # Role mismatch — log in with the account's actual role instead of rejecting
+        session_role = account_role
 
     _clear_failures(rate_key)
 
