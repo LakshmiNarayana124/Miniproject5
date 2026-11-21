@@ -43,9 +43,8 @@ Pre-seeded accounts for testing and demonstration:
 
 | Branch | Purpose |
 |---|---|
-| `main` | Production — auto-deploys to Vercel + Render |
+| `clean-start` | **Production** — auto-deploys to Vercel + Render |
 | `feature/iot-lcd-relay-integration` | IoT hardware layer — LCD display + relay control |
-| `clean-start` | Clean baseline with Postgres/Neon DB layer |
 | `master` | Original Miniproject5 merge point |
 
 ---
@@ -162,12 +161,12 @@ npm run dev
 
 ## ☁️ Deployment
 
-Push to `main` — both services redeploy automatically.
+Push to `clean-start` — both services redeploy automatically.
 
 ```powershell
 git add .
 git commit -m "your change"
-git push origin main
+git push miniproject5 HEAD:clean-start
 # Vercel: ~1 min  |  Render: ~3 min  |  Neon: always on
 ```
 
