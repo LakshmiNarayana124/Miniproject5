@@ -2090,6 +2090,7 @@ async def firebase_login(request: FirebaseLoginRequest, http_request: Request):
             user = get_firebase_identity_user(uid)
         if not user or user["role"] != "ADMIN" or not user["is_active"] or user.get("is_deleted"):
             raise HTTPException(status_code=403, detail="Administrator account is inactive or unavailable.")
+        effective_role = "ADMIN"
     else:
         # Preserve existing non-admin registration while rejecting role changes.
         email = payload.get("email", "")
@@ -2108,21 +2109,21 @@ async def firebase_login(request: FirebaseLoginRequest, http_request: Request):
                 raise HTTPException(status_code=409, detail="Unable to create this account.")
         if not user or not user.get("is_active") or user.get("is_deleted"):
             raise HTTPException(status_code=403, detail="Account is inactive.")
-        if user["role"] != requested_role:
-            raise HTTPException(status_code=403, detail="This account is not authorised for the selected role.")
+        # Use the account's actual role — ignore requested_role mismatch for non-admin
+        effective_role = user["role"]
 
     _clear_failures(rate_key)
     update_last_login(user["id"])
     _audit_event("FIREBASE_LOGIN", actor=user["username"], target=user["id"],
-                 details={"provider": provider, "uid": uid, "role": requested_role})
+                 details={"provider": provider, "uid": uid, "role": effective_role})
     return {
-        "access_token": create_access_token(user, requested_role),
+        "access_token": create_access_token(user, effective_role),
         "token_type": "bearer",
         "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         "user_id": user["id"],
         "username": user["username"],
         "full_name": user["full_name"],
-        "role": requested_role,
+        "role": effective_role,
         "account_role": user["role"],
         "is_restricted_session": is_restricted_session,
     }
