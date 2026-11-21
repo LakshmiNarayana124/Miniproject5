@@ -459,15 +459,13 @@ export default function MLStatusPanel({
 
             if (!state || !sensor) return null
 
-            const confidence = state.confidence ?? 0
-            const score = state.score ?? 0
+            const confidence = readings > 0 ? (state.confidence ?? 0) : 0
+            const score = readings > 0 ? (state.score ?? 0) : 0
             const readings = state.readingCount ?? 0
 
             const accuracy = state.accuracy
               ? `${Math.round(state.accuracy * 100)}%`
-              : state.readingCount > 0
-                ? '85%'
-                : '—'
+              : '—'
 
             const band = state.learnedNormal
               ? `${state.learnedNormal.min.toFixed(2)} – ${state.learnedNormal.max.toFixed(2)} ${sensor.unit}`

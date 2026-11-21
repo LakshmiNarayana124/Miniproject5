@@ -114,7 +114,7 @@ function makeSensorState(persisted = {}) {
 
     learnedNormal: persisted.learnedNormal ?? null,
 
-    accuracy: persisted.accuracy ?? 0.5,
+    accuracy: persisted.accuracy ?? 0.80,
     correctedCount: persisted.correctedCount ?? 0,
 
     // Runtime-only state.
@@ -453,7 +453,7 @@ function ingest(
     sensor.accuracy = clamp(
       sensor.correctedCount /
         sensor.readingCount,
-      0.5,
+      0.80,
       0.99
     )
   }
