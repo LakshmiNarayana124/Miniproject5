@@ -15,7 +15,7 @@ The project is designed to support predictive-maintenance workflows while remain
 
 | Resource | Link |
 |---|---|
-| **Live Dashboard** | https://intelliwatch-cyan.vercel.app |
+| **Live Dashboard** | https://intelliwatch-iw.vercel.app   |
 | **Backend API** | https://intelliwatch-backend.onrender.com |
 | **API Documentation (Swagger)** | https://intelliwatch-backend.onrender.com/docs |
 | **Registration Status** | https://intelliwatch-backend.onrender.com/auth/registration-status |
