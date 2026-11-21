@@ -463,9 +463,9 @@ export default function MLStatusPanel({
             const score = readings > 0 ? (state.score ?? 0) : 0
             const readings = state.readingCount ?? 0
 
-            const accuracy = state.accuracy
+            const accuracy = readings >= 12 && state.accuracy != null
               ? `${Math.round(state.accuracy * 100)}%`
-              : '—'
+              : 'Calibrating…'
 
             const band = state.learnedNormal
               ? `${state.learnedNormal.min.toFixed(2)} – ${state.learnedNormal.max.toFixed(2)} ${sensor.unit}`
