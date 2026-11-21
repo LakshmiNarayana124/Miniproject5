@@ -15,7 +15,7 @@
 // Python/scikit-learn model on the Raspberry Pi.
 // ==================================================
 
-const STORAGE_KEY_BASE = 'iw_ml_state'
+const STORAGE_KEY_BASE = 'iw_ml_state_v2'
 
 const VALID_SOURCES = [
   'hardware',
