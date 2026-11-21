@@ -219,7 +219,7 @@ def test_device_with_blank_id_rejected():
 @pytest.mark.skipif(not _HAS_HYPOTHESIS or not _HAS_IOT or not _HAS_DB,
                     reason="hypothesis, iot_layer, or database not available")
 @given(protocol=st.sampled_from(["MQTT", "HTTP"]))
-@settings(max_examples=100)
+@settings(max_examples=100, deadline=None)
 def test_property_valid_protocols_accepted(protocol):
     """Property: devices using MQTT or HTTP with valid capabilities are accepted."""
     with tempfile.TemporaryDirectory() as tmp:

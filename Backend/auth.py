@@ -2107,8 +2107,10 @@ async def firebase_login(request: FirebaseLoginRequest, http_request: Request):
                 raise HTTPException(status_code=409, detail="Unable to create this account.")
         if not user or not user.get("is_active") or user.get("is_deleted"):
             raise HTTPException(status_code=403, detail="Account is inactive.")
-        # Use the account's actual role — ignore requested_role mismatch for non-admin
+        # Reject if the requested role doesn't match the stored role
         effective_role = user["role"]
+        if requested_role and requested_role != effective_role:
+            raise HTTPException(status_code=403, detail="Requested role does not match account role.")
 
     _clear_failures(rate_key)
     update_last_login(user["id"])
