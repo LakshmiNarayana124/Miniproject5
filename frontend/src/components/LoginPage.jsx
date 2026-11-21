@@ -2166,7 +2166,6 @@ export default function LoginPage({ onLogin }) {
         typeof data.username !== 'string' ||
         typeof data.role !== 'string' ||
         !['ADMIN', 'OPERATOR', 'MAINTENANCE_ENGINEER'].includes(data.role) ||
-        data.role !== requestedRole ||
         !Number.isInteger(data.user_id) ||
         typeof data.full_name !== 'string'
       ) {

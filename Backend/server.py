@@ -1922,6 +1922,120 @@ async def get_model_audit(limit: int = 100):
 
 
 # ============================================================
+# AUDIT REPORT — clean printable HTML export
+# ============================================================
+
+from fastapi.responses import HTMLResponse
+
+@app.get(
+    "/audit/report",
+    tags=["Audit"],
+    response_class=HTMLResponse,
+    dependencies=[Depends(admin_access)],
+)
+async def get_audit_report(limit: int = 100):
+    """Returns a clean printable HTML report of recent audit entries."""
+    limit = max(1, min(limit, 500))
+    conn = database.get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT * FROM audit_entries ORDER BY timestamp DESC LIMIT %s" if database._USE_POSTGRES
+            else "SELECT * FROM audit_entries ORDER BY timestamp DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
+        entries = [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+    from datetime import datetime as _dt
+    generated = _dt.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+
+    rows_html = ""
+    for e in entries:
+        ts = str(e.get("timestamp", ""))[:19].replace("T", " ")
+        cat = e.get("category", "")
+        actor = e.get("actor_username") or e.get("actor_id") or "system"
+        detail = e.get("detail") or ""
+        if isinstance(detail, str) and len(detail) > 120:
+            detail = detail[:120] + "…"
+        rows_html += f"""
+        <tr>
+            <td>{ts}</td>
+            <td><span class="tag">{cat}</span></td>
+            <td>{actor}</td>
+            <td>{detail}</td>
+        </tr>"""
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>IntelliWatch — Audit Report</title>
+<style>
+  * {{ margin:0; padding:0; box-sizing:border-box; }}
+  body {{ font-family: 'Segoe UI', Arial, sans-serif; background:#f5f7fa; color:#1a2535; padding:32px; }}
+  .header {{ border-bottom:3px solid #0d6efd; padding-bottom:16px; margin-bottom:24px; display:flex; justify-content:space-between; align-items:flex-end; }}
+  .header h1 {{ font-size:22px; color:#0d6efd; letter-spacing:0.5px; }}
+  .header .meta {{ font-size:12px; color:#6b7a99; text-align:right; line-height:1.6; }}
+  .summary {{ background:#fff; border-radius:8px; padding:16px 20px; margin-bottom:20px; display:flex; gap:32px; box-shadow:0 1px 4px rgba(0,0,0,0.07); }}
+  .stat {{ text-align:center; }}
+  .stat .num {{ font-size:28px; font-weight:700; color:#0d6efd; }}
+  .stat .lbl {{ font-size:11px; color:#6b7a99; text-transform:uppercase; letter-spacing:0.5px; }}
+  table {{ width:100%; border-collapse:collapse; background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,0.07); }}
+  thead {{ background:#0d6efd; color:#fff; }}
+  th {{ padding:11px 14px; text-align:left; font-size:12px; font-weight:600; letter-spacing:0.4px; }}
+  td {{ padding:10px 14px; font-size:12px; border-bottom:1px solid #e8ecf2; vertical-align:top; }}
+  tr:last-child td {{ border-bottom:none; }}
+  tr:nth-child(even) {{ background:#f9fafc; }}
+  .tag {{ background:#e8f0fe; color:#0d6efd; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600; white-space:nowrap; }}
+  .footer {{ margin-top:20px; font-size:11px; color:#9aaabf; text-align:center; }}
+  @media print {{
+    body {{ background:#fff; padding:16px; }}
+    .summary {{ box-shadow:none; border:1px solid #ddd; }}
+    table {{ box-shadow:none; border:1px solid #ddd; }}
+  }}
+</style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>👁️ IntelliWatch — Audit Report</h1>
+      <div style="font-size:13px;color:#4a5568;margin-top:4px;">Industrial Condition Monitoring System</div>
+    </div>
+    <div class="meta">
+      Generated: {generated}<br>
+      Entries shown: {len(entries)}<br>
+      IEC 62443 Compliance Log
+    </div>
+  </div>
+
+  <div class="summary">
+    <div class="stat"><div class="num">{len(entries)}</div><div class="lbl">Total Entries</div></div>
+    <div class="stat"><div class="num">{len(set(e.get('category','') for e in entries))}</div><div class="lbl">Categories</div></div>
+    <div class="stat"><div class="num">{len(set(e.get('actor_username','') or e.get('actor_id','') for e in entries if e.get('actor_username') or e.get('actor_id')))}</div><div class="lbl">Actors</div></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Timestamp</th>
+        <th>Category</th>
+        <th>Actor</th>
+        <th>Detail</th>
+      </tr>
+    </thead>
+    <tbody>
+      {rows_html if rows_html else '<tr><td colspan="4" style="text-align:center;padding:24px;color:#9aaabf;">No audit entries found.</td></tr>'}
+    </tbody>
+  </table>
+
+  <div class="footer">IntelliWatch Audit Log &nbsp;·&nbsp; {generated} &nbsp;·&nbsp; Confidential</div>
+</body>
+</html>"""
+    return HTMLResponse(content=html)
+
+
+# ============================================================
 # FEEDBACK ENDPOINT
 # ============================================================
 
