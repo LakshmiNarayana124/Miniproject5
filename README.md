@@ -1,7 +1,7 @@
 
 # 👁️ IntelliWatch
 
-> **Real-Time Industrial Machine Health Monitoring & Decision Support System**
+> **Real-Time Machine Health Anomaly Detection & Decision Support System**
 >
 > Raspberry Pi sensors → FastAPI backend → ML anomaly detection → live cloud dashboard.
 
@@ -15,7 +15,7 @@ The project is designed to support predictive-maintenance workflows while remain
 
 | Resource | Link |
 |---|---|
-| **Live Dashboard** | https://intelliwatch-iw.vercel.app   |
+| **Live Dashboard** | https://miniproject5.vercel.app/   |
 | **Backend API** | https://intelliwatch-backend.onrender.com |
 | **API Documentation (Swagger)** | https://intelliwatch-backend.onrender.com/docs |
 | **Registration Status** | https://intelliwatch-backend.onrender.com/auth/registration-status |
