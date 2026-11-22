@@ -2,7 +2,7 @@ import { formatDateTime } from '../sensors'
 import { t } from '../i18n'
 import useLang from '../useLang'
 import { mlEngine } from '../mlEngine'
-
+import ServiceReport from './ServiceReport'
 const DEMO_TOKEN = 'demo-offline'
 
 const API = (
@@ -239,6 +239,7 @@ export default function AlertLog({
               {t('alert_clear', lang)}
             </button>
           )}
+	  <ServiceReport alerts={alerts} />
         </div>
       </div>
 

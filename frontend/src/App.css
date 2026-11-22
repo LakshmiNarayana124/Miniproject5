@@ -1642,3 +1642,495 @@
     transition: none;
   }
 }
+
+/* =========================================================
+   INTELLIWATCH — EQUIPMENT SERVICE REPORT
+   Screen preparation panel + clean A4 print layout
+   ========================================================= */
+
+.iw-report-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.58);
+  backdrop-filter: blur(3px);
+}
+
+.iw-report-panel {
+  width: min(100%, 1050px);
+  max-height: 92vh;
+  overflow-y: auto;
+  background: #f4f6f9;
+  border: 1px solid #dce2ea;
+  border-radius: 14px;
+  padding: 22px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.25);
+}
+
+.iw-report-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+/* Printable report sheet */
+
+#iw-service-report {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 38px;
+  background: #ffffff;
+  color: #172033;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  line-height: 1.5;
+  border: 1px solid #e1e6ed;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.07);
+  box-sizing: border-box;
+}
+
+#iw-service-report *,
+#iw-service-report *::before,
+#iw-service-report *::after {
+  box-sizing: border-box;
+}
+
+.iw-report-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 22px;
+  border-bottom: 2px solid #2457a7;
+}
+
+.iw-report-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.iw-report-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: #2457a7;
+  color: #ffffff;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -1px;
+}
+
+.iw-report-brand strong {
+  display: block;
+  color: #172033;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+}
+
+.iw-report-brand span {
+  display: block;
+  margin-top: 3px;
+  color: #647084;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.iw-report-heading {
+  text-align: right;
+}
+
+.iw-report-heading h1 {
+  margin: 0;
+  color: #172033;
+  font-size: 21px;
+  line-height: 1.25;
+  font-weight: 750;
+}
+
+.iw-report-heading p {
+  margin: 5px 0 0;
+  color: #647084;
+  font-size: 11px;
+}
+
+.iw-report-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 16px 0;
+  border-bottom: 1px solid #e3e8ef;
+}
+
+.iw-report-meta > div {
+  min-width: 0;
+}
+
+.iw-report-meta strong {
+  display: block;
+  margin-bottom: 3px;
+  color: #68758a;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+}
+
+.iw-report-meta span {
+  display: block;
+  color: #172033;
+  font-size: 11px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* Report sections */
+
+.iw-report-section {
+  margin-top: 22px;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.iw-report-section h2 {
+  margin: 0 0 12px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid #dfe5ed;
+  color: #2457a7;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.iw-report-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 18px;
+}
+
+.iw-report-fields > div {
+  min-width: 0;
+}
+
+.iw-report-fields label {
+  display: block;
+  margin-bottom: 4px;
+  color: #68758a;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.iw-report-fields input,
+.iw-report-fields textarea,
+#iw-service-report input,
+#iw-service-report textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid #d7dee8;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #172033;
+  font: inherit;
+  font-size: 11px;
+}
+
+#iw-service-report textarea {
+  min-height: 65px;
+  resize: vertical;
+}
+
+.iw-report-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.iw-report-summary > div {
+  padding: 12px;
+  border: 1px solid #e0e6ee;
+  border-radius: 6px;
+  background: #f8fafc;
+  text-align: center;
+}
+
+.iw-report-summary strong {
+  display: block;
+  color: #172033;
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.iw-report-summary span {
+  display: block;
+  margin-top: 4px;
+  color: #68758a;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+/* Alert details */
+
+.iw-report-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 10px;
+}
+
+.iw-report-table th {
+  padding: 9px 8px;
+  background: #f0f4f9;
+  color: #334155;
+  border-bottom: 1px solid #d8e0ea;
+  text-align: left;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.iw-report-table td {
+  padding: 8px;
+  border-bottom: 1px solid #e6ebf1;
+  color: #263247;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.iw-report-table tr {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.iw-report-table tbody tr:nth-child(even) {
+  background: #fafbfd;
+}
+
+/* Findings, actions, notes and sign-off */
+
+#iw-service-report .iw-report-section p {
+  margin: 0;
+  color: #263247;
+  overflow-wrap: anywhere;
+}
+
+.iw-report-signatures {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px;
+  margin-top: 24px;
+}
+
+.iw-report-signatures > div {
+  min-width: 0;
+  padding-top: 24px;
+  border-bottom: 1px solid #9aa6b7;
+  color: #68758a;
+  font-size: 10px;
+}
+
+.iw-report-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 28px;
+  padding-top: 12px;
+  border-top: 1px solid #dfe5ed;
+  color: #68758a;
+  font-size: 9px;
+}
+
+.iw-report-footer span {
+  overflow-wrap: anywhere;
+}
+
+/* Small screens */
+
+@media (max-width: 700px) {
+  .iw-report-overlay {
+    padding: 8px;
+    align-items: flex-start;
+  }
+
+  .iw-report-panel {
+    max-height: 96vh;
+    padding: 12px;
+    border-radius: 10px;
+  }
+
+  #iw-service-report {
+    padding: 18px;
+  }
+
+  .iw-report-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .iw-report-heading {
+    text-align: left;
+  }
+
+  .iw-report-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .iw-report-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .iw-report-summary {
+    gap: 6px;
+  }
+
+  .iw-report-summary > div {
+    padding: 8px 4px;
+  }
+
+  .iw-report-summary strong {
+    font-size: 18px;
+  }
+
+  .iw-report-table {
+    font-size: 9px;
+  }
+
+  .iw-report-table th,
+  .iw-report-table td {
+    padding: 6px 4px;
+  }
+}
+
+/* Print / Save as PDF */
+
+@page {
+  size: A4 portrait;
+  margin: 14mm;
+}
+
+@media print {
+  html,
+  body {
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    overflow: visible !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  #iw-service-report,
+  #iw-service-report * {
+    visibility: visible !important;
+  }
+
+  .iw-report-overlay {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    backdrop-filter: none !important;
+  }
+
+  .iw-report-panel {
+    position: static !important;
+    width: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+  }
+
+  .iw-report-actions {
+    display: none !important;
+  }
+
+  #iw-service-report {
+    position: relative !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    background: #ffffff !important;
+    color: #172033 !important;
+    box-shadow: none !important;
+    font-size: 10pt !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  #iw-service-report input,
+  #iw-service-report textarea {
+    border: none !important;
+    border-bottom: 1px solid #cbd5e1 !important;
+    border-radius: 0 !important;
+    padding: 4px 0 !important;
+    background: transparent !important;
+    color: #172033 !important;
+    box-shadow: none !important;
+    resize: none !important;
+  }
+
+  #iw-service-report .iw-report-header,
+  #iw-service-report .iw-report-meta,
+  #iw-service-report .iw-report-section,
+  #iw-service-report .iw-report-footer {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  #iw-service-report .iw-report-table thead {
+    display: table-header-group;
+  }
+
+  #iw-service-report .iw-report-table tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  #iw-service-report .iw-report-table th {
+    background: #f0f4f9 !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  a[href]::after {
+    content: none !important;
+  }
+}
