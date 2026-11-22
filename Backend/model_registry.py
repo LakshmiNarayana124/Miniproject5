@@ -313,12 +313,16 @@ class ModelRegistry:
         artifact_path: str,
         metrics: dict[str, Any]
     ) -> None:
-        """Insert or update a ``ml_models`` row for the model."""
+        """Insert or update a ml_models row for the model."""
 
         connection = database.get_connection()
+        cursor = None
+        placeholder = "%s" if database._USE_POSTGRES else "?"
 
         try:
-            connection.execute("""
+            cursor = connection.cursor()
+
+            cursor.execute(f"""
                 INSERT INTO ml_models (
                     family,
                     model_name,
@@ -330,8 +334,11 @@ class ModelRegistry:
                     metrics_json,
                     schema_version
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-
+                VALUES (
+                    {placeholder}, {placeholder}, {placeholder},
+                    {placeholder}, {placeholder}, {placeholder},
+                    {placeholder}, {placeholder}, {placeholder}
+                )
                 ON CONFLICT(family, version)
                 DO UPDATE SET
                     model_name = excluded.model_name,
@@ -359,35 +366,48 @@ class ModelRegistry:
             raise
 
         finally:
+            if cursor is not None:
+                cursor.close()
             connection.close()
 
     def _model_row_exists(self, family: str, version: str) -> bool:
-        """Return ``True`` when a matching ``ml_models`` row exists."""
+        """Return True when a matching ml_models row exists."""
 
         connection = database.get_connection()
+        cursor = None
+        placeholder = "%s" if database._USE_POSTGRES else "?"
 
         try:
-            row = connection.execute("""
+            cursor = connection.cursor()
+
+            cursor.execute(f"""
                 SELECT 1
                 FROM ml_models
-                WHERE family = ? AND version = ?
-            """, (family, version)).fetchone()
+                WHERE family = {placeholder}
+                  AND version = {placeholder}
+            """, (family, version))
 
-            return row is not None
+            return cursor.fetchone() is not None
 
         finally:
+            if cursor is not None:
+                cursor.close()
             connection.close()
 
     def _deactivate_family_rows(self, family: str) -> None:
-        """Set ``is_active = 0`` for every version in ``family``."""
+        """Set is_active = 0 for every version in the family."""
 
         connection = database.get_connection()
+        cursor = None
+        placeholder = "%s" if database._USE_POSTGRES else "?"
 
         try:
-            connection.execute("""
+            cursor = connection.cursor()
+
+            cursor.execute(f"""
                 UPDATE ml_models
                 SET is_active = 0
-                WHERE family = ?
+                WHERE family = {placeholder}
             """, (family,))
 
             connection.commit()
@@ -397,18 +417,25 @@ class ModelRegistry:
             raise
 
         finally:
+            if cursor is not None:
+                cursor.close()
             connection.close()
 
     def _activate_model_row(self, family: str, version: str) -> None:
-        """Set ``is_active = 1`` for the selected ``(family, version)``."""
+        """Set is_active = 1 for the selected model version."""
 
         connection = database.get_connection()
+        cursor = None
+        placeholder = "%s" if database._USE_POSTGRES else "?"
 
         try:
-            connection.execute("""
+            cursor = connection.cursor()
+
+            cursor.execute(f"""
                 UPDATE ml_models
                 SET is_active = 1
-                WHERE family = ? AND version = ?
+                WHERE family = {placeholder}
+                  AND version = {placeholder}
             """, (family, version))
 
             connection.commit()
@@ -418,24 +445,34 @@ class ModelRegistry:
             raise
 
         finally:
+            if cursor is not None:
+                cursor.close()
             connection.close()
 
     def _active_version_from_db(self, family: str) -> Optional[str]:
-        """Return the active version for ``family`` from the database."""
+        """Return the active version for the family from the database."""
 
         connection = database.get_connection()
+        cursor = None
+        placeholder = "%s" if database._USE_POSTGRES else "?"
 
         try:
-            row = connection.execute("""
+            cursor = connection.cursor()
+
+            cursor.execute(f"""
                 SELECT version
                 FROM ml_models
-                WHERE family = ? AND is_active = 1
+                WHERE family = {placeholder}
+                  AND is_active = 1
                 LIMIT 1
-            """, (family,)).fetchone()
+            """, (family,))
 
+            row = cursor.fetchone()
             return row["version"] if row else None
 
         finally:
+            if cursor is not None:
+                cursor.close()
             connection.close()
 
 
