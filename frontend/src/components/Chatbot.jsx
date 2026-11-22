@@ -550,6 +550,118 @@ export default function Chatbot({
   isDemoSession = false,
 }) {
   const [open, setOpen] = useState(false)
+  const [fabPosition, setFabPosition] = useState(null)
+  const [isFabDragging, setIsFabDragging] = useState(false)
+
+  const fabDragRef = useRef({
+    dragging: false,
+    moved: false,
+    pointerId: null,
+    offsetX: 0,
+    offsetY: 0,
+    startX: 0,
+    startY: 0,
+  })
+
+  function handleFabPointerDown(event) {
+    if (!event.isPrimary || event.button !== 0) return
+
+    const rect = event.currentTarget.getBoundingClientRect()
+    const drag = fabDragRef.current
+
+    drag.dragging = true
+    drag.moved = false
+    drag.pointerId = event.pointerId
+    drag.offsetX = event.clientX - rect.left
+    drag.offsetY = event.clientY - rect.top
+    drag.startX = event.clientX
+    drag.startY = event.clientY
+
+    setFabPosition({
+      x: rect.left,
+      y: rect.top,
+    })
+
+    setIsFabDragging(true)
+
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId)
+    } catch {}
+  }
+
+  function handleFabPointerMove(event) {
+    const drag = fabDragRef.current
+
+    if (!drag.dragging || drag.pointerId !== event.pointerId) return
+
+    const distance = Math.hypot(
+      event.clientX - drag.startX,
+      event.clientY - drag.startY
+    )
+
+    if (distance > 5) {
+      drag.moved = true
+    }
+
+    const button = event.currentTarget
+    const width = button.offsetWidth
+    const height = button.offsetHeight
+
+    const maxX = Math.max(0, window.innerWidth - width)
+    const maxY = Math.max(0, window.innerHeight - height)
+
+    const x = Math.min(
+      maxX,
+      Math.max(0, event.clientX - drag.offsetX)
+    )
+
+    const y = Math.min(
+      maxY,
+      Math.max(0, event.clientY - drag.offsetY)
+    )
+
+    setFabPosition({ x, y })
+  }
+
+  function handleFabPointerUp(event) {
+    const drag = fabDragRef.current
+
+    if (drag.pointerId !== event.pointerId) return
+
+    drag.dragging = false
+    drag.pointerId = null
+
+    setIsFabDragging(false)
+
+    try {
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId)
+      }
+    } catch {}
+  }
+
+  function handleFabPointerCancel(event) {
+    const drag = fabDragRef.current
+
+    if (drag.pointerId !== event.pointerId) return
+
+    drag.dragging = false
+    drag.pointerId = null
+
+    setIsFabDragging(false)
+  }
+
+  function handleFabClick(event) {
+    if (fabDragRef.current.moved) {
+      fabDragRef.current.moved = false
+      event.preventDefault()
+      event.stopPropagation()
+      return
+    }
+
+    setOpen(value => !value)
+  }
+
   const globalLang = useLang()
   const [lang, setLang] = useState(globalLang)
 
@@ -1117,11 +1229,22 @@ export default function Chatbot({
     <>
       {/* ── Floating trigger button ── */}
 
-      <button
-        className={`chatbot-fab ${open ? 'chatbot-fab-open' : ''}`}
-        onClick={() => setOpen(value => !value)}
+            <button
+        className={`chatbot-fab ${open ? 'chatbot-fab-open' : ''} ${isFabDragging ? 'chatbot-fab-dragging' : ''}`}
+        onClick={handleFabClick}
+        onPointerDown={handleFabPointerDown}
+        onPointerMove={handleFabPointerMove}
+        onPointerUp={handleFabPointerUp}
+        onPointerCancel={handleFabPointerCancel}
+        style={fabPosition ? {
+          position: 'fixed',
+          left: `${fabPosition.x}px`,
+          top: `${fabPosition.y}px`,
+          right: 'auto',
+          bottom: 'auto',
+        } : undefined}
         aria-label="Open IntelliWatch Assistant"
-        title="Chat with Bolt — IntelliWatch AI"
+        title="Drag to move Bolt — click to open"
         type="button"
       >
         <RobotAvatar size={46} glow pulse={!open} />

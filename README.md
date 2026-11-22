@@ -219,3 +219,10 @@ VITE_FIREBASE_APP_ID               1:174724193863:web:e09ddbd891e2cc547d5b62
 ## 📄 License
 
 MIT
+
+## Recent Frontend Updates
+
+- **Movable Bolt assistant:** The floating chatbot launcher can be repositioned by dragging it.
+- **Service Report:** The alert log provides a printable service report. Use the browser's print dialog and select **Save as PDF** to export it.
+- **PDF workflow:** The report opens in a separate browser window/tab. Allow pop-ups for the IntelliWatch site if the report does not open.
+- **Build verification:** Frontend production build completed successfully with Vite.
