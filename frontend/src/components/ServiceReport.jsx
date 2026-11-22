@@ -36,7 +36,63 @@ export default function ServiceReport({ alerts = [] }) {
   ).length
 
   function printReport() {
-    window.print()
+    const report = document.getElementById('iw-service-report')
+    if (!report) return window.alert('Report not found')
+
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) return window.alert('Allow pop-ups for this site')
+
+    const clone = report.cloneNode(true)
+
+    const originalInputs = report.querySelectorAll('input')
+    const clonedInputs = clone.querySelectorAll('input')
+    originalInputs.forEach((input, index) => {
+      clonedInputs[index].setAttribute('value', input.value)
+    })
+
+    const originalTextareas = report.querySelectorAll('textarea')
+    const clonedTextareas = clone.querySelectorAll('textarea')
+    originalTextareas.forEach((textarea, index) => {
+      clonedTextareas[index].textContent = textarea.value
+    })
+
+    const originalSelects = report.querySelectorAll('select')
+    const clonedSelects = clone.querySelectorAll('select')
+    originalSelects.forEach((select, index) => {
+      Array.from(clonedSelects[index].options).forEach((option, optionIndex) => {
+        if (select.options[optionIndex].selected) {
+          option.setAttribute('selected', 'selected')
+        } else {
+          option.removeAttribute('selected')
+        }
+      })
+    })
+
+    const styles = Array.from(
+      document.querySelectorAll('link[rel="stylesheet"], style')
+    ).map(node => node.outerHTML).join('')
+
+    printWindow.addEventListener('load', () => {
+      printWindow.focus()
+      printWindow.print()
+    })
+
+    printWindow.document.write(
+      '<!doctype html><html><head>' +
+      '<base href="' + window.location.href + '">' +
+      '<title>IntelliWatch Service Report</title>' +
+      styles +
+      '<style>' +
+      'body, body * { visibility: visible !important; }' +
+      'body { margin: 0; padding: 20px; background: white !important; }' +
+      '#iw-service-report { display: block !important; position: static !important; visibility: visible !important; width: 100% !important; max-width: none !important; margin: 0 !important; }' +
+      '@media print { body { margin: 0; padding: 0; } }' +
+      '</style></head><body>' +
+      clone.outerHTML +
+      '</body></html>'
+    )
+
+    printWindow.document.close()
   }
 
   if (!open) {
