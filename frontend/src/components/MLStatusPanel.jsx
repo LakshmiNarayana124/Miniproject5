@@ -459,9 +459,9 @@ export default function MLStatusPanel({
 
             if (!state || !sensor) return null
 
+            const readings = state.readingCount ?? 0
             const confidence = readings > 0 ? (state.confidence ?? 0) : 0
             const score = readings > 0 ? (state.score ?? 0) : 0
-            const readings = state.readingCount ?? 0
 
             const accuracy = readings >= 12 && state.accuracy != null
               ? `${Math.round(state.accuracy * 100)}%`
