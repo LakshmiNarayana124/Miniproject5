@@ -11,49 +11,59 @@ IntelliWatch reads live sensor data (vibration, temperature, electrical current)
 | Component | Platform | URL |
 |---|---|---|
 | **Frontend** | Vercel | https://miniproject5.vercel.app |
-| **Backend** | Render | https://intelliwatch-backend.onrender.com |
-| **Database** | Neon Postgres | https://console.neon.tech/app/projects/gentle-snow-07661904 |
+| **Backend API** | Render | https://intelliwatch-backend.onrender.com |
 | **API Docs** | Render (Swagger) | https://intelliwatch-backend.onrender.com/docs |
 | **Health Check** | Render | https://intelliwatch-backend.onrender.com/health |
+| **Database** | Neon Postgres | https://console.neon.tech/app/projects/gentle-snow-07661904 |
 
 ---
 
 ## Architecture
 
 ```
-Physical Sensors (Pi)
-        │  HTTP push  (vibration · temperature · current)
+Physical Sensors (Raspberry Pi)
+  vibration (ADXL345 · I²C) + temperature (DS18B20 · 1-Wire) + current (ACS712 · SPI/ADC)
+        │
+        │  HTTP POST  /iot/data/{device_id}
         ▼
- Railway / Render Backend  (FastAPI + Python 3.11)
-   ├── IoT Layer          — device auth, payload validation
-   ├── ML Brain           — NORMAL / WARNING / CRITICAL
-   ├── Equipment Controller — control signal dispatch (SHUTDOWN / DE_RATE / RUN)
-   ├── LCD + Relay Module — physical actuator (GPIO + I²C)
-   └── Neon Postgres      — 19 tables, persistent data
-        │  WebSocket / REST
+┌─────────────────────────────────────────────────┐
+│  Backend  (FastAPI · Python 3.11 · Render)      │
+│                                                  │
+│  iot_layer.py        ← device auth + validation │
+│  intelliwatch_brain  ← ML: NORMAL/WARNING/CRITICAL│
+│  equipment_controller← SHUTDOWN / DE_RATE / RUN │
+│  lcd_relay_module    ← GPIO relay + HD44780 LCD  │
+│  database.py         ← Neon Postgres / SQLite    │
+│  auth.py             ← JWT + role-based access   │
+│  chatbot_api.py      ← Bolt AI (Dify Chatflow)  │
+└─────────────────────────────────────────────────┘
+        │  REST + WebSocket
         ▼
- Vercel Frontend  (React 19 + Vite 8)
-   ├── Live sensor dashboard
-   ├── Control-signal banner
-   ├── Alert log + Service Report
-   ├── Adaptive ML status panel
-   ├── Bolt AI chatbot (multilingual)
-   ├── 3D Sensor Explorer
-   ├── TenderWatch Leaderboard
-   └── User management
+┌─────────────────────────────────────────────────┐
+│  Frontend  (React 19 · Vite 8 · Vercel)         │
+│                                                  │
+│  Login page      ← SVG logo · floating elements │
+│  Sensor dashboard← live charts · status cards   │
+│  Alert log       ← confirm/dismiss · PDF report  │
+│  ML status panel ← accuracy · learned band      │
+│  Bolt chatbot    ← multilingual · draggable FAB  │
+│  3D Explorer     ← virtual hardware workbench    │
+│  Leaderboard     ← TenderWatch rankings          │
+│  User management ← admin panel                   │
+└─────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## Role-Based Access
 
-| Role | Live sensors | Act (control signals) | Manage |
+| Role | Live sensors | Control signals | Manage |
 |---|---|---|---|
 | **Operator** | ✅ + reason device stopped | ❌ | — |
 | **Maintenance Engineer** | ✅ | ✅ SHUTDOWN / DE_RATE / RUN | — |
 | **Admin** | ✅ | ✅ | ✅ users + IoT devices |
 
-Anomaly → action is **automated**: the ML brain fires a control signal the moment status changes, without waiting for a human. Manual dispatch is role-gated (Engineer / Admin only).
+Anomaly detection is **automated** — the ML brain fires a control signal the moment status changes without waiting for a human. Manual dispatch is role-gated (Engineer / Admin only).
 
 ---
 
@@ -64,43 +74,43 @@ from lcd_relay_module import LCDRelayEdgeAdapter, create_lcd_relay_actuator
 
 adapter = LCDRelayEdgeAdapter(
     device_id="lcd-relay-01",
-    actuator=create_lcd_relay_actuator(),   # HD44780 LCD + 4-ch relay board
+    actuator=create_lcd_relay_actuator(),   # HD44780 LCD + 4-ch relay
 )
 hs = iot_layer.register_device(adapter)
 iot_layer.authenticate(hs.device_id, hs.device_credential)
 ```
 
-| Intent | Relay channels | LCD |
+| Intent | Relay channels | LCD display |
 |---|---|---|
 | `RUN` | MAIN on, INDICATOR on | `SYSTEM : RUN / STATUS : NORMAL` |
 | `DE_RATE` | MAIN + DERATE on | `SYSTEM : DERATE / STATUS : WARNING` |
 | `SHUTDOWN` | All off (fail-safe) | `SYSTEM : STOP / STATUS : CRITICAL` |
 
-Hardware libraries (`smbus2`, `RPi.GPIO`) are optional — backend imports cleanly anywhere.
+Hardware libs (`smbus2`, `RPi.GPIO`) are optional — backend imports cleanly anywhere.
 
 ---
 
 ## Safety Design
 
-- Relays de-energise on startup and on any `SHUTDOWN` or unknown intent
+- Relays de-energise on startup and on any `SHUTDOWN` or unknown intent (fail-safe)
 - Every control dispatch recorded immutably in the audit trail
+- CRITICAL latching — only `NORMAL` status releases a latch (no silent downgrade)
 - Payload validation: size limits, finite-value checks, constant-time credential comparison
-- CRITICAL latching — once critical, only `NORMAL` can release it (no silent downgrade)
 
-> ⚠️ Verify relay polarity with a meter on first bring-up. Keep a hardwired e-stop in series with the main relay.
+> ⚠️ Verify relay polarity with a multimeter on first bring-up. Keep a hardwired e-stop in series with the main relay for real machinery.
 
 ---
 
 ## Tech Stack
 
-| Layer | Tech |
+| Layer | Technology |
 |---|---|
 | Frontend | React 19, Vite 8, Recharts, Three.js |
-| Backend | Python 3.11, FastAPI, psycopg2, WebSockets |
+| Backend | Python 3.11, FastAPI, psycopg2, WebSockets, httpx |
 | Database | Neon Postgres (production) / SQLite (local fallback) |
-| Edge | Raspberry Pi, smbus2, RPi.GPIO, HD44780 LCD, relay board |
-| Auth | JWT, role-based access, session versioning |
-| AI Chatbot | Bolt — multilingual (EN/HI/KN/TA/TE), Dify Chatflow integration |
+| Edge hardware | Raspberry Pi, ADXL345, DS18B20, ACS712, HD44780 LCD, relay board |
+| Auth | JWT, role-based access control, session versioning |
+| AI Chatbot | Bolt — EN/HI/KN/TA/TE, Dify Chatflow integration, offline KB fallback |
 
 ---
 
@@ -122,44 +132,38 @@ Set `INTELLIWATCH_SECRET_KEY` in `Backend/.env` before starting.
 
 ---
 
-## Connecting Edge Hardware (Raspberry Pi)
-
-Point the device's HTTP push URL at the live backend:
-
-```
-POST https://intelliwatch-backend.onrender.com/iot/data/{device_id}
-Header: X-Device-Credential: <your-device-credential>
-```
-
-The backend validates, the brain classifies, and control signals flow back to the relay and LCD automatically.
-
----
-
 ## Deployment Guide
 
-### Vercel (Frontend)
+### Vercel — Frontend
 
 1. Connect GitHub → `Miniproject5` → branch `clean-start`
-2. **Root Directory:** `frontend`
-3. **Framework:** Vite
-4. Add env var: `VITE_API_URL = https://intelliwatch-backend.onrender.com`
-5. Deploy
+2. **Root Directory:** `frontend` · **Framework:** Vite
+3. Add env var: `VITE_API_URL = https://intelliwatch-backend.onrender.com`
+4. Deploy → live at `https://miniproject5.vercel.app`
 
-### Render (Backend)
+### Render — Backend
 
 `render.yaml` at repo root is pre-configured. Connect GitHub → `Miniproject5`.
 
-Add these env vars in the Render dashboard:
+Add these env vars in Render dashboard:
 
 | Key | Value |
 |---|---|
 | `INTELLIWATCH_SECRET_KEY` | `0423617d89103f8e1825ab72354b0b04f051c0c4e5582748970153f837deb9850d43227a44e051220330545156d7079517809210e502cc998de69ebe59447f49` |
-| `DATABASE_URL` | *(your Neon connection string)* |
+| `DATABASE_URL` | *(Neon connection string)* |
 | `INTELLIWATCH_CORS_ORIGINS` | `https://miniproject5.vercel.app` |
 
-### Neon (Database)
+### Neon — Database
 
-Already provisioned at `gentle-snow-07661904`. Tables are created automatically on first backend startup.
+Project `gentle-snow-07661904` already provisioned. 19 tables created automatically on first backend startup. Connect via `DATABASE_URL` env var on Render.
+
+### Edge Device (Raspberry Pi)
+
+Point HTTP push URL at the Render backend:
+```
+POST https://intelliwatch-backend.onrender.com/iot/data/{device_id}
+Header: X-Device-Credential: <device-credential>
+```
 
 ---
 
@@ -175,11 +179,11 @@ Already provisioned at `gentle-snow-07661904`. Tables are created automatically 
 
 ## Important URLs
 
-| Resource | Link |
+| Resource | URL |
 |---|---|
-| **Frontend** | https://miniproject5.vercel.app |
+| **Frontend (Live)** | https://miniproject5.vercel.app |
 | **Backend API** | https://intelliwatch-backend.onrender.com |
-| **API Docs (Swagger)** | https://intelliwatch-backend.onrender.com/docs |
+| **Swagger Docs** | https://intelliwatch-backend.onrender.com/docs |
 | **Neon Console** | https://console.neon.tech/app/projects/gentle-snow-07661904 |
 | **Miniproject5 Repo** | https://github.com/LakshmiNarayana124/Miniproject5 |
 | **IntelliWatch Private** | https://github.com/LakshmiNarayana124/IntelliWatch-Private |
