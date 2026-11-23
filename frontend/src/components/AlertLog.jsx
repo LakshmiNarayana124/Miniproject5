@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { formatDateTime } from '../sensors'
 import { t } from '../i18n'
 import useLang from '../useLang'
@@ -35,11 +36,12 @@ function getFeedbackSource(alertSource, operatingMode, token) {
 // ALERT ENTRY — CONFIRM / DISMISS FEEDBACK
 // ==================================================
 
-function AlertEntry({ alert, onFeedback }) {
+function AlertEntry({ alert, onFeedback, onDismiss }) {
   const lang = useLang()
+  const [confirmed, setConfirmed] = useState(false)
 
   return (
-    <div className={`alert-entry alert-${alert.status}`}>
+    <div className={`alert-entry alert-${alert.status}${confirmed ? ' alert-confirmed' : ''}`}>
       <span className="alert-dot" />
 
       <div className="alert-body">
@@ -52,6 +54,11 @@ function AlertEntry({ alert, onFeedback }) {
             ? `${Number(alert.value).toFixed?.(3) ?? alert.value} ${alert.unit ?? ''} — ${alert.status?.toUpperCase()}`
             : alert.message}
         </span>
+        {confirmed && (
+          <span style={{ color: '#4ade80', fontSize: 12, marginLeft: 6 }}>
+            ✓ Logged
+          </span>
+        )}
       </div>
 
       <span className="alert-time">
@@ -61,7 +68,7 @@ function AlertEntry({ alert, onFeedback }) {
       {(
         alert.status === 'warning' ||
         alert.status === 'critical'
-      ) && (
+      ) && !confirmed && (
         <div
           className="alert-feedback"
           role="group"
@@ -71,11 +78,14 @@ function AlertEntry({ alert, onFeedback }) {
             className="alert-fb-btn alert-fb-confirm"
             title="Confirm anomaly"
             aria-label="Confirm anomaly"
-            onClick={() => onFeedback?.(
-              alert.sensor,
-              'anomaly',
-              alert.source
-            )}
+            onClick={() => {
+              onFeedback?.(
+                alert.sensor || alert.label || 'unknown',
+                'anomaly',
+                alert.source
+              )
+              setConfirmed(true)
+            }}
             type="button"
           >
             ✓
@@ -85,11 +95,7 @@ function AlertEntry({ alert, onFeedback }) {
             className="alert-fb-btn alert-fb-dismiss"
             title="Dismiss (false positive)"
             aria-label="Dismiss"
-            onClick={() => onFeedback?.(
-              alert.sensor,
-              'normal',
-              alert.source
-            )}
+            onClick={() => onDismiss?.(alert)}
             type="button"
           >
             ✕
@@ -114,6 +120,8 @@ export default function AlertLog({
 }) {
   const hookLang = useLang()
   const lang = propLang || hookLang
+  const [dismissedAlertIds, setDismissedAlertIds] = useState(() => new Set())
+  const visibleAlerts = alerts.filter(alert => !dismissedAlertIds.has(String(alert.id)))
 
 
   // ==================================================
@@ -215,9 +223,9 @@ export default function AlertLog({
         <h2 className="section-title">
           🔔 {t('alert_log', lang)}
 
-          {alerts.length > 0 && (
+          {visibleAlerts.length > 0 && (
             <span className="alert-count">
-              {alerts.length}
+              {visibleAlerts.length}
             </span>
           )}
         </h2>
@@ -230,7 +238,7 @@ export default function AlertLog({
             </span>
           )}
 
-          {alerts.length > 0 && (
+          {visibleAlerts.length > 0 && (
             <button
               className="clear-btn"
               onClick={onClear}
@@ -239,12 +247,17 @@ export default function AlertLog({
               {t('alert_clear', lang)}
             </button>
           )}
-	  <ServiceReport alerts={alerts} />
+
+          {alerts.some(a =>
+            a.status === 'warning' || a.status === 'critical'
+          ) && (
+            <ServiceReport alerts={alerts} />
+          )}
         </div>
       </div>
 
       <div className="alert-list">
-        {alerts.length === 0 ? (
+        {visibleAlerts.length === 0 ? (
           <div className="no-alerts">
             <span
               style={{
@@ -265,11 +278,19 @@ export default function AlertLog({
             </span>
           </div>
         ) : (
-          alerts.map(alert => (
+          visibleAlerts.map(alert => (
             <AlertEntry
               key={alert.id}
               alert={alert}
               onFeedback={handleFeedback}
+              onDismiss={alert => {
+                handleFeedback(alert.sensor || alert.label || 'unknown', 'normal', alert.source)
+                setDismissedAlertIds(prev => {
+                  const next = new Set(prev)
+                  next.add(String(alert.id))
+                  return next
+                })
+              }}
             />
           ))
         )}

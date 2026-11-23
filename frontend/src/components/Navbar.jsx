@@ -8,7 +8,7 @@ import useLang from '../useLang'
 
 // ==================================================
 // NAVBAR
-// Logo | Navigation | Operating Mode | Controls
+import IntelliWatchLogo from './IntelliWatchLogo'
 // ==================================================
 
 // Map status strings to i18n keys.
@@ -122,7 +122,7 @@ export default function Navbar({
         onClick={closeMobileMenu}
       >
         <span className="logo-eye">
-          👁️
+          <IntelliWatchLogo size={28} />
         </span>
 
         <span className="logo-text">
