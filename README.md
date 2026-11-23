@@ -1,8 +1,8 @@
 # IntelliWatch
 
-**Intelligent condition-monitoring and safety-actuation system for industrial equipment.**
+> **Intelligent condition-monitoring and safety-actuation system for industrial equipment.**
 
-IntelliWatch reads live sensor data (vibration, temperature, current), classifies equipment health via ML, and automatically acts on anomalies — dispatching control signals that shut down or de-rate equipment, switching physical relay channels, and updating an LCD display in real time.
+IntelliWatch reads live sensor data (vibration, temperature, electrical current) from physical hardware, classifies equipment health using machine learning, and **automatically acts on anomalies** — dispatching control signals that shut down or de-rate equipment, switching physical relay channels, and updating an LCD display in real time.
 
 ---
 
@@ -10,79 +10,82 @@ IntelliWatch reads live sensor data (vibration, temperature, current), classifie
 
 | Component | Platform | URL |
 |---|---|---|
-| Frontend | Vercel | https://frontend-five-kappa-31.vercel.app |
-| Backend | Railway | https://intelliwatch-backend-production.up.railway.app |
-| Database | Neon Postgres | 19 tables, persistent |
+| **Frontend** | Vercel | https://miniproject5.vercel.app |
+| **Backend** | Render | https://intelliwatch-backend.onrender.com |
+| **Database** | Neon Postgres | https://console.neon.tech/app/projects/gentle-snow-07661904 |
+| **API Docs** | Render (Swagger) | https://intelliwatch-backend.onrender.com/docs |
+| **Health Check** | Render | https://intelliwatch-backend.onrender.com/health |
 
 ---
 
 ## Architecture
 
 ```
-Sensors (Pi) → HTTP → Railway Backend → ML Brain → Control Signal
-                                                        ↓
-                                              Relay Module + LCD Display
-                                                        ↓
-                                              Neon Postgres (audit + data)
-                                                        ↓
-                                              Vercel Frontend (live dashboard)
+Physical Sensors (Pi)
+        │  HTTP push  (vibration · temperature · current)
+        ▼
+ Railway / Render Backend  (FastAPI + Python 3.11)
+   ├── IoT Layer          — device auth, payload validation
+   ├── ML Brain           — NORMAL / WARNING / CRITICAL
+   ├── Equipment Controller — control signal dispatch (SHUTDOWN / DE_RATE / RUN)
+   ├── LCD + Relay Module — physical actuator (GPIO + I²C)
+   └── Neon Postgres      — 19 tables, persistent data
+        │  WebSocket / REST
+        ▼
+ Vercel Frontend  (React 19 + Vite 8)
+   ├── Live sensor dashboard
+   ├── Control-signal banner
+   ├── Alert log + Service Report
+   ├── Adaptive ML status panel
+   ├── Bolt AI chatbot (multilingual)
+   ├── 3D Sensor Explorer
+   ├── TenderWatch Leaderboard
+   └── User management
 ```
-
-Three layers:
-
-1. **Edge Hardware** — Raspberry Pi with sensors, HD44780 LCD (I2C), multi-channel relay board
-2. **Backend** (Python FastAPI on Railway)
-   - `iot_layer.py` — device registration, auth, payload validation, MQTT/HTTP adapters
-   - `intelliwatch_brain.py` — ML inference engine (NORMAL / WARNING / CRITICAL)
-   - `equipment_controller.py` — anomaly → control signal (SHUTDOWN / DE_RATE / RUN), CRITICAL latching, audit trail
-   - `lcd_relay_module.py` — LCD + relay actuator, fail-safe defaults, software shadow mode
-   - `database.py` — dual Postgres/SQLite driver (Neon in production, SQLite locally)
-   - `auth.py`, `learning_system.py`, `vision_service.py`, `chatbot_api.py`
-3. **Frontend** (React/Vite on Vercel) — live sensor dashboard, control-signal banner, alert log, ML status panel, chatbot, user management
 
 ---
 
 ## Role-Based Access
 
-| Role | See anomalies | Act (dispatch control) | Manage |
+| Role | Live sensors | Act (control signals) | Manage |
 |---|---|---|---|
-| **Operator** | ✅ including reason device stopped | ❌ | — |
+| **Operator** | ✅ + reason device stopped | ❌ | — |
 | **Maintenance Engineer** | ✅ | ✅ SHUTDOWN / DE_RATE / RUN | — |
-| **Admin** | ✅ | ✅ | ✅ devices + users |
+| **Admin** | ✅ | ✅ | ✅ users + IoT devices |
 
-Automated safety path runs under a system identity — anomalies trigger shutdown instantly without waiting for a human.
+Anomaly → action is **automated**: the ML brain fires a control signal the moment status changes, without waiting for a human. Manual dispatch is role-gated (Engineer / Admin only).
 
 ---
 
-## IoT Integration
-
-The LCD + relay actuator registers at backend startup and rides the existing control-signal delivery path:
+## IoT Integration (LCD + Relay)
 
 ```python
 from lcd_relay_module import LCDRelayEdgeAdapter, create_lcd_relay_actuator
 
-adapter = LCDRelayEdgeAdapter(device_id="lcd-relay-01",
-                               actuator=create_lcd_relay_actuator())
+adapter = LCDRelayEdgeAdapter(
+    device_id="lcd-relay-01",
+    actuator=create_lcd_relay_actuator(),   # HD44780 LCD + 4-ch relay board
+)
 hs = iot_layer.register_device(adapter)
 iot_layer.authenticate(hs.device_id, hs.device_credential)
 ```
 
-Intent → relay + LCD mapping:
-
-| Intent | Relays | LCD |
+| Intent | Relay channels | LCD |
 |---|---|---|
-| RUN | MAIN on, INDICATOR on | `SYSTEM : RUN / STATUS : NORMAL` |
-| DE_RATE | MAIN + DERATE on | `SYSTEM : DERATE / STATUS : WARNING` |
-| SHUTDOWN | All off (fail-safe) | `SYSTEM : STOP / STATUS : CRITICAL` |
+| `RUN` | MAIN on, INDICATOR on | `SYSTEM : RUN / STATUS : NORMAL` |
+| `DE_RATE` | MAIN + DERATE on | `SYSTEM : DERATE / STATUS : WARNING` |
+| `SHUTDOWN` | All off (fail-safe) | `SYSTEM : STOP / STATUS : CRITICAL` |
+
+Hardware libraries (`smbus2`, `RPi.GPIO`) are optional — backend imports cleanly anywhere.
 
 ---
 
 ## Safety Design
 
-- Relays de-energize on startup and on any SHUTDOWN (fail-safe default)
-- Data integrity: payload size limits, finite-value checks, credential constant-time comparison
-- Every control dispatch recorded immutably in audit trail
-- Hardware libs (`smbus2`, `RPi.GPIO`) optional — backend imports cleanly anywhere
+- Relays de-energise on startup and on any `SHUTDOWN` or unknown intent
+- Every control dispatch recorded immutably in the audit trail
+- Payload validation: size limits, finite-value checks, constant-time credential comparison
+- CRITICAL latching — once critical, only `NORMAL` can release it (no silent downgrade)
 
 > ⚠️ Verify relay polarity with a meter on first bring-up. Keep a hardwired e-stop in series with the main relay.
 
@@ -90,10 +93,14 @@ Intent → relay + LCD mapping:
 
 ## Tech Stack
 
-- **Backend:** Python 3.11, FastAPI, psycopg2, WebSockets, paho-mqtt / httpx
-- **Frontend:** React 19, Vite 8, Recharts, Three.js
-- **Database:** Neon Postgres (production) / SQLite (local)
-- **Edge:** Raspberry Pi, smbus2, RPi.GPIO
+| Layer | Tech |
+|---|---|
+| Frontend | React 19, Vite 8, Recharts, Three.js |
+| Backend | Python 3.11, FastAPI, psycopg2, WebSockets |
+| Database | Neon Postgres (production) / SQLite (local fallback) |
+| Edge | Raspberry Pi, smbus2, RPi.GPIO, HD44780 LCD, relay board |
+| Auth | JWT, role-based access, session versioning |
+| AI Chatbot | Bolt — multilingual (EN/HI/KN/TA/TE), Dify Chatflow integration |
 
 ---
 
@@ -105,7 +112,7 @@ cd Backend
 pip install -r requirements.txt
 uvicorn server:app --reload --port 8000
 
-# Frontend
+# Frontend (new terminal)
 cd frontend
 npm install
 npm run dev
@@ -115,13 +122,44 @@ Set `INTELLIWATCH_SECRET_KEY` in `Backend/.env` before starting.
 
 ---
 
-## Connecting Edge Hardware (Pi)
+## Connecting Edge Hardware (Raspberry Pi)
 
-Change the device push URL to the live backend:
+Point the device's HTTP push URL at the live backend:
+
 ```
-https://intelliwatch-backend-production.up.railway.app
+POST https://intelliwatch-backend.onrender.com/iot/data/{device_id}
+Header: X-Device-Credential: <your-device-credential>
 ```
-The Pi pushes readings to `POST /iot/data/{device_id}` with `X-Device-Credential` header — the backend validates, brain classifies, and control signals flow back to relays and LCD automatically.
+
+The backend validates, the brain classifies, and control signals flow back to the relay and LCD automatically.
+
+---
+
+## Deployment Guide
+
+### Vercel (Frontend)
+
+1. Connect GitHub → `Miniproject5` → branch `clean-start`
+2. **Root Directory:** `frontend`
+3. **Framework:** Vite
+4. Add env var: `VITE_API_URL = https://intelliwatch-backend.onrender.com`
+5. Deploy
+
+### Render (Backend)
+
+`render.yaml` at repo root is pre-configured. Connect GitHub → `Miniproject5`.
+
+Add these env vars in the Render dashboard:
+
+| Key | Value |
+|---|---|
+| `INTELLIWATCH_SECRET_KEY` | `0423617d89103f8e1825ab72354b0b04f051c0c4e5582748970153f837deb9850d43227a44e051220330545156d7079517809210e502cc998de69ebe59447f49` |
+| `DATABASE_URL` | *(your Neon connection string)* |
+| `INTELLIWATCH_CORS_ORIGINS` | `https://miniproject5.vercel.app` |
+
+### Neon (Database)
+
+Already provisioned at `gentle-snow-07661904`. Tables are created automatically on first backend startup.
 
 ---
 
@@ -130,7 +168,7 @@ The Pi pushes readings to `POST /iot/data/{device_id}` with `X-Device-Credential
 | Branch | Purpose |
 |---|---|
 | `main` | Full source with all integrations |
-| `clean-start` | Production deploy branch (Vercel + Railway) |
+| `clean-start` | Production deploy branch (Vercel + Render) |
 | `feature/iot-lcd-relay-integration` | IoT feature branch |
 
 ---
@@ -139,34 +177,24 @@ The Pi pushes readings to `POST /iot/data/{device_id}` with `X-Device-Credential
 
 | Resource | Link |
 |---|---|
-| **Frontend (Live)** | https://frontend-five-kappa-31.vercel.app |
-| **Backend API (Live)** | https://intelliwatch-backend-production.up.railway.app |
-| **Backend Health Check** | https://intelliwatch-backend-production.up.railway.app/health |
-| **API Docs (Swagger)** | https://intelliwatch-backend-production.up.railway.app/docs |
-| **Database (Neon)** | https://console.neon.tech/app/projects/gentle-snow-07661904 |
-| **GitHub — Miniproject5** | https://github.com/LakshmiNarayana124/Miniproject5 |
-| **GitHub — IntelliWatch Private** | https://github.com/LakshmiNarayana124/IntelliWatch-Private |
-| **Railway Dashboard** | https://railway.com/project/2f8ca63a-580d-42ba-84e3-f2006b1789d7 |
-| **Vercel Dashboard** | https://vercel.com/n0t7h1in-g/frontend |
+| **Frontend** | https://miniproject5.vercel.app |
+| **Backend API** | https://intelliwatch-backend.onrender.com |
+| **API Docs (Swagger)** | https://intelliwatch-backend.onrender.com/docs |
+| **Neon Console** | https://console.neon.tech/app/projects/gentle-snow-07661904 |
+| **Miniproject5 Repo** | https://github.com/LakshmiNarayana124/Miniproject5 |
+| **IntelliWatch Private** | https://github.com/LakshmiNarayana124/IntelliWatch-Private |
 
 ---
 
 ## Research References
 
-This project is grounded in published research from IEEE, arXiv, and MDPI:
-
-1. **Predictive Maintenance via IoT + ML** — Samatas et al., *Predictive Maintenance: Bridging Artificial Intelligence and IoT*, arXiv 2021. Establishes the framework of combining sensor streams with ML for proactive fault detection. [arXiv:2103.11148](https://arxiv.org/abs/2103.11148)
-
-2. **Real-Time Anomaly Detection in Industrial IoT** — *Real-Time Adaptive Anomaly Detection in Industrial IoT Environments*, arXiv 2026. Covers adaptive ML methods for multi-dimensional IoT sensor data, directly applicable to vibration + temperature + current fusion used in IntelliWatch. [arXiv:2601.03085](https://arxiv.org/abs/2601.03085)
-
-3. **ML-Based Rotary Machine Fault Detection** — Givnan et al., Liverpool John Moores University. Proposes a traffic-light severity system (normal / warning / critical) for industrial anomaly detection — the same NORMAL / WARNING / CRITICAL classification model IntelliWatch implements. [arXiv:2110.01447](https://arxiv.org/abs/2110.01447)
-
-4. **Multi-Sensor Fault Signatures** — IEEE Technology Navigator, *Machine learning for predictive maintenance using IoT sensor data*. Demonstrates that combining vibration, temperature, and current signals provides richer fault signatures than any single sensor, enabling earlier failure detection. [IEEE TechNav](https://technav.ieee.org/topic/predictive-maintenance)
-
-5. **TinyML Anomaly Detection at the Edge** — MDPI Sensors, *An Adaptable and Unsupervised TinyML Anomaly Detection System for Extreme Industrial Environments*, 2023. Covers end-to-end IoT + edge computing for industrial anomaly detection, relevant to IntelliWatch's edge-device architecture. [MDPI:2344](https://www.mdpi.com/1424-8220/23/4/2344)
-
-6. **AI-Driven Predictive Maintenance (Industry 4.0)** — Deshmukh & Dere, Terna Engineering College / University of Mumbai, IJCRT 2024. Addresses the shift from reactive to proactive maintenance using IoT sensor data and ML in Industry 4.0 environments. [IJCRT:2401033](https://ijcrt.org/papers/IJCRT2401033.pdf)
+1. **Predictive Maintenance via IoT + ML** — Samatas et al., arXiv 2021. [arXiv:2103.11148](https://arxiv.org/abs/2103.11148)
+2. **Real-Time Anomaly Detection in Industrial IoT** — arXiv 2026. [arXiv:2601.03085](https://arxiv.org/abs/2601.03085)
+3. **ML-Based Rotary Machine Fault Detection** — Givnan et al., Liverpool John Moores University. [arXiv:2110.01447](https://arxiv.org/abs/2110.01447)
+4. **Multi-Sensor Fault Signatures** — IEEE Technology Navigator. [IEEE TechNav](https://technav.ieee.org/topic/predictive-maintenance)
+5. **TinyML Anomaly Detection at the Edge** — MDPI Sensors, 2023. [MDPI:2344](https://www.mdpi.com/1424-8220/23/4/2344)
+6. **AI-Driven Predictive Maintenance (Industry 4.0)** — Deshmukh & Dere, IJCRT 2024. [IJCRT:2401033](https://ijcrt.org/papers/IJCRT2401033.pdf)
 
 ---
 
-_IntelliWatch — software + hardware, end to end._
+*IntelliWatch — software + hardware, end to end.*
