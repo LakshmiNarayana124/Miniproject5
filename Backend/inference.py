@@ -78,6 +78,175 @@ class DetectionTrace:
     method: str = "model"
     probabilities: Dict[str, float] = field(default_factory=dict)
     threshold_status: Optional[str] = None
+    fault_hint: Optional[Dict[str, Any]] = None   # populated by classify_fault_hint()
+
+
+# ============================================================
+# FAULT SIGNATURE CLASSIFICATION  (server-side mirror of
+# frontend faultSignatures.js — same rule logic, Python port)
+#
+# References: ISO 10816-3, IEC 60034-1, IEC 60947-4-1,
+#             ISO 13373-1 condition monitoring practices.
+# ============================================================
+
+_FAULT_CATALOGUE = [
+    {
+        "id": "bearing_wear",
+        "label": "Bearing Wear",
+        "severity": "high",
+        "standard": "ISO 10816-3 / ISO 13373-1",
+        "description": "Progressive rolling-element bearing degradation.",
+    },
+    {
+        "id": "mechanical_imbalance",
+        "label": "Mechanical Imbalance",
+        "severity": "medium",
+        "standard": "ISO 10816-3",
+        "description": "Rotating mass imbalance causing 1× running-frequency vibration.",
+    },
+    {
+        "id": "thermal_overload",
+        "label": "Thermal Overload",
+        "severity": "high",
+        "standard": "IEC 60034-1 Class F",
+        "description": "Winding or bearing temperature exceeds safe operating limit.",
+    },
+    {
+        "id": "electrical_overload",
+        "label": "Electrical Overload",
+        "severity": "high",
+        "standard": "IEC 60947-4-1 / NEMA MG-1",
+        "description": "Motor drawing current above service factor limit.",
+    },
+    {
+        "id": "compound_fault",
+        "label": "Compound Fault",
+        "severity": "high",
+        "standard": "ISO 10816-3 / IEC 60034-1",
+        "description": "Multiple sensors simultaneously in abnormal zones.",
+    },
+]
+
+_MIN_CONFIDENCE = 32
+
+
+def _score_bearing_wear(v, t, c):
+    if v is None:
+        return 0
+    score = 55 if v > 7.1 else 40 if v > 4.5 else 20 if v > 3.5 else 0
+    if score == 0:
+        return 0
+    if t is not None and t > 80:
+        score += 8
+    if c is not None and c < 16.5:
+        score += 7
+    return min(score, 95)
+
+
+def _score_imbalance(v, t, c):
+    if v is None:
+        return 0
+    score = 45 if 4.5 < v <= 10 else 25 if 2.8 < v <= 4.5 else 0
+    if score == 0:
+        return 0
+    if t is not None and t < 80:
+        score += 10
+    if c is not None and 12 < c < 16.5:
+        score += 10
+    return min(score, 90)
+
+
+def _score_thermal(v, t, c):
+    if t is None:
+        return 0
+    score = 60 if t > 100 else 40 if t > 85 else 20 if t > 80 else 0
+    if score == 0:
+        return 0
+    if c is not None and c > 16.5:
+        score += 12
+    if v is not None and v < 4.5:
+        score += 5
+    return min(score, 95)
+
+
+def _score_electrical(v, t, c):
+    if c is None:
+        return 0
+    score = 60 if c > 18.75 else 40 if c > 16.5 else 15 if c > 15 else 0
+    if score == 0:
+        return 0
+    if t is not None and t > 80:
+        score += 12
+    if v is not None and v > 4.5:
+        score += 8
+    return min(score, 95)
+
+
+def _score_compound(v, t, c):
+    zones = sum([
+        v is not None and v > 4.5,
+        t is not None and t > 80,
+        c is not None and c > 16.5,
+    ])
+    if zones < 2:
+        return 0
+    score = 85 if zones == 3 else 60
+    if v is not None and v > 7.1:
+        score += 8
+    if t is not None and t > 100:
+        score += 8
+    if c is not None and c > 18.75:
+        score += 8
+    return min(score, 98)
+
+
+_SCORERS = [
+    ("bearing_wear",        _score_bearing_wear),
+    ("mechanical_imbalance", _score_imbalance),
+    ("thermal_overload",    _score_thermal),
+    ("electrical_overload", _score_electrical),
+    ("compound_fault",      _score_compound),
+]
+
+
+def classify_fault_hint(
+    vibration_mm_s: Optional[float] = None,
+    temperature_c: Optional[float] = None,
+    current_a: Optional[float] = None,
+) -> Optional[Dict[str, Any]]:
+    """Return the best-matching fault signature dict or None.
+
+    Mirrors the browser-side faultSignatures.js logic so the backend
+    DetectionTrace carries the same fault_hint field.
+
+    Parameters
+    ----------
+    vibration_mm_s : float | None
+        Vibration RMS in mm/s (ISO 10816-3 scale).
+    temperature_c  : float | None
+        Temperature in °C.
+    current_a      : float | None
+        Motor current in Amperes.
+
+    Returns
+    -------
+    dict with keys id, label, severity, standard, description, confidence
+    or None when no pattern exceeds the minimum confidence threshold.
+    """
+    v, t, c = vibration_mm_s, temperature_c, current_a
+    best_id, best_score = None, _MIN_CONFIDENCE - 1
+
+    for fault_id, scorer in _SCORERS:
+        score = scorer(v, t, c)
+        if score > best_score:
+            best_score = score
+            best_id    = fault_id
+
+    if best_id is None:
+        return None
+
+    meta = next(f for f in _FAULT_CATALOGUE if f["id"] == best_id)
+    return {**meta, "confidence": best_score}
 
 
 # ============================================================
@@ -333,6 +502,11 @@ def determine_status(
                 method="model",
                 probabilities=prob_dict,
                 threshold_status=_threshold_only_status(threshold_inputs),
+                fault_hint=classify_fault_hint(
+                    vibration_mm_s=_extract_param(threshold_inputs, ("velocity", "rms_mm_s", "vibration")),
+                    temperature_c =_extract_param(threshold_inputs, ("temperature", "temp_c")),
+                    current_a     =_extract_param(threshold_inputs, ("current", "current_a")),
+                ),
             )
             return status, trace
         except Exception as exc:
@@ -350,8 +524,27 @@ def determine_status(
         timestamp=ts,
         method="cold_start",
         threshold_status=_threshold_only_status(threshold_inputs),
+        fault_hint=classify_fault_hint(
+            vibration_mm_s=_extract_param(threshold_inputs, ("velocity", "rms_mm_s", "vibration")),
+            temperature_c =_extract_param(threshold_inputs, ("temperature", "temp_c")),
+            current_a     =_extract_param(threshold_inputs, ("current", "current_a")),
+        ),
     )
     return combined, trace
+
+
+def _extract_param(
+    threshold_inputs: Optional[Dict[str, float]],
+    keywords: tuple,
+) -> Optional[float]:
+    """Return the first value whose key contains any of the keywords."""
+    if not threshold_inputs:
+        return None
+    for key, val in threshold_inputs.items():
+        if any(kw in key.lower() for kw in keywords):
+            if val is not None and math.isfinite(float(val)):
+                return float(val)
+    return None
 
 
 def _threshold_only_status(threshold_inputs: Optional[Dict[str, float]]) -> Optional[str]:

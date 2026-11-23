@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from 'react'
 import './LoginPage.css'
-import IntelliWatchLogo from './IntelliWatchLogo'
 
 const API = (
   import.meta.env.VITE_API_URL || 'http://localhost:8000'
@@ -1757,7 +1756,7 @@ export default function LoginPage({ onLogin }) {
         <div className="login-card">
           <div className="login-brand">
             <span className="login-eye" aria-hidden="true">
-              <IntelliWatchLogo size={36} />
+              &#128065;&#65039;
             </span>
 
             <div>
@@ -1924,6 +1923,23 @@ export default function LoginPage({ onLogin }) {
           </form>
 
 
+
+          {/* MANUAL OFFLINE DEMO ACCESS */}
+          <div style={{ marginTop: '14px' }}>
+            <button
+              type="button"
+              className="login-btn"
+              aria-label="Enter Offline Demo"
+              onClick={() =>
+                completeDemoLogin(
+                  mode === 'admin' ? 'ADMIN' : activeRole
+                )
+              }
+              disabled={loading}
+            >
+              Enter Offline Demo
+            </button>
+          </div>
           {/* DEMO HINT — SHOWN ONLY IN FALLBACK MODE */}
 
           {!availability.onlineMode && DEMO_MODE && (
@@ -1967,9 +1983,10 @@ export default function LoginPage({ onLogin }) {
         </div>
 
 
-        {/* SELF REGISTRATION — always visible */}
+        {/* ONLINE-ONLY SELF REGISTRATION */}
 
-        <div className="new-here-strip">
+        {onlineMode && regEnabled && (
+          <div className="new-here-strip">
             <span className="new-here-label">
               New here?
             </span>
@@ -1990,6 +2007,7 @@ export default function LoginPage({ onLogin }) {
               🔧 Engineer
             </button>
           </div>
+        )}
       </div>
 
 
