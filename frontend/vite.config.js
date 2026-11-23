@@ -47,5 +47,6 @@ export default defineConfig({
   // Avoid manually separating Recharts, D3 and React dependencies.
   build: {
     sourcemap: false,
+    chunkSizeWarningLimit: 2000,
   },
 })

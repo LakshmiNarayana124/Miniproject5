@@ -235,15 +235,25 @@ export default function ServiceReport({ alerts = [] }) {
     URL.revokeObjectURL(url)
   }
 
-  // ── Trigger button (export-btn style restored) ──
+  // ── Trigger button — plain text link, no box ──
   if (!open) {
     return (
       <button
         type="button"
-        className="export-btn"
         onClick={() => setOpen(true)}
+        style={{
+          background: 'none',
+          border: 'none',
+          padding: '0 0 0 6px',
+          color: 'var(--accent, #60a5fa)',
+          fontSize: 13,
+          fontWeight: 500,
+          cursor: 'pointer',
+          letterSpacing: '0.01em',
+          opacity: 0.9,
+        }}
       >
-        📋 Service Report
+        📋 Service Report ↗
       </button>
     )
   }
