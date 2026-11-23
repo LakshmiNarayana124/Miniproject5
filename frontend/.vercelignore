@@ -1,0 +1,5 @@
+node_modules
+dist
+*.bak
+*.backup*
+INTELLIWATCH_SOURCE.txt

@@ -223,54 +223,63 @@ const KB = {
 // ==================================================
 
 function classifyMessage(text) {
-  const t = text.toLowerCase()
+  const t = text.toLowerCase().trim()
+  if (!t) return 'fallback'
 
-  if (/\b(hi|hello|hey|namaste|vanakkam|namaskara|namaskar|help|start)\b/.test(t)) {
+  // Greetings — exact short phrases only, not buried in a longer question
+  if (/^(hi|hello|hey|namaste|vanakkam|namaskara|namaskar|yo|sup|good morning|good evening|hiya|howdy)\b[^a-z]*$/.test(t)) {
     return 'greeting'
   }
 
-  if (/\b(what|about|intelliwatch|system|project|overview|explain)\b/.test(t)) {
-    return 'about'
-  }
-
+  // Sensor-specific — most specific first so they win over broad words
   if (/\b(vibrat|adxl|shake|oscillat|कंपन|ಕಂಪನ|అదురు|அதிர்)\b/.test(t)) {
     return 'vibration'
   }
-
-  if (/\b(temp|heat|ds18|thermal|celsius|degree|तापमान|ಉಷ್ಣ|வெப்ப|ఉష్ణ)\b/.test(t)) {
+  if (/\b(temp|heat|ds18|thermal|celsius|degree|तापमान|ಉಷ್ಣ|வெப்ப|ఉష్ణ)\b/.test(t) && !/\b(room|weather|outside)\b/.test(t)) {
     return 'temperature'
   }
-
-  if (/\b(current|amp|acs|motor|power|करंट|ಮಿನ್ನ|மின்|విద్యుత్)\b/.test(t)) {
+  if (/\b(current|amp|acs712|करंट|ಮಿನ್ನ|மின்|విద్యుత్)\b/.test(t)) {
     return 'current'
   }
 
-  if (/\b(iot|raspberry|sensor|hardware|connect|wire|gpio|i2c|mqtt|websocket)\b/.test(t)) {
-    return 'iot'
-  }
-
-  if (/\b(alert|log|notif|alarm|warn|critical|threshold|event)\b/.test(t)) {
+  // Alert log specifically
+  if (/\b(alert log|alert|anomal|alarm|notif|warn.*log|critical.*log|log.*warn|log.*critical|threshold|event log)\b/.test(t)) {
     return 'alert'
   }
 
-  if (/\b(role|admin|operator|engineer|user|access|login|auth|permission)\b/.test(t)) {
+  // Roles / access
+  if (/\b(role|admin|operator|engineer|access|permission|who can|login method|sign.?in method)\b/.test(t)) {
     return 'roles'
   }
 
-  if (/\b(ml|machine|learn|model|kaist|fault|bpfi|bpfo|misalign|unbalanc|predict|classif)\b/.test(t)) {
+  // ML / AI
+  if (/\b(ml|machine learning|model|kaist|bearing|bpfi|bpfo|misalign|unbalanc|predict|classif|anomaly detect|fault detect)\b/.test(t)) {
     return 'ml'
   }
 
-  if (/\b(status|health|system|online|offline|live|state)\b/.test(t)) {
-    return 'status'
+  // IoT / hardware wiring
+  if (/\b(iot|raspberry|gpio|i2c|mqtt|websocket|wire|connect.*sensor|sensor.*connect|hardware setup)\b/.test(t)) {
+    return 'iot'
   }
 
-  if (/\b(3d|explorer|hardware|lab|workbench|place|component|drag)\b/.test(t)) {
+  // 3D Explorer
+  if (/\b(3d|explorer|workbench|drag.*component|component.*drag|virtual.*assembly)\b/.test(t)) {
     return 'explorer'
   }
 
-  if (/\b(leader|board|rank|tender|top|org|company|chart)\b/.test(t)) {
+  // Leaderboard
+  if (/\b(leader.*board|leaderboard|rank|tender.*watch|top.*org|organization.*rank)\b/.test(t)) {
     return 'leaderboard'
+  }
+
+  // System status specifically
+  if (/\b(system status|current status|live status|device.*state|equipment.*state|is.*running|is.*online|is.*offline)\b/.test(t)) {
+    return 'status'
+  }
+
+  // Project overview — only when explicitly asking about the project
+  if (/\b(what is intelliwatch|about intelliwatch|tell me about|project overview|explain intelliwatch|what does intelliwatch do)\b/.test(t)) {
+    return 'about'
   }
 
   return 'fallback'
@@ -743,6 +752,59 @@ export default function Chatbot({
     }
 
     const topic = classifyMessage(text)
+    const t = (text || '').toLowerCase()
+
+    // Within vibration — give specific sub-answers
+    if (topic === 'vibration') {
+      if (/\b(limit|threshold|safe|max|iso|standard|value|how much)\b/.test(t))
+        return (KB[lang].vibration_limit) || 'Vibration warning threshold is typically 4.5 mm/s RMS and critical is 7.1 mm/s RMS (ISO 10816-3 reference for general industrial motors). Actual limits depend on machine class and mounting.'
+      if (/\b(sensor|adxl|wire|connect|pin|i2c|sda|scl)\b/.test(t))
+        return (KB[lang].vibration_sensor) || 'The ADXL345 accelerometer connects to the Raspberry Pi over I²C (SDA/SCL pins). It operates at 3.3 V and measures ±2 g to ±16 g full-scale range.'
+      if (/\b(fault|bearing|bpfi|bpfo|unbalanc|misalign|cause|why)\b/.test(t))
+        return (KB[lang].vibration_fault) || 'Vibration anomalies can indicate bearing faults (BPFI/BPFO frequency patterns), rotor unbalance (1× rotational frequency), or shaft misalignment (2× frequency). The IntelliWatch ML model classifies these patterns.'
+    }
+
+    if (topic === 'temperature') {
+      if (/\b(limit|threshold|safe|max|how much|value|celsius|degree)\b/.test(t))
+        return (KB[lang].temperature_limit) || 'Temperature warning is typically around 70–80 °C for motor surface and critical at 85–100 °C depending on insulation class. Class B motors allow up to 130 °C winding temperature.'
+      if (/\b(sensor|ds18|wire|connect|pin|1.wire|one.wire|protocol)\b/.test(t))
+        return (KB[lang].temperature_sensor) || 'The DS18B20 uses the 1-Wire protocol on a single GPIO pin with a 4.7 kΩ pull-up resistor. It provides ±0.5 °C accuracy from −10 °C to +85 °C.'
+    }
+
+    if (topic === 'current') {
+      if (/\b(limit|threshold|safe|max|overload|how much|amp|value)\b/.test(t))
+        return (KB[lang].current_limit) || 'IntelliWatch warns at 110% of full-load amperage (FLA) and flags critical at 125% FLA. Check the motor nameplate for the actual FLA value.'
+      if (/\b(sensor|acs|wire|connect|pin|hall|spi|adc)\b/.test(t))
+        return (KB[lang].current_sensor) || 'The ACS712 uses the Hall effect and outputs an analogue voltage proportional to current. It connects via an ADC (e.g. MCP3008) to the Raspberry Pi over SPI. The 5 A module has 185 mV/A sensitivity.'
+    }
+
+    if (topic === 'alert') {
+      if (/\b(critical|shutdown|stop|emergency|severe)\b/.test(t))
+        return (KB[lang].alert_critical) || 'A CRITICAL alert triggers an automatic SHUTDOWN signal — the relay de-energises the equipment and the LCD shows SYSTEM : STOP / STATUS : CRITICAL. Only an Engineer or Admin can restart it manually.'
+      if (/\b(warn|derate|de.rate|slow|reduce|yellow)\b/.test(t))
+        return (KB[lang].alert_warning) || 'A WARNING alert triggers a DE_RATE signal — equipment slows down or reduces load. The LCD shows SYSTEM : DERATE / STATUS : WARNING. It auto-escalates to SHUTDOWN if the condition worsens.'
+      if (/\b(clear|dismiss|delete|remove|tick|confirm|✓|✕)\b/.test(t))
+        return (KB[lang].alert_clear) || 'Click ✓ to confirm an anomaly (this teaches the ML model) or ✕ to dismiss as a false positive. Use the Clear button to clear all resolved alerts from the log.'
+    }
+
+    if (topic === 'roles') {
+      if (/\b(admin)\b/.test(t))
+        return (KB[lang].roles_admin) || 'Admin has full access — live sensors, all control signals (SHUTDOWN/DE_RATE/RUN), IoT device registration, user management, model recalibration, and audit log.'
+      if (/\b(engineer|maintenance|maint)\b/.test(t))
+        return (KB[lang].roles_engineer) || 'Maintenance Engineer can view all sensor data and dispatch control signals (SHUTDOWN / DE_RATE / RUN). They cannot manage users or register new IoT devices.'
+      if (/\b(operator)\b/.test(t))
+        return (KB[lang].roles_operator) || 'Operator has read-only access — live sensor data, alert log (including why a device stopped), and system status. They cannot issue control signals.'
+    }
+
+    if (topic === 'ml') {
+      if (/\b(kaist|dataset|train|bearing|bpfi|bpfo|data)\b/.test(t))
+        return (KB[lang].ml_kaist) || 'IntelliWatch uses the KAIST bearing-fault dataset to train its fault-detection model. It includes vibration signatures for inner-race (BPFI), outer-race (BPFO), ball faults, and normal operation.'
+      if (/\b(accura|f1|score|metric|perform|good|how well)\b/.test(t))
+        return (KB[lang].ml_accuracy) || 'Model accuracy is tracked via an F1-score trend stored per model version in the database. The system promotes a new model automatically when retrained accuracy improves.'
+      if (/\b(retrain|recalibrat|learn|update|improve|feedback)\b/.test(t))
+        return (KB[lang].ml_retrain) || 'The learning system accepts operator feedback (confirm anomaly / dismiss false positive) and periodically retrains the model. Admin can trigger manual recalibration from the dashboard.'
+    }
+
     return KB[lang][topic] || KB[lang].fallback
   }
 
