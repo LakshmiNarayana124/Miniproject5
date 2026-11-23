@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react'
+import './LoginPage.css'
 import IntelliWatchLogo from './IntelliWatchLogo'
 
 const API = (
@@ -1174,8 +1175,8 @@ function CreateAccountView({ onBackToLogin }) {
       <div className="create-account-wrap">
         <div className="create-account-header">
           <span className="login-eye" aria-hidden="true">
-              <IntelliWatchLogo size={28} />
-            </span>
+            <PasswordVisibilityIcon visible={false} size={28} />
+          </span>
 
           <div>
             <h1 className="login-title">
@@ -1923,23 +1924,6 @@ export default function LoginPage({ onLogin }) {
           </form>
 
 
-
-          {/* MANUAL OFFLINE DEMO ACCESS */}
-          <div style={{ marginTop: '14px' }}>
-            <button
-              type="button"
-              className="login-btn"
-              aria-label="Enter Offline Demo"
-              onClick={() =>
-                completeDemoLogin(
-                  mode === 'admin' ? 'ADMIN' : activeRole
-                )
-              }
-              disabled={loading}
-            >
-              Enter Offline Demo
-            </button>
-          </div>
           {/* DEMO HINT — SHOWN ONLY IN FALLBACK MODE */}
 
           {!availability.onlineMode && DEMO_MODE && (
@@ -1955,68 +1939,70 @@ export default function LoginPage({ onLogin }) {
 
           {/* ONLINE-ONLY ACCOUNT ACTIONS */}
 
-          <div className="login-bottom-links">
-            <button
-              type="button"
-              className="login-extra-btn"
-              onClick={() => setModal('forgot')}
-            >
-              Forgot Password?
-            </button>
+          {onlineMode && (
+            <div className="login-bottom-links">
+              <button
+                type="button"
+                className="login-extra-btn"
+                onClick={() => setModal('forgot')}
+              >
+                Forgot Password?
+              </button>
 
-            {mode === 'admin' && (
-              <>
-                <span className="login-extra-sep">•</span>
+              {mode === 'admin' && (
+                <>
+                  <span className="login-extra-sep">•</span>
 
-                <button
-                  type="button"
-                  className="login-extra-btn login-extra-btn--admin"
-                  onClick={() => setModal('admin-register')}
-                >
-                  Register as Admin
-                </button>
-              </>
-            )}
-          </div>
+                  <button
+                    type="button"
+                    className="login-extra-btn login-extra-btn--admin"
+                    onClick={() => setModal('admin-register')}
+                  >
+                    Register as Admin
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
 
-        {/* SELF REGISTRATION — always visible, attempt will fail gracefully if offline */}
+        {/* SELF REGISTRATION — always visible */}
 
         <div className="new-here-strip">
-          <span className="new-here-label">
-            New here?
-          </span>
+            <span className="new-here-label">
+              New here?
+            </span>
 
-          <button
-            type="button"
-            className="new-here-btn new-here-btn--op"
-            onClick={() => setView('create')}
-          >
-            📊 Operator
-          </button>
+            <button
+              type="button"
+              className="new-here-btn new-here-btn--op"
+              onClick={() => setView('create')}
+            >
+              📊 Operator
+            </button>
 
-          <button
-            type="button"
-            className="new-here-btn new-here-btn--eng"
-            onClick={() => setView('create')}
-          >
-            🔧 Engineer
-          </button>
-        </div>
+            <button
+              type="button"
+              className="new-here-btn new-here-btn--eng"
+              onClick={() => setView('create')}
+            >
+              🔧 Engineer
+            </button>
+          </div>
       </div>
 
 
       {/* ONLINE-ONLY MODALS */}
 
-      {modal === 'admin-register' && (
+      {modal === 'admin-register' && onlineMode && (
         <AdminRegisterModal
           onClose={() => setModal(null)}
           onDone={() => setModal(null)}
         />
       )}
 
-      {modal === 'forgot' && (
+      {modal === 'forgot' && onlineMode && (
         <ForgotModal
           onClose={() => setModal(null)}
         />
