@@ -227,7 +227,8 @@ function classifyMessage(text) {
   if (!t) return 'fallback'
 
   // Greetings — exact short phrases only, not buried in a longer question
-  if (/^(hi|hello|hey|namaste|vanakkam|namaskara|namaskar|yo|sup|good morning|good evening|hiya|howdy)\b[^a-z]*$/.test(t)) {
+  if (/^(hi|hello|hey|namaste|vanakkam|namaskara|namaskar|yo|sup|good morning|good evening|hiya|howdy)\b[^a-z]*$/.test(t) ||
+      /^(hi|hello|hey)\s+(bro|buddy|bolt|there|friend|man|sir|madam|mam|sir)\b/.test(t)) {
     return 'greeting'
   }
 
@@ -588,6 +589,41 @@ export default function Chatbot({
   // Conversation and request state
   const conversationIdRef = useRef(null)
   const requestControllerRef = useRef(null)
+
+  // Drag state for the FAB + panel
+  const [fabPos, setFabPos] = useState({ bottom: 28, right: 28 })
+  const dragRef = useRef(null)
+
+  function startDrag(e) {
+    const isTouch = e.type === 'touchstart'
+    const startX = isTouch ? e.touches[0].clientX : e.clientX
+    const startY = isTouch ? e.touches[0].clientY : e.clientY
+    const startBottom = fabPos.bottom
+    const startRight = fabPos.right
+
+    function onMove(ev) {
+      const cx = isTouch ? ev.touches[0].clientX : ev.clientX
+      const cy = isTouch ? ev.touches[0].clientY : ev.clientY
+      const dx = cx - startX
+      const dy = cy - startY
+      setFabPos({
+        bottom: Math.max(8, Math.min(window.innerHeight - 80, startBottom - dy)),
+        right:  Math.max(8, Math.min(window.innerWidth  - 80, startRight  - dx)),
+      })
+    }
+    function onUp() {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+      window.removeEventListener('touchmove', onMove)
+      window.removeEventListener('touchend', onUp)
+      dragRef.current = null
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    window.addEventListener('touchmove', onMove, { passive: false })
+    window.addEventListener('touchend', onUp)
+    dragRef.current = { startX, startY }
+  }
   const requestInProgressRef = useRef(false)
 
   const messagesEndRef = useRef(null)
@@ -1206,7 +1242,10 @@ export default function Chatbot({
 
       <button
         className={`chatbot-fab ${open ? 'chatbot-fab-open' : ''}`}
-        onClick={() => setOpen(value => !value)}
+        onClick={() => { if (!dragRef.current) setOpen(value => !value) }}
+        onMouseDown={startDrag}
+        onTouchStart={startDrag}
+        style={{ bottom: fabPos.bottom, right: fabPos.right, cursor: 'grab' }}
         aria-label="Open IntelliWatch Assistant"
         title="Chat with Bolt — IntelliWatch AI"
         type="button"
@@ -1223,6 +1262,7 @@ export default function Chatbot({
           role="dialog"
           aria-label="IntelliWatch Chatbot"
           aria-modal="false"
+          style={{ bottom: fabPos.bottom + 80, right: fabPos.right }}
         >
           {/* Header */}
 
