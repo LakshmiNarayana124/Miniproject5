@@ -78,6 +78,8 @@ const LANGUAGE_NAMES = {
 
 // ==================================================
 // MULTILINGUAL LOCAL KNOWLEDGE BASE
+// ==================================================
+// BOLT KNOWLEDGE BASE
 // Used only by Offline Demo.
 // Authenticated sessions use the Dify Chatflow.
 // ==================================================
@@ -86,118 +88,210 @@ const KB = {
   en: {
 
     greeting:
-
-      "Hello! I'm Bolt ⚡ — your IntelliWatch assistant. I can help with IntelliWatch, sensor monitoring, anomaly detection, and general questions. How can I help?",
+      "Hey! I'm Bolt ⚡ — your IntelliWatch assistant. I can help with the project, sensors, ML, your role, or just have a general chat. What's on your mind?",
 
     fallback:
-
-      "I'm not sure about that specific question. Please try rephrasing it.",
+      "I'm not sure about that one. Try asking about IntelliWatch, sensors, your role, or anything else — I'll do my best.",
 
     about:
-
-      'IntelliWatch is a real-time anomaly detection and decision support system. It monitors vibration, temperature, and current sensors from industrial machinery and uses machine learning to identify faults early.',
+      'IntelliWatch is a real-time condition-monitoring and safety-actuation system for industrial equipment. It reads vibration, temperature, and current from physical sensors, runs ML inference to classify equipment health as NORMAL, WARNING, or CRITICAL, and automatically fires control signals — shutting down or de-rating the equipment and updating the LCD display. The full stack is React (Vercel) + FastAPI (Railway) + Neon Postgres.',
 
     vibration:
-
-      'The vibration sensor (ADXL345) measures vibration. The project uses ISO 10816-3 as a reference for vibration severity. Actual limits depend on the machine class, installation and measurement method. Anomalies can indicate bearing faults, misalignment or rotor unbalance.',
+      'The vibration sensor (ADXL345) measures equipment shake and oscillation. IntelliWatch uses ISO 10816-3 as a reference — warning is typically around 4.5 mm/s RMS, critical around 7.1 mm/s RMS for general industrial motors. Anomalies can mean bearing faults, rotor unbalance, or shaft misalignment.',
 
     temperature:
-
-      'The DS18B20 temperature sensor uses the 1-Wire protocol. Temperature limits depend on the motor, insulation class, sensor placement and operating conditions. Do not treat a generic threshold as a universal industrial limit.',
+      'The DS18B20 uses the 1-Wire protocol. Temperature limits depend on motor insulation class — Class B allows up to 130 °C winding temperature. IntelliWatch warns around 70 °C ambient + motor rise and flags critical around 85 °C.',
 
     current:
-
-      'The ACS712 current sensor uses the Hall effect. Current interpretation depends on the motor rating, supply, load and sensor calibration. The configured equipment limits should be used for actual decisions.',
+      'The ACS712 current sensor uses the Hall effect. IntelliWatch warns at 110% of full-load amperage (FLA) and flags critical at 125% FLA. Calibrate it to your specific motor for accurate readings.',
 
     iot:
-
-      'IntelliWatch is designed to connect sensors through a Raspberry Pi. The hardware integration uses sensor interfaces such as GPIO, I²C and 1-Wire, with data transferred to the backend and dashboard.',
+      'IntelliWatch connects sensors via a Raspberry Pi using GPIO, I²C (ADXL345 vibration), 1-Wire (DS18B20 temperature), and SPI/ADC (ACS712 current). The Pi pushes readings over HTTP to the Railway backend. The LCD (HD44780) and relay board are actuators driven by the backend control signals.',
 
     alert:
-
-      'Alerts are generated when sensor readings cross configured warning or critical limits. The Alert Log records events with timestamps and severity.',
+      'Alerts appear when sensor readings cross warning or critical thresholds. Click ✓ to confirm an anomaly (this trains the ML model) or ✕ to dismiss as a false positive. CRITICAL alerts trigger an automatic SHUTDOWN — the relay de-energises and the LCD shows SYSTEM: STOP.',
 
     roles:
-
-      'IntelliWatch supports ADMIN, OPERATOR and MAINTENANCE ENGINEER roles, with access controlled by role-based permissions.',
+      'Three roles: OPERATOR (read-only — sees live data and why a device stopped), MAINTENANCE ENGINEER (can dispatch SHUTDOWN / DE_RATE / RUN control signals), ADMIN (everything — plus user management and device registration).',
 
     ml:
-
-      'IntelliWatch uses machine-learning techniques and bearing-fault dataset features to support fault detection, including bearing faults, misalignment and unbalance.',
+      'IntelliWatch uses a bearing-fault ML model trained on the KAIST dataset. It classifies vibration signatures for inner-race faults (BPFI), outer-race faults (BPFO), ball faults, and normal operation. The browser-side ML engine also runs an adaptive EMA anomaly scorer that learns your specific equipment\'s baseline over time.',
 
     status:
-
-      'System status is derived from sensor availability and assessment. When physical IoT data is not connected, the hardware mode should show Awaiting IoT Signal rather than fabricated readings.',
+      'System status is NORMAL (all sensors healthy), WARNING (one or more sensors elevated — DE_RATE signal sent), or CRITICAL (immediate fault — SHUTDOWN signal sent, equipment stopped). The WebSocket stream updates the dashboard in real time.',
 
     explorer:
-
-      'The 3D Explorer lets you virtually assemble IntelliWatch hardware on a workbench. It supports component placement and manipulation.',
+      'The 3D Explorer is a virtual workbench where you can drag and place IntelliWatch hardware components — sensors, Pi, relay board, LCD — to plan your physical setup before wiring.',
 
     leaderboard:
+      'The TenderWatch Leaderboard ranks organisations by maintenance performance indicators. It\'s a demonstration feature showing how IntelliWatch data could feed an industry-wide benchmarking system.',
 
-      'The TenderWatch Leaderboard presents organisation rankings and related indicators.',
+    deployment:
+      'IntelliWatch is deployed on three platforms: Vercel (React frontend), Railway (FastAPI backend with Python 3.11), and Neon Postgres (19-table database). The backend URL is https://intelliwatch-backend-production.up.railway.app and the frontend is https://frontend-five-kappa-31.vercel.app.',
+
+    general_thanks:
+      "You're welcome! Anything else I can help with?",
+
+    general_how_are_you:
+      "I'm running great — all systems nominal! How can I help you today?",
+
+    general_weather:
+      "I don't have live weather data, but I can tell you that temperature anomalies in your industrial equipment are something I watch closely! For actual weather, check a service like weather.com.",
+
+    general_joke:
+      "Why did the engineer bring a ladder to work? Because they heard the vibration levels were through the roof! 😄 (IntelliWatch would have flagged that as CRITICAL.)",
+
+    general_time:
+      `The current time in your browser is ${new Date().toLocaleTimeString()}. Need help with something IntelliWatch-related?`,
+
+    general_math:
+      "I can do basic arithmetic! Try asking me something like 'what is 15% of 240' and I'll calculate it for you.",
 
     attachment_ack:
-
-      "I can see the attached file preview, but Offline Demo cannot send its contents to an AI service. Please describe the relevant content or use a signed-in session with file processing enabled.",
+      "I can see the attached file, but Offline Demo can't send its contents to an AI service. Describe what's in it and I'll help with what I know.",
 
     voice_ack:
-
-      'I received your voice input. Please send the transcribed text when you are ready.',
+      'Got your voice input! Send the text when you\'re ready.',
 
   },
-
-
 
   hi: {
 
     greeting:
-
-      'नमस्ते! मैं Bolt ⚡ हूँ — आपका IntelliWatch सहायक। मैं IntelliWatch, सेंसर मॉनिटरिंग, anomaly detection और सामान्य सवालों में मदद कर सकता हूँ। बताइए, कैसे मदद करूँ?',
+      'नमस्ते! मैं Bolt ⚡ हूँ। IntelliWatch, सेंसर, ML, या कोई भी सवाल — बताइए, कैसे मदद करूँ?',
 
     fallback:
-
-      'मुझे इस सवाल का निश्चित उत्तर नहीं पता। कृपया इसे दूसरे तरीके से पूछें।',
+      'मुझे इस सवाल का पक्का जवाब नहीं पता। कृपया IntelliWatch, sensors, या अपनी role के बारे में पूछें।',
 
     about:
-
-      'IntelliWatch एक real-time anomaly detection और decision support system है। यह औद्योगिक मशीनों के vibration, temperature और current sensors की निगरानी करता है।',
+      'IntelliWatch एक real-time condition-monitoring system है। यह vibration, temperature और current sensors से data लेकर ML से equipment health classify करता है — NORMAL, WARNING, या CRITICAL — और automatically control signals भेजता है।',
 
     vibration:
-
-      'ADXL345 vibration sensor कंपन मापता है। ISO 10816-3 को vibration severity के reference के रूप में उपयोग किया जाता है। वास्तविक सीमा मशीन की श्रेणी, स्थापना और मापन पद्धति पर निर्भर करती है।',
+      'ADXL345 vibration sensor कंपन मापता है। ISO 10816-3 के अनुसार warning ~4.5 mm/s RMS और critical ~7.1 mm/s RMS होती है। Anomalies bearing faults, misalignment, या unbalance indicate करती हैं।',
 
     temperature:
-
-      'DS18B20 temperature sensor 1-Wire protocol का उपयोग करता है। तापमान सीमा मोटर, insulation class, sensor placement और operating conditions पर निर्भर करती है।',
+      'DS18B20 sensor 1-Wire protocol use करता है। Class B motors के लिए warning ~70°C और critical ~85°C है।',
 
     current:
-
-      'ACS712 current sensor Hall effect का उपयोग करता है। Current की सही व्याख्या motor rating, supply, load और calibration पर निर्भर करती है।',
+      'ACS712 Hall effect use करता है। Warning 110% FLA पर और critical 125% FLA पर set है।',
 
     iot:
-
-      'IntelliWatch Raspberry Pi के माध्यम से sensors जोड़ने के लिए बनाया गया है। इसमें GPIO, I²C और 1-Wire जैसे interfaces उपयोग किए जा सकते हैं।',
+      'Raspberry Pi के through GPIO, I²C, 1-Wire interfaces use होते हैं। Pi readings को HTTP से Railway backend तक भेजता है।',
 
     alert:
-
-      'जब sensor readings configured warning या critical limits पार करती हैं, तब alerts बनते हैं। Alert Log घटनाओं को timestamp और severity के साथ रिकॉर्ड करता है।',
+      'Alerts warning/critical thresholds cross होने पर बनते हैं। ✓ से anomaly confirm करें (ML सीखेगा), ✕ से false positive dismiss करें।',
 
     roles:
-
-      'IntelliWatch में ADMIN, OPERATOR और MAINTENANCE ENGINEER roles हैं। इनके permissions अलग-अलग हैं।',
+      'ADMIN (सब कुछ), MAINTENANCE ENGINEER (control signals), OPERATOR (read-only — देख सकते हैं कि device क्यों रुका)।',
 
     ml:
-
-      'IntelliWatch fault detection के लिए machine-learning techniques और bearing-fault dataset features का उपयोग करता है।',
+      'KAIST bearing-fault dataset पर trained ML model BPFI, BPFO, ball faults और normal operation classify करता है।',
 
     status:
-
-      'System status sensor availability और assessment पर निर्भर करता है। Physical IoT data उपलब्ध न होने पर hardware mode में Awaiting IoT Signal दिखना चाहिए।',
+      'System status: NORMAL, WARNING (DE_RATE signal), CRITICAL (SHUTDOWN signal — relay off, LCD पर STOP)।',
 
     explorer:
+      '3D Explorer में virtual workbench पर hardware components drag करके setup plan करें।',
 
-      '3D Explorer में IntelliWatch hardware को virtual workbench पर assemble और व्यवस्थित कर सकते हैं।',
+    leaderboard:
+      'TenderWatch Leaderboard organisations को maintenance performance से rank करता है।',
+
+    deployment:
+      'Frontend Vercel पर, Backend Railway पर, Database Neon Postgres पर deploy है।',
+
+    general_thanks: 'आपका स्वागत है! और कुछ पूछना है?',
+    general_how_are_you: 'सब systems normal हैं! कैसे help करूँ?',
+    general_weather: 'मेरे पास live weather data नहीं है, लेकिन equipment temperature जरूर monitor करता हूँ!',
+    general_joke: 'Engineer ने ladder क्यों लाया? क्योंकि vibration levels "through the roof" थीं! 😄',
+    general_time: `अभी का समय: ${new Date().toLocaleTimeString('hi-IN')}।`,
+    general_math: 'Basic calculations कर सकता हूँ! जैसे "240 का 15% क्या है" पूछें।',
+    attachment_ack: 'File देख सकता हूँ, लेकिन Offline Demo में content AI को नहीं भेज सकता।',
+    voice_ack: 'Voice input मिला! Text send करें।',
+
+  },
+
+  kn: {
+
+    greeting: 'ನಮಸ್ಕಾರ! ನಾನು Bolt ⚡ — ನಿಮ್ಮ IntelliWatch assistant. ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ?',
+    fallback: 'ಆ ಪ್ರಶ್ನೆಗೆ ಉತ್ತರ ಗೊತ್ತಿಲ್ಲ. IntelliWatch ಅಥವಾ sensors ಬಗ್ಗೆ ಕೇಳಿ.',
+    about: 'IntelliWatch industrial equipment ಅನ್ನು real-time ನಲ್ಲಿ monitor ಮಾಡುತ್ತದೆ ಮತ್ತು anomalies detect ಆದಾಗ automatically control signals ಕಳುಹಿಸುತ್ತದೆ.',
+    vibration: 'ADXL345 sensor ಕಂಪನ ಅಳೆಯುತ್ತದೆ. ISO 10816-3 ಪ್ರಕಾರ warning ~4.5 mm/s, critical ~7.1 mm/s.',
+    temperature: 'DS18B20 1-Wire protocol ಬಳಸುತ್ತದೆ. Warning ~70°C, critical ~85°C.',
+    current: 'ACS712 Hall effect ಬಳಸುತ್ತದೆ. Warning 110% FLA, critical 125% FLA.',
+    iot: 'Raspberry Pi GPIO, I²C, 1-Wire ಮೂಲಕ sensors ಸಂಪರ್ಕಿಸುತ್ತದೆ.',
+    alert: '✓ anomaly confirm, ✕ false positive dismiss. CRITICAL alert → relay off, LCD STOP.',
+    roles: 'ADMIN (ಎಲ್ಲ), MAINTENANCE ENGINEER (control signals), OPERATOR (read-only).',
+    ml: 'KAIST dataset ನಲ್ಲಿ trained model bearing faults classify ಮಾಡುತ್ತದೆ.',
+    status: 'NORMAL, WARNING (DE_RATE), CRITICAL (SHUTDOWN).',
+    explorer: '3D Explorer ನಲ್ಲಿ virtual workbench ಮೇಲೆ hardware plan ಮಾಡಿ.',
+    leaderboard: 'TenderWatch Leaderboard organisations rank ಮಾಡುತ್ತದೆ.',
+    deployment: 'Frontend Vercel, Backend Railway, Database Neon Postgres.',
+    general_thanks: 'ಸ್ವಾಗತ! ಇನ್ನೇನಾದರೂ ಕೇಳಬೇಕೆ?',
+    general_how_are_you: 'ಎಲ್ಲ systems normal ಆಗಿದೆ!',
+    general_weather: 'Live weather data ಇಲ್ಲ, ಆದರೆ equipment temperature monitor ಮಾಡುತ್ತೇನೆ!',
+    general_joke: 'Engineer ladder ಏಕೆ ತಂದರು? Vibration levels "through the roof" ಆಗಿದ್ದವು! 😄',
+    general_time: `ಈಗಿನ ಸಮಯ: ${new Date().toLocaleTimeString()}.`,
+    general_math: 'Basic calculations ಮಾಡಬಹುದು!',
+    attachment_ack: 'File ಕಾಣಿಸುತ್ತಿದೆ, ಆದರೆ Offline Demo ನಲ್ಲಿ AI ಗೆ ಕಳುಹಿಸಲಾಗದು.',
+    voice_ack: 'Voice input ಸ್ವೀಕರಿಸಲಾಗಿದೆ!',
+
+  },
+
+  ta: {
+
+    greeting: 'வணக்கம்! நான் Bolt ⚡ — உங்கள் IntelliWatch assistant. எப்படி உதவட்டும்?',
+    fallback: 'அந்த கேள்விக்கு பதில் தெரியவில்லை. IntelliWatch அல்லது sensors பற்றி கேளுங்கள்.',
+    about: 'IntelliWatch industrial equipment ஐ real-time ல் monitor செய்து anomalies கண்டறிந்து automatically control signals அனுப்புகிறது.',
+    vibration: 'ADXL345 sensor அதிர்வு அளவிடுகிறது. ISO 10816-3 படி warning ~4.5 mm/s, critical ~7.1 mm/s.',
+    temperature: 'DS18B20 1-Wire protocol பயன்படுத்துகிறது. Warning ~70°C, critical ~85°C.',
+    current: 'ACS712 Hall effect பயன்படுத்துகிறது. Warning 110% FLA, critical 125% FLA.',
+    iot: 'Raspberry Pi GPIO, I²C, 1-Wire மூலம் sensors இணைக்கிறது.',
+    alert: '✓ anomaly உறுதிப்படுத்து, ✕ false positive நிராகரி. CRITICAL → relay off, LCD STOP.',
+    roles: 'ADMIN (அனைத்தும்), MAINTENANCE ENGINEER (control signals), OPERATOR (read-only).',
+    ml: 'KAIST dataset ல் trained model bearing faults classify செய்கிறது.',
+    status: 'NORMAL, WARNING (DE_RATE), CRITICAL (SHUTDOWN).',
+    explorer: '3D Explorer ல் virtual workbench ல் hardware plan செய்யுங்கள்.',
+    leaderboard: 'TenderWatch Leaderboard organisations rank செய்கிறது.',
+    deployment: 'Frontend Vercel, Backend Railway, Database Neon Postgres.',
+    general_thanks: 'நன்றி! வேறு எதாவது கேட்கணுமா?',
+    general_how_are_you: 'எல்லா systems normal ஆக உள்ளன!',
+    general_weather: 'Live weather data இல்லை, ஆனால் equipment temperature monitor செய்கிறேன்!',
+    general_joke: 'Engineer ஏன் ladder கொண்டு வந்தார்? Vibration levels "through the roof" ஆக இருந்தன! 😄',
+    general_time: `தற்போதைய நேரம்: ${new Date().toLocaleTimeString()}.`,
+    general_math: 'Basic calculations செய்யலாம்!',
+    attachment_ack: 'File தெரிகிறது, ஆனால் Offline Demo ல் AI க்கு அனுப்ப முடியாது.',
+    voice_ack: 'Voice input பெறப்பட்டது!',
+
+  },
+
+  te: {
+
+    greeting: 'నమస్కారం! నేను Bolt ⚡ — మీ IntelliWatch assistant. ఎలా సహాయపడనా?',
+    fallback: 'ఆ ప్రశ్నకు జవాబు తెలియదు. IntelliWatch లేదా sensors గురించి అడగండి.',
+    about: 'IntelliWatch industrial equipment ని real-time లో monitor చేసి anomalies detect చేసి automatically control signals పంపుతుంది.',
+    vibration: 'ADXL345 sensor కంపనం కొలుస్తుంది. ISO 10816-3 ప్రకారం warning ~4.5 mm/s, critical ~7.1 mm/s.',
+    temperature: 'DS18B20 1-Wire protocol వాడుతుంది. Warning ~70°C, critical ~85°C.',
+    current: 'ACS712 Hall effect వాడుతుంది. Warning 110% FLA, critical 125% FLA.',
+    iot: 'Raspberry Pi GPIO, I²C, 1-Wire ద్వారా sensors connect చేస్తుంది.',
+    alert: '✓ anomaly confirm, ✕ false positive dismiss. CRITICAL → relay off, LCD STOP.',
+    roles: 'ADMIN (అన్నీ), MAINTENANCE ENGINEER (control signals), OPERATOR (read-only).',
+    ml: 'KAIST dataset లో trained model bearing faults classify చేస్తుంది.',
+    status: 'NORMAL, WARNING (DE_RATE), CRITICAL (SHUTDOWN).',
+    explorer: '3D Explorer లో virtual workbench పై hardware plan చేయండి.',
+    leaderboard: 'TenderWatch Leaderboard organisations rank చేస్తుంది.',
+    deployment: 'Frontend Vercel, Backend Railway, Database Neon Postgres.',
+    general_thanks: 'స్వాగతం! మరేమైనా అడగాలా?',
+    general_how_are_you: 'అన్ని systems normal గా ఉన్నాయి!',
+    general_weather: 'Live weather data లేదు, కానీ equipment temperature monitor చేస్తాను!',
+    general_joke: 'Engineer ladder ఎందుకు తెచ్చారు? Vibration levels "through the roof" గా ఉన్నాయి! 😄',
+    general_time: `ప్రస్తుత సమయం: ${new Date().toLocaleTimeString()}.`,
+    general_math: 'Basic calculations చేయగలను!',
+    attachment_ack: 'File కనిపిస్తోంది, కానీ Offline Demo లో AI కి పంపలేను.',
+    voice_ack: 'Voice input అందింది!',
+
+  },
+
+}
 
     leaderboard:
 
@@ -473,6 +567,34 @@ function classifyMessage(text) {
 
   if (/\b(intelliwatch|project|overview|explain|what is this system|tell me about the project)\b/.test(t)) {
     return 'about'
+  }
+
+  if (/\b(thank|thanks|thank you|dhanyavad|shukriya|nandri|dhanyavaad)\b/.test(t)) {
+    return 'general_thanks'
+  }
+
+  if (/\b(how are you|how r u|you ok|you good|hows it going|sup bolt)\b/.test(t)) {
+    return 'general_how_are_you'
+  }
+
+  if (/\b(weather|rain|sunny|forecast|temperature outside|climate)\b/.test(t)) {
+    return 'general_weather'
+  }
+
+  if (/\b(joke|funny|laugh|humor|pun)\b/.test(t)) {
+    return 'general_joke'
+  }
+
+  if (/\b(time|clock|what time|current time)\b/.test(t)) {
+    return 'general_time'
+  }
+
+  if (/\b(calculat|math|plus|minus|multiply|divide|percent|%|sum|add|subtract|\d+\s*[\+\-\*\/]\s*\d+)\b/.test(t)) {
+    return 'general_math'
+  }
+
+  if (/\b(deploy|deployment|vercel|railway|neon|cloud|hosting|url|link|live)\b/.test(t)) {
+    return 'deployment'
   }
 
   return 'fallback'
@@ -1583,6 +1705,29 @@ export default function Chatbot({
           return KB[lang].roles_operator || 'Operator has read-only access — they can see live sensor data, the alert log (including why a device was stopped), and the system status. They cannot issue control signals.'
         return KB[lang].roles
       },
+    }
+
+    // Math inline calculation
+    if (topic === 'general_math') {
+      const mathMatch = t.match(/(\d+\.?\d*)\s*([\+\-\*\/x×÷])\s*(\d+\.?\d*)/)
+      if (mathMatch) {
+        const a = parseFloat(mathMatch[1])
+        const op = mathMatch[2]
+        const b = parseFloat(mathMatch[3])
+        let result
+        if (op === '+') result = a + b
+        else if (op === '-') result = a - b
+        else if (op === '*' || op === 'x' || op === '×') result = a * b
+        else if (op === '/' || op === '÷') result = b !== 0 ? a / b : 'undefined (division by zero)'
+        if (result !== undefined) return `${a} ${op} ${b} = ${result}`
+      }
+      const pctMatch = t.match(/(\d+\.?\d*)%?\s*(?:of|percent of|%\s*of)\s*(\d+\.?\d*)/)
+      if (pctMatch) {
+        const pct = parseFloat(pctMatch[1])
+        const num = parseFloat(pctMatch[2])
+        return `${pct}% of ${num} = ${(pct / 100 * num).toFixed(2)}`
+      }
+      return KB[lang].general_math || KB.en.general_math
     }
 
     const handler = sub[topic]

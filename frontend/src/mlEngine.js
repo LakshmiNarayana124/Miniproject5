@@ -43,9 +43,8 @@ const SCORE_CRITICAL = 72
 
 function normalizeSource(source = 'hardware') {
   if (!VALID_SOURCES.includes(source)) {
-    throw new Error(
-      `Invalid ML data source: ${source}`
-    )
+    // Gracefully default instead of throwing so UI clicks never silently die.
+    return 'hardware'
   }
 
   return source

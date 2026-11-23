@@ -38,9 +38,10 @@ function getFeedbackSource(alertSource, operatingMode, token) {
 
 function AlertEntry({ alert, onFeedback, onDismiss }) {
   const lang = useLang()
+  const [confirmed, setConfirmed] = useState(false)
 
   return (
-    <div className={`alert-entry alert-${alert.status}`}>
+    <div className={`alert-entry alert-${alert.status}${confirmed ? ' alert-confirmed' : ''}`}>
       <span className="alert-dot" />
 
       <div className="alert-body">
@@ -53,6 +54,11 @@ function AlertEntry({ alert, onFeedback, onDismiss }) {
             ? `${Number(alert.value).toFixed?.(3) ?? alert.value} ${alert.unit ?? ''} — ${alert.status?.toUpperCase()}`
             : alert.message}
         </span>
+        {confirmed && (
+          <span style={{ color: '#4ade80', fontSize: 12, marginLeft: 6 }}>
+            ✓ Logged
+          </span>
+        )}
       </div>
 
       <span className="alert-time">
@@ -62,7 +68,7 @@ function AlertEntry({ alert, onFeedback, onDismiss }) {
       {(
         alert.status === 'warning' ||
         alert.status === 'critical'
-      ) && (
+      ) && !confirmed && (
         <div
           className="alert-feedback"
           role="group"
@@ -72,11 +78,14 @@ function AlertEntry({ alert, onFeedback, onDismiss }) {
             className="alert-fb-btn alert-fb-confirm"
             title="Confirm anomaly"
             aria-label="Confirm anomaly"
-            onClick={() => onFeedback?.(
-              alert.sensor || alert.label || 'unknown',
-              'anomaly',
-              alert.source
-            )}
+            onClick={() => {
+              onFeedback?.(
+                alert.sensor || alert.label || 'unknown',
+                'anomaly',
+                alert.source
+              )
+              setConfirmed(true)
+            }}
             type="button"
           >
             ✓
