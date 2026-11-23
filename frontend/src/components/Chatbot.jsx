@@ -923,9 +923,28 @@ export default function Chatbot({
         const detail =
           typeof result?.detail === 'string'
             ? result.detail
-            : 'Bolt could not process your message. Please try again.'
+            : ''
 
-        throw new Error(detail)
+        // If Dify is not configured on the backend (503) or any
+        // backend AI error, fall back to the local offline KB
+        // so Bolt always gives a useful answer.
+        const isNotConfigured =
+          response.status === 503 ||
+          response.status === 502 ||
+          (detail && (
+            detail.toLowerCase().includes('not configured') ||
+            detail.toLowerCase().includes('bolt ai') ||
+            detail.toLowerCase().includes('dify')
+          ))
+
+        if (isNotConfigured) {
+          const fallbackResponse = getOfflineResponse(text, hasFiles)
+          addBotMessage(fallbackResponse)
+          if (hasFiles) addBotMessage(getAttachmentNotice())
+          return
+        }
+
+        throw new Error(detail || 'Bolt could not process your message. Please try again.')
       }
 
       if (
@@ -961,10 +980,16 @@ export default function Chatbot({
 
       const message =
         error instanceof TypeError
-          ? 'Bolt could not connect to the IntelliWatch backend. Check that the backend is running and reachable.'
-          : error.message || 'Something went wrong while contacting Bolt AI.'
+          ? null  // network error — fall back to offline KB below
+          : error.message || null
 
-      addBotMessage(message)
+      if (!message || error instanceof TypeError) {
+        // Backend unreachable or not configured — use offline KB
+        const fallbackResponse = getOfflineResponse(text, hasFiles)
+        addBotMessage(fallbackResponse)
+      } else {
+        addBotMessage(message)
+      }
     } finally {
       if (requestControllerRef.current === controller) {
         requestControllerRef.current = null
