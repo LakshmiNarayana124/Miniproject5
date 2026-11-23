@@ -43,3 +43,4 @@ Backend/.venv312/
 # Test coverage output
 .coverage
 .vercel
+.env*
