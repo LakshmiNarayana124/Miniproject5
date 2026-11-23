@@ -10,7 +10,7 @@ IntelliWatch reads live sensor data (vibration, temperature, current), classifie
 
 | Component | Platform | URL |
 |---|---|---|
-| Frontend | Vercel | https://frontend-alpha-tawny-49.vercel.app |
+| Frontend | Vercel | https://frontend-five-kappa-31.vercel.app |
 | Backend | Railway | https://intelliwatch-backend-production.up.railway.app |
 | Database | Neon Postgres | 19 tables, persistent |
 
@@ -135,13 +135,11 @@ The Pi pushes readings to `POST /iot/data/{device_id}` with `X-Device-Credential
 
 ---
 
----
-
 ## Important URLs
 
 | Resource | Link |
 |---|---|
-| **Frontend (Live)** | https://frontend-alpha-tawny-49.vercel.app |
+| **Frontend (Live)** | https://frontend-five-kappa-31.vercel.app |
 | **Backend API (Live)** | https://intelliwatch-backend-production.up.railway.app |
 | **Backend Health Check** | https://intelliwatch-backend-production.up.railway.app/health |
 | **API Docs (Swagger)** | https://intelliwatch-backend-production.up.railway.app/docs |

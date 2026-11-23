@@ -347,7 +347,9 @@ function classifyMessage(text) {
     return 'status'
   }
 
-  if (/^\s*(hi|hello|hey|namaste|vanakkam|namaskara|namaskar|help|start)\s*[!.?]*\s*$/.test(t)) {
+  if (/^\s*(hi|hello|hey|namaste|vanakkam|namaskara|namaskar|help|start)\s*[!.?]*\s*$/.test(t) ||
+      /\b(hi|hello|hey)\b.{0,20}$/.test(t) ||
+      /^(yo|sup|hiya|howdy|greetings|good morning|good evening|good afternoon|bro|buddy)\b/.test(t)) {
     return 'greeting'
   }
 
@@ -381,6 +383,11 @@ function classifyMessage(text) {
 
   if (/\b(deploy|deployment|vercel|railway|neon|cloud|hosting|url|link|live)\b/.test(t)) {
     return 'deployment'
+  }
+
+  // Generic feature / page questions fall through to 'about'
+  if (/\b(page|section|tab|feature|use|purpose|function|dedicated|maintenance|hour|report|service)\b/.test(t)) {
+    return 'about'
   }
 
   return 'fallback'
