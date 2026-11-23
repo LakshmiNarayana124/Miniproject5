@@ -11,7 +11,7 @@ export default function ServiceReport({ alerts = [] }) {
         sessionStorage.getItem('iw_user') || '{}'
       ).username || ''
     } catch {
-      return ''
+      return '\u2014'
     }
   })
 
@@ -36,17 +36,93 @@ export default function ServiceReport({ alerts = [] }) {
   ).length
 
   function printReport() {
-    window.print()
+    const report = document.getElementById('iw-service-report')
+
+    if (!report) {
+      window.alert('Service report content was not found.')
+      return
+    }
+
+    const printWindow = window.open('', '_blank')
+
+    if (!printWindow) {
+      window.alert('Please allow pop-ups for this site, then try Print / Save PDF again.')
+      return
+    }
+
+    const styles = Array.from(
+      document.querySelectorAll('link[rel="stylesheet"], style')
+    ).map(style => style.outerHTML).join('\n')
+
+    printWindow.onload = () => {
+      printWindow.focus()
+      printWindow.print()
+    }
+
+    printWindow.document.open()
+    printWindow.document.write(`<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>IntelliWatch Equipment Service Report</title>
+  <base href="${window.location.href}" />
+  ${styles}
+  <style>
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
+      min-width: 0 !important;
+      background: #fff !important;
+    }
+
+    body * {
+      visibility: visible !important;
+    }
+
+    #iw-service-report {
+      display: block !important;
+      visibility: visible !important;
+      position: static !important;
+      width: 100% !important;
+      max-width: none !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      background: #fff !important;
+    }
+
+    @media print {
+      .iw-report-actions {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>${report.outerHTML}</body>
+</html>`)
+    printWindow.document.close()
   }
 
   if (!open) {
     return (
       <button
         type="button"
-        className="export-btn"
+        className="service-report-link"
         onClick={() => setOpen(true)}
+        style={{
+          background: 'none',
+          border: 'none',
+          padding: '0 0 0 8px',
+          color: 'var(--accent, #60a5fa)',
+          fontSize: 13,
+          fontWeight: 500,
+          cursor: 'pointer',
+          textDecoration: 'none',
+          letterSpacing: '0.01em',
+          opacity: 0.85,
+        }}
       >
-        Service Report
+        Service Report ↗
       </button>
     )
   }

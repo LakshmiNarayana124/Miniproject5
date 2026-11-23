@@ -247,7 +247,12 @@ export default function AlertLog({
               {t('alert_clear', lang)}
             </button>
           )}
-	  <ServiceReport alerts={alerts} />
+
+          {alerts.some(a =>
+            a.status === 'warning' || a.status === 'critical'
+          ) && (
+            <ServiceReport alerts={alerts} />
+          )}
         </div>
       </div>
 
