@@ -1171,6 +1171,14 @@ function CreateAccountView({ onBackToLogin }) {
         <span className="orb orb-1" />
         <span className="orb orb-2" />
         <span className="orb orb-3" />
+        <span className="orb orb-4" />
+        <span className="orb orb-5" />
+        <span className="float-dot fd-1" />
+        <span className="float-dot fd-2" />
+        <span className="float-dot fd-3" />
+        <span className="float-dot fd-4" />
+        <span className="float-dot fd-5" />
+        <span className="float-dot fd-6" />
       </div>
 
       <div className="create-account-wrap">
@@ -1438,7 +1446,7 @@ export default function LoginPage({ onLogin }) {
 
   async function handleGoogleSignIn() {
     if (!FIREBASE_ENABLED) {
-      setError('Firebase is not configured. Add the VITE_FIREBASE_* environment variables.')
+      setError('Google sign-in is not configured. Firebase environment variables are missing.')
       return
     }
     setError('')
@@ -1446,7 +1454,7 @@ export default function LoginPage({ onLogin }) {
     try {
       const fb = await getFirebaseAuth()
       if (!fb) {
-        setError('Firebase could not be initialised. Check your configuration.')
+        setError('Firebase could not initialise. Check your VITE_FIREBASE_* environment variables.')
         return
       }
       const { auth, GoogleAuthProvider, signInWithPopup } = fb
@@ -1454,6 +1462,7 @@ export default function LoginPage({ onLogin }) {
       const result = await signInWithPopup(auth, provider)
       const idToken = await result.user.getIdToken()
       const requestedRole = mode === 'admin' ? 'ADMIN' : activeRole
+      const roleEmoji = requestedRole === 'ADMIN' ? '🛡️' : '📊'
       const response = await fetch(`${API}/auth/firebase-login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1469,14 +1478,19 @@ export default function LoginPage({ onLogin }) {
         role: data.role, account_role: data.account_role || data.role,
         is_restricted_session: !!data.is_restricted_session,
         is_demo_session: false, user_id: data.user_id, session_mode: 'ONLINE',
+        roleEmoji,
       }
       saveSession(data.access_token, sessionUser)
-      onLogin({ ...data, is_demo_session: false, session_mode: 'ONLINE' })
+      onLogin({ ...data, is_demo_session: false, session_mode: 'ONLINE', roleEmoji })
     } catch (err) {
-      if (err.code === 'auth/popup-closed-by-user') {
+      if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
         setError('')
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setError('This domain is not authorised in Firebase. Add it in Firebase Console → Authentication → Settings → Authorised domains.')
+      } else if (err.code === 'auth/operation-not-allowed') {
+        setError('Google sign-in is not enabled. Enable it in Firebase Console → Authentication → Sign-in method.')
       } else {
-        setError('Google sign-in failed. ' + (err.message || ''))
+        setError('Google sign-in failed: ' + (err.message || err.code || 'Unknown error'))
       }
     } finally {
       setLoading(false)
@@ -1886,6 +1900,14 @@ export default function LoginPage({ onLogin }) {
         <span className="orb orb-1" />
         <span className="orb orb-2" />
         <span className="orb orb-3" />
+        <span className="orb orb-4" />
+        <span className="orb orb-5" />
+        <span className="float-dot fd-1" />
+        <span className="float-dot fd-2" />
+        <span className="float-dot fd-3" />
+        <span className="float-dot fd-4" />
+        <span className="float-dot fd-5" />
+        <span className="float-dot fd-6" />
       </div>
 
       <div className="login-stack">
@@ -1971,7 +1993,39 @@ export default function LoginPage({ onLogin }) {
           )}
 
 
-          {/* LOGIN FORM — all three methods visible together */}
+          {/* LOGIN FORM — sign-in method selector + all three methods */}
+
+          {/* ── SIGN-IN METHOD SELECTOR (single box, 3 buttons) ── */}
+          <div className="signin-methods-box">
+            <button
+              type="button"
+              className={`signin-method-pill${signMethod === 'password' ? ' signin-method-pill--active' : ''}`}
+              onClick={() => { setSignMethod('password'); setError('') }}
+            >
+              🔑 Password
+            </button>
+            <button
+              type="button"
+              className={`signin-method-pill${signMethod === 'google' ? ' signin-method-pill--active' : ''}`}
+              onClick={() => { setSignMethod('google'); setError('') }}
+            >
+              <svg width="13" height="13" viewBox="0 0 48 48" aria-hidden="true" style={{verticalAlign:'middle',marginRight:3}}>
+                <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.8 2.5 30.2 0 24 0 14.7 0 6.7 5.4 2.9 13.3l7.8 6.1C12.5 13 17.8 9.5 24 9.5z"/>
+                <path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.4c-.5 2.8-2.1 5.1-4.4 6.7l6.8 5.3c4-3.7 6.3-9.2 6.3-16z"/>
+                <path fill="#FBBC05" d="M10.7 28.6A14.5 14.5 0 019.5 24c0-1.6.3-3.1.8-4.6L2.9 13.3A23.9 23.9 0 000 24c0 3.8.9 7.4 2.5 10.6l8.2-6z"/>
+                <path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-6.8-5.3c-2 1.4-4.6 2.3-8.4 2.3-6.2 0-11.5-4.2-13.3-9.9l-8.2 6C6.5 42.5 14.6 48 24 48z"/>
+              </svg>
+              Google
+            </button>
+            <button
+              type="button"
+              className={`signin-method-pill${signMethod === 'phone' ? ' signin-method-pill--active' : ''}`}
+              onClick={() => { setSignMethod('phone'); setError(''); setOtpSent(false); setOtp(''); setPhone('') }}
+            >
+              📱 Phone + OTP
+            </button>
+          </div>
+
 
           {/* ── 1. USERNAME + PASSWORD ── */}
 
@@ -2040,15 +2094,9 @@ export default function LoginPage({ onLogin }) {
           </form>
 
 
-          {/* ── DIVIDER ── */}
-          <div className="login-or-divider">
-            <span>or</span>
-          </div>
-
-
           {/* ── 2. GOOGLE SIGN-IN ── */}
 
-          <div className="login-form">
+          <div className="login-form" style={{marginTop:10}}>
             <button
               className="login-btn signin-google-btn"
               type="button"
@@ -2063,22 +2111,16 @@ export default function LoginPage({ onLogin }) {
                     <path fill="#FBBC05" d="M10.7 28.6A14.5 14.5 0 019.5 24c0-1.6.3-3.1.8-4.6L2.9 13.3A23.9 23.9 0 000 24c0 3.8.9 7.4 2.5 10.6l8.2-6z"/>
                     <path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-6.8-5.3c-2 1.4-4.6 2.3-8.4 2.3-6.2 0-11.5-4.2-13.3-9.9l-8.2 6C6.5 42.5 14.6 48 24 48z"/>
                   </svg>
-                  Continue with Google
+                  {mode === 'admin' ? '🛡️ ' : '📊 '}Sign in with Google
                 </>
               )}
             </button>
           </div>
 
 
-          {/* ── DIVIDER ── */}
-          <div className="login-or-divider">
-            <span>or</span>
-          </div>
-
-
           {/* ── 3. PHONE + OTP ── */}
 
-          <div className="login-form">
+          <div className="login-form" style={{marginTop:10}}>
             {!otpSent ? (
               <form onSubmit={handleSendOtp} noValidate>
                 <div className="login-field" style={{marginBottom:12}}>

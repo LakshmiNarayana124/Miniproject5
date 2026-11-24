@@ -578,3 +578,69 @@
   height: 1px;
   background: #252837;
 }
+
+/* ── Extra orbs (orb-4, orb-5) ──────────────────────────────────────────── */
+.orb-4 { width:300px;height:300px; background:radial-gradient(circle,#7c3aed28 0%,transparent 70%); top:30%;right:-80px; animation-duration:20s;animation-delay:-8s; }
+.orb-5 { width:200px;height:200px; background:radial-gradient(circle,#be185d22 0%,transparent 70%); bottom:20%;left:10%; animation-duration:22s;animation-delay:-12s; }
+
+/* ── Floating dots ───────────────────────────────────────────────────────── */
+.float-dot {
+  position: absolute;
+  border-radius: 50%;
+  animation: dotFloat 8s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+.fd-1 { width:6px;height:6px; background:#aa3bff80; top:15%;left:20%; animation-duration:9s; }
+.fd-2 { width:4px;height:4px; background:#38bdf880; top:40%;right:15%; animation-duration:7s;animation-delay:-2s; }
+.fd-3 { width:8px;height:8px; background:#7c3aed60; bottom:30%;left:35%; animation-duration:11s;animation-delay:-4s; }
+.fd-4 { width:5px;height:5px; background:#be185d70; top:60%;right:30%; animation-duration:8s;animation-delay:-6s; }
+.fd-5 { width:7px;height:7px; background:#aa3bff50; bottom:15%;right:20%; animation-duration:10s;animation-delay:-1s; }
+.fd-6 { width:4px;height:4px; background:#38bdf860; top:25%;left:60%; animation-duration:6s;animation-delay:-3s; }
+@keyframes dotFloat {
+  from { transform: translate(0,0) scale(1); opacity:.6; }
+  to   { transform: translate(12px,-18px) scale(1.3); opacity:1; }
+}
+
+/* ── Sign-in method pill box ─────────────────────────────────────────────── */
+.signin-methods-box {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0;
+  margin-bottom: 16px;
+  background: #0d0f14;
+  border: 1.5px solid #252837;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.signin-method-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 9px 6px;
+  background: transparent;
+  border: none;
+  border-right: 1px solid #252837;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  color: #4a5070;
+  cursor: pointer;
+  transition: all .15s;
+  letter-spacing: .2px;
+  white-space: nowrap;
+}
+.signin-method-pill:last-child { border-right: none; }
+.signin-method-pill:hover { background: #ffffff08; color: #a0a8c0; }
+.signin-method-pill--active {
+  background: #aa3bff18;
+  color: #d8b4fe;
+  border-bottom: 2px solid #aa3bff;
+}
+
+@media (max-width: 520px) {
+  .signin-methods-box { grid-template-columns: 1fr; }
+  .signin-method-pill { border-right: none; border-bottom: 1px solid #252837; padding: 10px 14px; justify-content: flex-start; }
+  .signin-method-pill:last-child { border-bottom: none; }
+}
