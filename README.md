@@ -109,8 +109,9 @@ Hardware libs (`smbus2`, `RPi.GPIO`) are optional — backend imports cleanly an
 | Backend | Python 3.11, FastAPI, psycopg2, WebSockets, httpx |
 | Database | Neon Postgres (production) / SQLite (local fallback) |
 | Edge hardware | Raspberry Pi, ADXL345, DS18B20, ACS712, HD44780 LCD, relay board |
-| Auth | JWT, role-based access control, session versioning |
+| Auth | JWT, role-based access control, session versioning, Firebase Auth (Google + Phone) |
 | AI Chatbot | Bolt — EN/HI/KN/TA/TE, Dify Chatflow integration, offline KB fallback |
+| Sign-in methods | Password · Google (Firebase) · Phone + OTP (Firebase Blaze) |
 
 ---
 
@@ -136,9 +137,21 @@ Set `INTELLIWATCH_SECRET_KEY` in `Backend/.env` before starting.
 
 ### Vercel — Frontend
 
-1. Connect GitHub → `Miniproject5` → branch `clean-start`
+1. Connect GitHub → `Miniproject5` → branch `main`
 2. **Root Directory:** `frontend` · **Framework:** Vite
-3. Add env var: `VITE_API_URL = https://intelliwatch-backend.onrender.com`
+3. Add these env vars in Vercel dashboard:
+
+| Key | Value |
+|---|---|
+| `VITE_API_URL` | `https://intelliwatch-backend.onrender.com` |
+| `VITE_DEMO_MODE` | `false` |
+| `VITE_FIREBASE_API_KEY` | *(from Firebase console → Project settings)* |
+| `VITE_FIREBASE_AUTH_DOMAIN` | *(e.g. `your-project.firebaseapp.com`)* |
+| `VITE_FIREBASE_PROJECT_ID` | *(e.g. `your-project-id`)* |
+| `VITE_FIREBASE_STORAGE_BUCKET` | *(e.g. `your-project.appspot.com`)* |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | *(from Firebase console)* |
+| `VITE_FIREBASE_APP_ID` | *(from Firebase console)* |
+
 4. Deploy → live at `https://miniproject5.vercel.app`
 
 ### Render — Backend
@@ -149,13 +162,44 @@ Add these env vars in Render dashboard:
 
 | Key | Value |
 |---|---|
-| `INTELLIWATCH_SECRET_KEY` | `0423617d89103f8e1825ab72354b0b04f051c0c4e5582748970153f837deb9850d43227a44e051220330545156d7079517809210e502cc998de69ebe59447f49` |
-| `DATABASE_URL` | *(Neon connection string)* |
+| `INTELLIWATCH_SECRET_KEY` | *(generate a 64-char hex secret)* |
+| `DATABASE_URL` | *(Neon connection string — see below)* |
 | `INTELLIWATCH_CORS_ORIGINS` | `https://miniproject5.vercel.app` |
+| `DIFY_API_BASE_URL` | `https://api.dify.ai/v1` |
+| `DIFY_API_KEY` | *(from Dify dashboard → API keys)* |
+| `GEMINI_API_KEY` | *(from Google AI Studio)* |
 
 ### Neon — Database
 
-Project `gentle-snow-07661904` already provisioned. 19 tables created automatically on first backend startup. Connect via `DATABASE_URL` env var on Render.
+Project `gentle-snow-07661904` already provisioned. 19 tables created automatically on first backend startup.
+
+1. Go to [console.neon.tech](https://console.neon.tech/app/projects/gentle-snow-07661904)
+2. Copy the **Connection string** (postgresql://...)
+3. Paste as `DATABASE_URL` in Render dashboard
+
+### Firebase — Authentication
+
+Three sign-in methods are supported: **Password**, **Google**, and **Phone + OTP**.
+
+1. Go to [Firebase Console](https://console.firebase.google.com) → your project
+2. **Authentication → Sign-in method** → enable:
+   - Email/Password (for password-based accounts)
+   - Google (for Google sign-in)
+   - Phone (requires **Blaze pay-as-you-go plan** — free Spark plan blocks phone auth)
+3. Copy all config keys from **Project settings → Your apps → Web app**
+4. Add them as `VITE_FIREBASE_*` env vars in Vercel (see table above)
+5. Add `https://miniproject5.vercel.app` to **Authorised domains** in Firebase Console → Authentication → Settings
+
+### Dify — AI Chatbot
+
+The Bolt chatbot uses Dify Chatflow for intelligent responses with multilingual support.
+
+1. Go to [Dify](https://dify.ai) → create a Chatflow app
+2. Copy the **API key** from the app's API page
+3. Set `DIFY_API_KEY` on Render (see table above)
+4. Set `DIFY_API_BASE_URL=https://api.dify.ai/v1` (default, change only if self-hosting)
+
+If `DIFY_API_KEY` is not set, the chatbot falls back to its offline knowledge base automatically.
 
 ### Edge Device (Raspberry Pi)
 
@@ -184,7 +228,10 @@ Header: X-Device-Credential: <device-credential>
 | **Frontend (Live)** | https://miniproject5.vercel.app |
 | **Backend API** | https://intelliwatch-backend.onrender.com |
 | **Swagger Docs** | https://intelliwatch-backend.onrender.com/docs |
+| **Health Check** | https://intelliwatch-backend.onrender.com/health |
 | **Neon Console** | https://console.neon.tech/app/projects/gentle-snow-07661904 |
+| **Firebase Console** | https://console.firebase.google.com |
+| **Dify Dashboard** | https://dify.ai |
 | **Miniproject5 Repo** | https://github.com/LakshmiNarayana124/Miniproject5 |
 | **IntelliWatch Private** | https://github.com/LakshmiNarayana124/IntelliWatch-Private |
 
