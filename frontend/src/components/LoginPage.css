@@ -560,3 +560,21 @@
   .signin-method-bar   { grid-template-columns: 1fr; }
   .signin-method-btn   { justify-content: flex-start; padding: 10px 14px; }
 }
+
+/* ── Or divider between sign-in sections ────────────────────────────────── */
+.login-or-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0;
+  color: #4a5070;
+  font-size: 11px;
+  letter-spacing: .5px;
+}
+.login-or-divider::before,
+.login-or-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #252837;
+}
