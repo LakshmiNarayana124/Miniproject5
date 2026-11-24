@@ -1,7 +1,12 @@
 import { useState } from 'react'
 
-// ── Inline IntelliWatch logo — matches the reference image exactly ──
-const LOGO_SVG = `<svg width="62" height="40" viewBox="0 0 186 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+// ── IntelliWatch logo for printable report ──
+// Uses the official PNG. In the printed/PDF report we embed it via window.location.origin.
+const getLogoImg = () =>
+  `<img src="${window.location.origin}/intelliwatch-eye-logo-source.png" alt="IntelliWatch" width="72" height="49" style="display:inline-block;object-fit:contain;vertical-align:middle;background:transparent;" />`
+
+// Legacy fallback kept for reference but not used
+const LOGO_SVG_UNUSED = `<svg width="62" height="40" viewBox="0 0 186 120" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="sr_outerEye" x1="0%" y1="20%" x2="100%" y2="80%">
       <stop offset="0%"   stop-color="#0a1a6e"/>
@@ -133,7 +138,7 @@ function buildReportHTML(data, alerts) {
 </head><body>
 <div class="header">
   <div class="brand">
-    ${LOGO_SVG}
+    ${getLogoImg()}
     <div><h1>INTELLIWATCH</h1><p>Real-Time Anomaly Detection &amp; Decision Support System</p></div>
   </div>
   <div class="heading"><h2>Equipment Service Report</h2><p>Alert &amp; Maintenance Record</p></div>
