@@ -1,39 +1,68 @@
 import { useState } from 'react'
 
-// ── Inline IntelliWatch logo (eye + gear + bars, transparent bg) ──
-const LOGO_SVG = `<svg width="48" height="32" viewBox="0 0 120 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+// ── Inline IntelliWatch logo — matches the reference image exactly ──
+const LOGO_SVG = `<svg width="62" height="40" viewBox="0 0 186 120" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="eyeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#2563eb"/>
-      <stop offset="60%" stop-color="#7c3aed"/>
-      <stop offset="100%" stop-color="#db2777"/>
+    <linearGradient id="sr_outerEye" x1="0%" y1="20%" x2="100%" y2="80%">
+      <stop offset="0%"   stop-color="#0a1a6e"/>
+      <stop offset="40%"  stop-color="#1a3fc4"/>
+      <stop offset="70%"  stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#38bdf8"/>
     </linearGradient>
-    <radialGradient id="irisGrad" cx="40%" cy="35%" r="65%">
-      <stop offset="0%" stop-color="#a78bfa"/>
-      <stop offset="60%" stop-color="#6d28d9"/>
-      <stop offset="100%" stop-color="#1e1b4b"/>
+    <linearGradient id="sr_innerLid" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#38bdf8" stop-opacity="0"/>
+      <stop offset="30%"  stop-color="#38bdf8"/>
+      <stop offset="70%"  stop-color="#93c5fd"/>
+      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="sr_lowerLid" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#7c3aed"/>
+      <stop offset="50%"  stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#be185d"/>
+    </linearGradient>
+    <radialGradient id="sr_iris" cx="38%" cy="35%" r="62%">
+      <stop offset="0%"   stop-color="#c4b5fd"/>
+      <stop offset="25%"  stop-color="#7c3aed"/>
+      <stop offset="60%"  stop-color="#4c1d95"/>
+      <stop offset="100%" stop-color="#0f0520"/>
     </radialGradient>
+    <linearGradient id="sr_gear" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#1d4ed8"/>
+      <stop offset="100%" stop-color="#0a1a6e"/>
+    </linearGradient>
+    <linearGradient id="sr_bar1" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="sr_bar2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#60a5fa"/>
+      <stop offset="100%" stop-color="#1e40af"/>
+    </linearGradient>
+    <linearGradient id="sr_bar3" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#93c5fd"/>
+      <stop offset="100%" stop-color="#2563eb"/>
+    </linearGradient>
   </defs>
-  <!-- eye outline -->
-  <path d="M5 40 Q35 10 60 10 Q85 10 115 40 Q85 70 60 70 Q35 70 5 40Z"
-        fill="none" stroke="url(#eyeGrad)" stroke-width="4"/>
-  <!-- lower lid accent -->
-  <path d="M10 44 Q40 65 60 68 Q80 65 110 44"
-        fill="none" stroke="#db2777" stroke-width="2.5" stroke-linecap="round" opacity="0.7"/>
-  <!-- iris -->
-  <circle cx="60" cy="40" r="18" fill="url(#irisGrad)"/>
-  <!-- pupil -->
-  <circle cx="60" cy="40" r="9" fill="#0f0a2e"/>
-  <!-- highlight -->
-  <circle cx="54" cy="34" r="4" fill="white" fill-opacity="0.55"/>
-  <!-- gear (top-right) -->
-  <g transform="translate(85,8) scale(0.7)" fill="#2563eb" opacity="0.9">
-    <path d="M18 2l-2 5a14 14 0 00-3.5 1.5L7 6 2 11l2.5 5.5A14 14 0 004 20H0l2 6h4a14 14 0 001.5 3.5L5 35l5 5 5.5-2.5A14 14 0 0020 39v4l6 2v-4a14 14 0 003.5-1.5L35 42l5-5-2.5-5.5A14 14 0 0039 28h4l-2-6h-4a14 14 0 00-1.5-3.5L38 13l-5-5-5.5 2.5A14 14 0 0024 9V5zm4 13a8 8 0 110 16 8 8 0 010-16z"/>
+  <path d="M4 60 Q20 20 70 14 Q100 10 130 20 Q155 28 182 60 Q155 92 130 100 Q100 110 70 106 Q20 100 4 60Z" fill="#0d1b6e" opacity="0.92"/>
+  <path d="M14 60 Q28 30 70 24 Q100 18 128 28 Q150 36 172 60 Q150 84 128 92 Q100 102 70 96 Q28 90 14 60Z" fill="white"/>
+  <path d="M4 60 Q20 20 70 14 Q100 10 130 20 Q155 28 182 60" fill="none" stroke="url(#sr_outerEye)" stroke-width="6" stroke-linecap="round"/>
+  <path d="M4 60 Q20 100 70 106 Q100 110 130 100 Q155 92 182 60" fill="none" stroke="url(#sr_outerEye)" stroke-width="5" stroke-linecap="round"/>
+  <path d="M18 54 Q35 28 70 22 Q100 17 128 30 Q148 38 168 56" fill="none" stroke="url(#sr_innerLid)" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
+  <path d="M16 64 Q34 92 70 100 Q100 106 128 96 Q152 88 170 68" fill="none" stroke="url(#sr_lowerLid)" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+  <path d="M4 60 L18 50" fill="none" stroke="#0a1a6e" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="93" cy="60" r="28" fill="url(#sr_iris)"/>
+  <circle cx="93" cy="60" r="28" fill="none" stroke="#6d28d9" stroke-width="1.5" opacity="0.6"/>
+  <circle cx="93" cy="60" r="13" fill="#050112"/>
+  <circle cx="83" cy="50" r="7" fill="white" fill-opacity="0.65"/>
+  <circle cx="98" cy="53" r="3" fill="white" fill-opacity="0.3"/>
+  <g transform="translate(148,36)">
+    <path d="M-4,-22 L-4,-26 L4,-26 L4,-22 A22,22 0 0,1 10.6,-19.4 L13.4,-22.2 L19.1,-16.5 L16.3,-13.7 A22,22 0 0,1 19.4,-10.6 L23.4,-10.6 L23.4,-2.6 L19.4,-2.6 A22,22 0 0,1 19.4,2.6 L23.4,2.6 L23.4,10.6 L19.4,10.6 A22,22 0 0,1 16.3,13.7 L19.1,16.5 L13.4,22.2 L10.6,19.4 A22,22 0 0,1 4,22 L4,26 L-4,26 L-4,22 A22,22 0 0,1 -10.6,19.4 L-13.4,22.2 L-19.1,16.5 L-16.3,13.7 A22,22 0 0,1 -19.4,10.6 L-23.4,10.6 L-23.4,2.6 L-19.4,2.6 A22,22 0 0,1 -19.4,-2.6 L-23.4,-2.6 L-23.4,-10.6 L-19.4,-10.6 A22,22 0 0,1 -16.3,-13.7 L-19.1,-16.5 L-13.4,-22.2 L-10.6,-19.4 A22,22 0 0,1 -4,-22 Z" fill="url(#sr_gear)" opacity="0.95"/>
+    <circle cx="0" cy="0" r="9" fill="white" opacity="0.15"/>
+    <circle cx="0" cy="0" r="9" fill="none" stroke="#1d4ed8" stroke-width="1.5"/>
   </g>
-  <!-- bar chart (top-right) -->
-  <rect x="92" y="4" width="5" height="16" rx="1.5" fill="#38bdf8" opacity="0.9"/>
-  <rect x="99" y="8" width="5" height="12" rx="1.5" fill="#60a5fa" opacity="0.9"/>
-  <rect x="106" y="12" width="5" height="8" rx="1.5" fill="#93c5fd" opacity="0.9"/>
+  <rect x="128" y="4"  width="9" height="30" rx="2.5" fill="url(#sr_bar1)"/>
+  <rect x="140" y="12" width="9" height="22" rx="2.5" fill="url(#sr_bar2)"/>
+  <rect x="152" y="18" width="9" height="16" rx="2.5" fill="url(#sr_bar3)"/>
 </svg>`
 
 // ── Non-box action button style ──
