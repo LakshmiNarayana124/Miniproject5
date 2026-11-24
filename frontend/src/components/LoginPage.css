@@ -481,3 +481,82 @@
   .new-here-strip      { flex-direction: column; gap: 6px; }
   .new-here-btn        { width: 100%; justify-content: center; }
 }
+
+/* ── Sign-in method tab bar ──────────────────────────────────────────────── */
+.signin-method-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+
+.signin-method-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 9px 6px;
+  border-radius: 10px;
+  border: 1.5px solid #252837;
+  background: transparent;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  color: #4a5070;
+  cursor: pointer;
+  letter-spacing: .2px;
+  transition: all .18s;
+  white-space: nowrap;
+}
+.signin-method-btn:hover {
+  border-color: #ffffff25;
+  color: #a0a8c0;
+  background: #ffffff06;
+}
+.signin-method-btn--active {
+  border-color: #aa3bff60;
+  background: #aa3bff14;
+  color: #d8b4fe;
+  box-shadow: 0 0 0 2px #aa3bff18;
+}
+
+/* ── Google button variant ───────────────────────────────────────────────── */
+.signin-google-btn {
+  background: #fff;
+  color: #3c4043;
+  font-size: 14px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.35);
+}
+.signin-google-btn:hover:not(:disabled) {
+  background: #f7f7f7;
+  opacity: 1;
+  box-shadow: 0 2px 8px rgba(0,0,0,.4);
+}
+
+/* ── Method description text ─────────────────────────────────────────────── */
+.signin-method-desc {
+  font-size: 12px;
+  color: #a0a8c0;
+  line-height: 1.6;
+  margin: 0 0 14px;
+  text-align: center;
+}
+
+/* ── Phone billing notice ────────────────────────────────────────────────── */
+.signin-phone-billing-notice {
+  background: #f59e0b12;
+  border: 1px solid #f59e0b40;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 11px;
+  color: #fbbf24;
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+.signin-phone-billing-notice strong { color: #fcd34d; }
+
+/* ── Mobile adjustments ──────────────────────────────────────────────────── */
+@media (max-width: 520px) {
+  .signin-method-bar   { grid-template-columns: 1fr; }
+  .signin-method-btn   { justify-content: flex-start; padding: 10px 14px; }
+}

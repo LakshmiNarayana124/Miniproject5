@@ -1,7 +1,8 @@
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import './LoginPage.css'
 import IntelliWatchLogo from './IntelliWatchLogo'
+import { getFirebaseAuth, FIREBASE_ENABLED } from '../firebaseConfig'
 
 const API = (
   import.meta.env.VITE_API_URL || 'http://localhost:8000'
@@ -1299,6 +1300,14 @@ export default function LoginPage({ onLogin }) {
   const [loading, setLoading] = useState(false)
   const [modal, setModal] = useState(null)
 
+  // Sign-in method: 'password' | 'google' | 'phone'
+  const [signMethod, setSignMethod] = useState('password')
+  const [phone, setPhone] = useState('')
+  const [otp, setOtp] = useState('')
+  const [otpSent, setOtpSent] = useState(false)
+  const [confirmResult, setConfirmResult] = useState(null)
+  const recaptchaContainerRef = useRef(null)
+
   const [availability, setAvailability] = useState({
     checked: false,
     internetAvailable: false,
@@ -1422,6 +1431,132 @@ export default function LoginPage({ onLogin }) {
     setError('')
   }
 
+
+  // ==================================================
+  // GOOGLE SIGN-IN
+  // ==================================================
+
+  async function handleGoogleSignIn() {
+    if (!FIREBASE_ENABLED) {
+      setError('Firebase is not configured. Add the VITE_FIREBASE_* environment variables.')
+      return
+    }
+    setError('')
+    setLoading(true)
+    try {
+      const fb = await getFirebaseAuth()
+      if (!fb) {
+        setError('Firebase could not be initialised. Check your configuration.')
+        return
+      }
+      const { auth, GoogleAuthProvider, signInWithPopup } = fb
+      const provider = new GoogleAuthProvider()
+      const result = await signInWithPopup(auth, provider)
+      const idToken = await result.user.getIdToken()
+      const requestedRole = mode === 'admin' ? 'ADMIN' : activeRole
+      const response = await fetch(`${API}/auth/firebase-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id_token: idToken, requested_role: requestedRole }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        setError(getLoginErrorMessage(data, 'Google sign-in was rejected by the server.'))
+        return
+      }
+      const sessionUser = {
+        username: data.username, full_name: data.full_name,
+        role: data.role, account_role: data.account_role || data.role,
+        is_restricted_session: !!data.is_restricted_session,
+        is_demo_session: false, user_id: data.user_id, session_mode: 'ONLINE',
+      }
+      saveSession(data.access_token, sessionUser)
+      onLogin({ ...data, is_demo_session: false, session_mode: 'ONLINE' })
+    } catch (err) {
+      if (err.code === 'auth/popup-closed-by-user') {
+        setError('')
+      } else {
+        setError('Google sign-in failed. ' + (err.message || ''))
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+
+  // ==================================================
+  // PHONE + OTP SIGN-IN
+  // ==================================================
+
+  async function handleSendOtp(e) {
+    e.preventDefault()
+    setError('')
+    if (!phone.trim()) { setError('Enter a phone number.'); return }
+    if (!FIREBASE_ENABLED) {
+      setError('Firebase is not configured. Add the VITE_FIREBASE_* environment variables.')
+      return
+    }
+    setLoading(true)
+    try {
+      const fb = await getFirebaseAuth()
+      if (!fb) { setError('Firebase could not be initialised.'); return }
+      const { auth, RecaptchaVerifier, signInWithPhoneNumber } = fb
+      if (!window._iwRecaptcha) {
+        window._iwRecaptcha = new RecaptchaVerifier(
+          auth,
+          recaptchaContainerRef.current,
+          { size: 'invisible' }
+        )
+      }
+      const result = await signInWithPhoneNumber(auth, phone.trim(), window._iwRecaptcha)
+      setConfirmResult(result)
+      setOtpSent(true)
+    } catch (err) {
+      const msg = err.message || ''
+      if (msg.includes('billing') || msg.includes('BILLING') || err.code === 'auth/operation-not-allowed') {
+        setError('Phone sign-in requires Firebase Blaze (pay-as-you-go) plan. Upgrade at console.firebase.google.com.')
+      } else {
+        setError('Could not send OTP. ' + msg)
+      }
+      window._iwRecaptcha = null
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleVerifyOtp(e) {
+    e.preventDefault()
+    setError('')
+    if (!otp.trim()) { setError('Enter the OTP.'); return }
+    setLoading(true)
+    try {
+      const credential = await confirmResult.confirm(otp.trim())
+      const idToken = await credential.user.getIdToken()
+      const requestedRole = mode === 'admin' ? 'ADMIN' : activeRole
+      const response = await fetch(`${API}/auth/firebase-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id_token: idToken, requested_role: requestedRole }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        setError(getLoginErrorMessage(data, 'Phone sign-in was rejected by the server.'))
+        return
+      }
+      const sessionUser = {
+        username: data.username, full_name: data.full_name,
+        role: data.role, account_role: data.account_role || data.role,
+        is_restricted_session: !!data.is_restricted_session,
+        is_demo_session: false, user_id: data.user_id, session_mode: 'ONLINE',
+      }
+      saveSession(data.access_token, sessionUser)
+      onLogin({ ...data, is_demo_session: false, session_mode: 'ONLINE' })
+    } catch (err) {
+      setError('Invalid OTP. ' + (err.message || ''))
+    } finally {
+      setLoading(false)
+    }
+  }
 
 
   // ==================================================
@@ -1836,92 +1971,228 @@ export default function LoginPage({ onLogin }) {
           )}
 
 
-          {/* LOGIN FORM */}
+          {/* SIGN-IN METHOD TABS */}
 
-          <form
-            className="login-form"
-            onSubmit={handleSubmit}
-            autoComplete="off"
-            noValidate
-          >
-            <div className="login-field">
-              <label
-                className="login-label"
-                htmlFor="iw-username"
-              >
-                Username
-              </label>
-
-              <div className="login-input-wrap">
-                <span className="login-input-icon">👤</span>
-
-                <input
-                  id="iw-username"
-                  className="login-input"
-                  type="text"
-                  placeholder="Enter your username"
-                  value={username}
-                  onChange={e => setUsername(e.target.value)}
-                  autoComplete="off"
-                  disabled={loading}
-                  spellCheck={false}
-                />
-              </div>
-
-
-            </div>
-
-            <div className="login-field">
-              <label
-                className="login-label"
-                htmlFor="iw-password"
-              >
-                Password
-              </label>
-
-              <div className="login-input-wrap">
-                <span className="login-input-icon">🔒</span>
-
-                <input
-                  id="iw-password"
-                  className="login-input"
-                  type={showPass ? 'text' : 'password'}
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  autoComplete="current-password"
-                  disabled={loading}
-                />
-
-                <button
-                  type="button"
-                  className="login-eye-btn"
-                  onClick={() => setShowPass(p => !p)}
-                  aria-label={showPass ? 'Hide password' : 'Show password'}
-                >
-                  <PasswordVisibilityIcon visible={showPass} />
-                </button>
-              </div>
-            </div>
-
-            {error && (
-              <div className="login-error" role="alert">
-                ⚠️ {error}
-              </div>
-            )}
+          <div className="signin-method-bar">
+            <button
+              type="button"
+              className={`signin-method-btn${signMethod === 'password' ? ' signin-method-btn--active' : ''}`}
+              onClick={() => { setSignMethod('password'); setError('') }}
+            >
+              🔑 Password
+            </button>
 
             <button
-              className={`login-btn${mode === 'admin' ? ' login-btn--admin-purple' : ''}`}
-              type="submit"
-              disabled={loading}
+              type="button"
+              className={`signin-method-btn${signMethod === 'google' ? ' signin-method-btn--active' : ''}`}
+              onClick={() => { setSignMethod('google'); setError('') }}
             >
-              {loading ? (
-                <span className="login-spinner" />
-              ) : (
-                'Sign In'
-              )}
+              <svg width="15" height="15" viewBox="0 0 48 48" aria-hidden="true" style={{verticalAlign:'middle',marginRight:4}}>
+                <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.8 2.5 30.2 0 24 0 14.7 0 6.7 5.4 2.9 13.3l7.8 6.1C12.5 13 17.8 9.5 24 9.5z"/>
+                <path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.4c-.5 2.8-2.1 5.1-4.4 6.7l6.8 5.3c4-3.7 6.3-9.2 6.3-16z"/>
+                <path fill="#FBBC05" d="M10.7 28.6A14.5 14.5 0 019.5 24c0-1.6.3-3.1.8-4.6L2.9 13.3A23.9 23.9 0 000 24c0 3.8.9 7.4 2.5 10.6l8.2-6z"/>
+                <path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-6.8-5.3c-2 1.4-4.6 2.3-8.4 2.3-6.2 0-11.5-4.2-13.3-9.9l-8.2 6C6.5 42.5 14.6 48 24 48z"/>
+              </svg>
+              Google
             </button>
-          </form>
+
+            <button
+              type="button"
+              className={`signin-method-btn${signMethod === 'phone' ? ' signin-method-btn--active' : ''}`}
+              onClick={() => { setSignMethod('phone'); setError(''); setOtpSent(false); setOtp(''); setPhone('') }}
+            >
+              📱 Phone + OTP
+            </button>
+          </div>
+
+
+          {/* LOGIN FORM */}
+
+          {/* PASSWORD FORM */}
+
+          {signMethod === 'password' && (
+            <form
+              className="login-form"
+              onSubmit={handleSubmit}
+              autoComplete="off"
+              noValidate
+            >
+              <div className="login-field">
+                <label className="login-label" htmlFor="iw-username">
+                  Username
+                </label>
+                <div className="login-input-wrap">
+                  <span className="login-input-icon">👤</span>
+                  <input
+                    id="iw-username"
+                    className="login-input"
+                    type="text"
+                    placeholder="Enter your username"
+                    value={username}
+                    onChange={e => setUsername(e.target.value)}
+                    autoComplete="off"
+                    disabled={loading}
+                    spellCheck={false}
+                  />
+                </div>
+              </div>
+
+              <div className="login-field">
+                <label className="login-label" htmlFor="iw-password">
+                  Password
+                </label>
+                <div className="login-input-wrap">
+                  <span className="login-input-icon">🔒</span>
+                  <input
+                    id="iw-password"
+                    className="login-input"
+                    type={showPass ? 'text' : 'password'}
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    autoComplete="current-password"
+                    disabled={loading}
+                  />
+                  <button
+                    type="button"
+                    className="login-eye-btn"
+                    onClick={() => setShowPass(p => !p)}
+                    aria-label={showPass ? 'Hide password' : 'Show password'}
+                  >
+                    <PasswordVisibilityIcon visible={showPass} />
+                  </button>
+                </div>
+              </div>
+
+              {error && <div className="login-error" role="alert">⚠️ {error}</div>}
+
+              <button
+                className={`login-btn${mode === 'admin' ? ' login-btn--admin-purple' : ''}`}
+                type="submit"
+                disabled={loading}
+              >
+                {loading ? <span className="login-spinner" /> : 'Sign In'}
+              </button>
+            </form>
+          )}
+
+
+          {/* GOOGLE SIGN-IN */}
+
+          {signMethod === 'google' && (
+            <div className="login-form">
+              <p className="signin-method-desc">
+                Sign in with your Google account. Your Google identity will be
+                matched to an IntelliWatch account on the server.
+              </p>
+
+              {error && <div className="login-error" role="alert">⚠️ {error}</div>}
+
+              <button
+                className="login-btn signin-google-btn"
+                type="button"
+                onClick={handleGoogleSignIn}
+                disabled={loading}
+              >
+                {loading ? <span className="login-spinner" /> : (
+                  <>
+                    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true" style={{verticalAlign:'middle',marginRight:8}}>
+                      <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.8 2.5 30.2 0 24 0 14.7 0 6.7 5.4 2.9 13.3l7.8 6.1C12.5 13 17.8 9.5 24 9.5z"/>
+                      <path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.4c-.5 2.8-2.1 5.1-4.4 6.7l6.8 5.3c4-3.7 6.3-9.2 6.3-16z"/>
+                      <path fill="#FBBC05" d="M10.7 28.6A14.5 14.5 0 019.5 24c0-1.6.3-3.1.8-4.6L2.9 13.3A23.9 23.9 0 000 24c0 3.8.9 7.4 2.5 10.6l8.2-6z"/>
+                      <path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-6.8-5.3c-2 1.4-4.6 2.3-8.4 2.3-6.2 0-11.5-4.2-13.3-9.9l-8.2 6C6.5 42.5 14.6 48 24 48z"/>
+                    </svg>
+                    Continue with Google
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+
+          {/* PHONE + OTP */}
+
+          {signMethod === 'phone' && (
+            <div className="login-form">
+              {!otpSent ? (
+                <form onSubmit={handleSendOtp} noValidate>
+                  <div className="login-field" style={{marginBottom:12}}>
+                    <label className="login-label" htmlFor="iw-phone">
+                      Phone Number
+                      <span className="login-label-hint"> (include country code, e.g. +91)</span>
+                    </label>
+                    <div className="login-input-wrap">
+                      <span className="login-input-icon">📱</span>
+                      <input
+                        id="iw-phone"
+                        className="login-input"
+                        type="tel"
+                        placeholder="+91 9876543210"
+                        value={phone}
+                        onChange={e => setPhone(e.target.value)}
+                        disabled={loading}
+                        spellCheck={false}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="signin-phone-billing-notice">
+                    ⚠️ Phone sign-in requires <strong>Firebase Blaze</strong> (pay-as-you-go) plan.
+                    Free Spark plan will return a billing error.
+                  </div>
+
+                  {error && <div className="login-error" role="alert">⚠️ {error}</div>}
+
+                  <div ref={recaptchaContainerRef} />
+
+                  <button className="login-btn" type="submit" disabled={loading}>
+                    {loading ? <span className="login-spinner" /> : 'Send OTP'}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleVerifyOtp} noValidate>
+                  <p className="signin-method-desc">
+                    OTP sent to <strong>{phone}</strong>.
+                  </p>
+
+                  <div className="login-field" style={{marginBottom:12}}>
+                    <label className="login-label" htmlFor="iw-otp">
+                      One-Time Password
+                    </label>
+                    <div className="login-input-wrap">
+                      <span className="login-input-icon">🔢</span>
+                      <input
+                        id="iw-otp"
+                        className="login-input"
+                        type="text"
+                        placeholder="Enter 6-digit OTP"
+                        value={otp}
+                        onChange={e => setOtp(e.target.value)}
+                        disabled={loading}
+                        spellCheck={false}
+                        maxLength={6}
+                      />
+                    </div>
+                  </div>
+
+                  {error && <div className="login-error" role="alert">⚠️ {error}</div>}
+
+                  <button className="login-btn" type="submit" disabled={loading || otp.length < 4}>
+                    {loading ? <span className="login-spinner" /> : 'Verify OTP'}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="login-extra-btn"
+                    style={{display:'block',margin:'8px auto 0',width:'100%',textAlign:'center'}}
+                    onClick={() => { setOtpSent(false); setOtp(''); setError(''); window._iwRecaptcha = null }}
+                  >
+                    ← Change number
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
 
 
 
