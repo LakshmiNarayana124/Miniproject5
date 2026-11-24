@@ -8,9 +8,9 @@ fastapi==0.115.12
 uvicorn[standard]==0.34.3
 pydantic==2.11.5
 
-# Authentication (JWT + Argon2 password hashing)
+# Authentication
 python-jose[cryptography]==3.5.0
-PyJWT
+PyJWT==2.10.1
 argon2-cffi==23.1.0
 
 # Machine Learning / Data Science
@@ -19,27 +19,23 @@ pandas==2.2.3
 numpy==1.26.4
 xgboost==2.1.3
 
-# IoT (MQTT broker connectivity + HTTP adapter)
+# IoT
 paho-mqtt==2.1.0
 httpx==0.28.1
 
-# Vision AI (Gemini image analysis)
-google-genai
+# Vision AI
+google-genai==1.16.0
 
 # HTTPS Certificate Trust
-truststore==0.10.5
+truststore==0.10.1
 
 # Utilities
 python-multipart==0.0.20
 
-# Property-based Testing
+# Testing
 hypothesis==6.131.10
 
-# Optional: Sequence Model (GRU)
-# Uncomment to enable full SequenceModel support.
-# Requires approximately 2 GB download.
-# All other features work without it.
-# torch==2.6.0
-onnxruntime==1.31.1
-Pillow==13.0.0
-psycopg2-binary>=2.9.9
+# ONNX inference (equipment detection)
+onnxruntime==1.19.0
+Pillow==11.1.0
+psycopg2-binary==2.9.9
