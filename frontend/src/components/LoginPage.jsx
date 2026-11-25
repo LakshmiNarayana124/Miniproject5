@@ -1995,207 +1995,170 @@ export default function LoginPage({ onLogin }) {
 
           {/* LOGIN FORM — sign-in method selector + all three methods */}
 
-          {/* ── SIGN-IN METHOD SELECTOR (single box, 3 buttons) ── */}
-          <div className="signin-methods-box">
-            <button
-              type="button"
-              className={`signin-method-pill${signMethod === 'password' ? ' signin-method-pill--active' : ''}`}
-              onClick={() => { setSignMethod('password'); setError('') }}
-            >
-              🔑 Password
-            </button>
-            <button
-              type="button"
-              className={`signin-method-pill${signMethod === 'google' ? ' signin-method-pill--active' : ''}`}
-              onClick={() => { setSignMethod('google'); setError('') }}
-            >
-              <svg width="13" height="13" viewBox="0 0 48 48" aria-hidden="true" style={{verticalAlign:'middle',marginRight:3}}>
-                <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.8 2.5 30.2 0 24 0 14.7 0 6.7 5.4 2.9 13.3l7.8 6.1C12.5 13 17.8 9.5 24 9.5z"/>
-                <path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.4c-.5 2.8-2.1 5.1-4.4 6.7l6.8 5.3c4-3.7 6.3-9.2 6.3-16z"/>
-                <path fill="#FBBC05" d="M10.7 28.6A14.5 14.5 0 019.5 24c0-1.6.3-3.1.8-4.6L2.9 13.3A23.9 23.9 0 000 24c0 3.8.9 7.4 2.5 10.6l8.2-6z"/>
-                <path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-6.8-5.3c-2 1.4-4.6 2.3-8.4 2.3-6.2 0-11.5-4.2-13.3-9.9l-8.2 6C6.5 42.5 14.6 48 24 48z"/>
-              </svg>
-              Google
-            </button>
-            <button
-              type="button"
-              className={`signin-method-pill${signMethod === 'phone' ? ' signin-method-pill--active' : ''}`}
-              onClick={() => { setSignMethod('phone'); setError(''); setOtpSent(false); setOtp(''); setPhone('') }}
-            >
-              📱 Phone + OTP
-            </button>
-          </div>
+          {/* ── THREE-COLUMN SIGN-IN PANEL (below role tabs, above username/password) ── */}
 
+          {error && <div className="login-error" role="alert" style={{marginBottom:10}}>⚠️ {error}</div>}
 
-          {/* ── 1. USERNAME + PASSWORD ── */}
+          <div className="signin-panel-3col">
 
-          <form
-            className="login-form"
-            onSubmit={handleSubmit}
-            autoComplete="off"
-            noValidate
-          >
-            <div className="login-field">
-              <label className="login-label" htmlFor="iw-username">
-                Username
-              </label>
-              <div className="login-input-wrap">
-                <span className="login-input-icon">👤</span>
-                <input
-                  id="iw-username"
-                  className="login-input"
-                  type="text"
-                  placeholder="Enter your username"
-                  value={username}
-                  onChange={e => setUsername(e.target.value)}
-                  autoComplete="off"
-                  disabled={loading}
-                  spellCheck={false}
-                />
-              </div>
-            </div>
-
-            <div className="login-field">
-              <label className="login-label" htmlFor="iw-password">
-                Password
-              </label>
-              <div className="login-input-wrap">
-                <span className="login-input-icon">🔒</span>
-                <input
-                  id="iw-password"
-                  className="login-input"
-                  type={showPass ? 'text' : 'password'}
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  autoComplete="current-password"
-                  disabled={loading}
-                />
-                <button
-                  type="button"
-                  className="login-eye-btn"
-                  onClick={() => setShowPass(p => !p)}
-                  aria-label={showPass ? 'Hide password' : 'Show password'}
-                >
-                  <PasswordVisibilityIcon visible={showPass} />
-                </button>
-              </div>
-            </div>
-
-            {error && <div className="login-error" role="alert">⚠️ {error}</div>}
-
-            <button
-              className={`login-btn${mode === 'admin' ? ' login-btn--admin-purple' : ''}`}
-              type="submit"
-              disabled={loading}
-            >
-              {loading ? <span className="login-spinner" /> : 'Sign In'}
-            </button>
-          </form>
-
-
-          {/* ── 2. GOOGLE SIGN-IN ── */}
-
-          <div className="login-form" style={{marginTop:10}}>
-            <button
-              className="login-btn signin-google-btn"
-              type="button"
-              onClick={handleGoogleSignIn}
-              disabled={loading}
-            >
-              {loading ? <span className="login-spinner" /> : (
-                <>
-                  <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true" style={{verticalAlign:'middle',marginRight:8}}>
-                    <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.8 2.5 30.2 0 24 0 14.7 0 6.7 5.4 2.9 13.3l7.8 6.1C12.5 13 17.8 9.5 24 9.5z"/>
-                    <path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.4c-.5 2.8-2.1 5.1-4.4 6.7l6.8 5.3c4-3.7 6.3-9.2 6.3-16z"/>
-                    <path fill="#FBBC05" d="M10.7 28.6A14.5 14.5 0 019.5 24c0-1.6.3-3.1.8-4.6L2.9 13.3A23.9 23.9 0 000 24c0 3.8.9 7.4 2.5 10.6l8.2-6z"/>
-                    <path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-6.8-5.3c-2 1.4-4.6 2.3-8.4 2.3-6.2 0-11.5-4.2-13.3-9.9l-8.2 6C6.5 42.5 14.6 48 24 48z"/>
-                  </svg>
-                  {mode === 'admin' ? '🛡️ ' : '📊 '}Sign in with Google
-                </>
-              )}
-            </button>
-          </div>
-
-
-          {/* ── 3. PHONE + OTP ── */}
-
-          <div className="login-form" style={{marginTop:10}}>
-            {!otpSent ? (
-              <form onSubmit={handleSendOtp} noValidate>
-                <div className="login-field" style={{marginBottom:12}}>
-                  <label className="login-label" htmlFor="iw-phone">
-                    Phone Number
-                    <span className="login-label-hint"> (include country code, e.g. +91)</span>
-                  </label>
+            {/* LEFT — Password (default selected) */}
+            <div className="signin-col signin-col--password">
+              <p className="signin-col-label">🔑 Password</p>
+              <form onSubmit={handleSubmit} autoComplete="off" noValidate>
+                <div className="login-field">
                   <div className="login-input-wrap">
-                    <span className="login-input-icon">📱</span>
+                    <span className="login-input-icon">👤</span>
                     <input
-                      id="iw-phone"
-                      className="login-input"
-                      type="tel"
-                      placeholder="+91 9876543210"
-                      value={phone}
-                      onChange={e => setPhone(e.target.value)}
-                      disabled={loading}
-                      spellCheck={false}
-                    />
-                  </div>
-                </div>
-
-                <div className="signin-phone-billing-notice">
-                  ⚠️ Phone sign-in requires <strong>Firebase Blaze</strong> (pay-as-you-go) plan.
-                  Free Spark plan will return a billing error.
-                </div>
-
-                <div ref={recaptchaContainerRef} />
-
-                <button className="login-btn" type="submit" disabled={loading}>
-                  {loading ? <span className="login-spinner" /> : '📱 Send OTP'}
-                </button>
-              </form>
-            ) : (
-              <form onSubmit={handleVerifyOtp} noValidate>
-                <p className="signin-method-desc">
-                  OTP sent to <strong>{phone}</strong>.
-                </p>
-
-                <div className="login-field" style={{marginBottom:12}}>
-                  <label className="login-label" htmlFor="iw-otp">
-                    One-Time Password
-                  </label>
-                  <div className="login-input-wrap">
-                    <span className="login-input-icon">🔢</span>
-                    <input
-                      id="iw-otp"
+                      id="iw-username"
                       className="login-input"
                       type="text"
-                      placeholder="Enter 6-digit OTP"
-                      value={otp}
-                      onChange={e => setOtp(e.target.value)}
+                      placeholder="Username"
+                      value={username}
+                      onChange={e => setUsername(e.target.value)}
+                      autoComplete="off"
                       disabled={loading}
                       spellCheck={false}
-                      maxLength={6}
                     />
                   </div>
                 </div>
-
-                {error && <div className="login-error" role="alert">⚠️ {error}</div>}
-
-                <button className="login-btn" type="submit" disabled={loading || otp.length < 4}>
-                  {loading ? <span className="login-spinner" /> : 'Verify OTP'}
-                </button>
-
+                <div className="login-field">
+                  <div className="login-input-wrap">
+                    <span className="login-input-icon">🔒</span>
+                    <input
+                      id="iw-password"
+                      className="login-input"
+                      type={showPass ? 'text' : 'password'}
+                      placeholder="Password"
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      autoComplete="current-password"
+                      disabled={loading}
+                    />
+                    <button
+                      type="button"
+                      className="login-eye-btn"
+                      onClick={() => setShowPass(p => !p)}
+                      aria-label={showPass ? 'Hide password' : 'Show password'}
+                    >
+                      <PasswordVisibilityIcon visible={showPass} />
+                    </button>
+                  </div>
+                </div>
                 <button
-                  type="button"
-                  className="login-extra-btn"
-                  style={{display:'block',margin:'8px auto 0',width:'100%',textAlign:'center'}}
-                  onClick={() => { setOtpSent(false); setOtp(''); setError(''); window._iwRecaptcha = null }}
+                  className={`login-btn signin-col-btn${mode === 'admin' ? ' login-btn--admin-purple' : ''}`}
+                  type="submit"
+                  disabled={loading}
                 >
-                  ← Change number
+                  {loading ? <span className="login-spinner" /> : 'Sign In'}
                 </button>
               </form>
-            )}
+            </div>
+
+            {/* DIVIDER */}
+            <div className="signin-col-divider"><span>or</span></div>
+
+            {/* MIDDLE — Google */}
+            <div className="signin-col signin-col--google">
+              <p className="signin-col-label">
+                <svg width="13" height="13" viewBox="0 0 48 48" aria-hidden="true" style={{verticalAlign:'middle',marginRight:4}}>
+                  <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.8 2.5 30.2 0 24 0 14.7 0 6.7 5.4 2.9 13.3l7.8 6.1C12.5 13 17.8 9.5 24 9.5z"/>
+                  <path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.4c-.5 2.8-2.1 5.1-4.4 6.7l6.8 5.3c4-3.7 6.3-9.2 6.3-16z"/>
+                  <path fill="#FBBC05" d="M10.7 28.6A14.5 14.5 0 019.5 24c0-1.6.3-3.1.8-4.6L2.9 13.3A23.9 23.9 0 000 24c0 3.8.9 7.4 2.5 10.6l8.2-6z"/>
+                  <path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-6.8-5.3c-2 1.4-4.6 2.3-8.4 2.3-6.2 0-11.5-4.2-13.3-9.9l-8.2 6C6.5 42.5 14.6 48 24 48z"/>
+                </svg>
+                Google
+              </p>
+              <button
+                className="login-btn signin-google-btn signin-col-btn"
+                type="button"
+                onClick={handleGoogleSignIn}
+                disabled={loading}
+              >
+                {loading ? <span className="login-spinner" /> : (
+                  <>
+                    <svg width="15" height="15" viewBox="0 0 48 48" aria-hidden="true" style={{verticalAlign:'middle',marginRight:5}}>
+                      <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.8 2.5 30.2 0 24 0 14.7 0 6.7 5.4 2.9 13.3l7.8 6.1C12.5 13 17.8 9.5 24 9.5z"/>
+                      <path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.4c-.5 2.8-2.1 5.1-4.4 6.7l6.8 5.3c4-3.7 6.3-9.2 6.3-16z"/>
+                      <path fill="#FBBC05" d="M10.7 28.6A14.5 14.5 0 019.5 24c0-1.6.3-3.1.8-4.6L2.9 13.3A23.9 23.9 0 000 24c0 3.8.9 7.4 2.5 10.6l8.2-6z"/>
+                      <path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-6.8-5.3c-2 1.4-4.6 2.3-8.4 2.3-6.2 0-11.5-4.2-13.3-9.9l-8.2 6C6.5 42.5 14.6 48 24 48z"/>
+                    </svg>
+                    {mode === 'admin'
+                      ? 'Sign in as 🛡️ Admin'
+                      : activeRole === 'MAINTENANCE_ENGINEER'
+                        ? 'Sign in as 📊 Engineer'
+                        : 'Sign in as 📊 Operator'}
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* DIVIDER */}
+            <div className="signin-col-divider"><span>or</span></div>
+
+            {/* RIGHT — Phone + OTP */}
+            <div className="signin-col signin-col--phone">
+              <p className="signin-col-label">📱 Phone + OTP</p>
+              <div className="signin-blaze-badge">
+                ⚠️ Notice: Phone OTP authentication incurs SMS charges and requires an active Firebase billing plan.
+              </div>
+              {!otpSent ? (
+                <form onSubmit={handleSendOtp} noValidate>
+                  <div className="login-field">
+                    <div className="login-input-wrap">
+                      <span className="login-input-icon">📱</span>
+                      <input
+                        id="iw-phone"
+                        className="login-input"
+                        type="tel"
+                        placeholder="+91 9876543210"
+                        value={phone}
+                        onChange={e => setPhone(e.target.value)}
+                        disabled={loading}
+                        spellCheck={false}
+                      />
+                    </div>
+                  </div>
+                  <div ref={recaptchaContainerRef} />
+                  <button className="login-btn signin-col-btn" type="submit" disabled={loading}>
+                    {loading ? <span className="login-spinner" /> : 'Send OTP'}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleVerifyOtp} noValidate>
+                  <p className="signin-method-desc" style={{marginBottom:6,fontSize:11}}>
+                    OTP → <strong>{phone}</strong>
+                  </p>
+                  <div className="login-field">
+                    <div className="login-input-wrap">
+                      <span className="login-input-icon">🔢</span>
+                      <input
+                        id="iw-otp"
+                        className="login-input"
+                        type="text"
+                        placeholder="6-digit OTP"
+                        value={otp}
+                        onChange={e => setOtp(e.target.value)}
+                        disabled={loading}
+                        spellCheck={false}
+                        maxLength={6}
+                      />
+                    </div>
+                  </div>
+                  <button className="login-btn signin-col-btn" type="submit" disabled={loading || otp.length < 4}>
+                    {loading ? <span className="login-spinner" /> : 'Verify OTP'}
+                  </button>
+                  <button
+                    type="button"
+                    className="login-extra-btn"
+                    style={{display:'block',marginTop:6,width:'100%',textAlign:'center',fontSize:11}}
+                    onClick={() => { setOtpSent(false); setOtp(''); setError(''); window._iwRecaptcha = null }}
+                  >
+                    ← Change number
+                  </button>
+                </form>
+              )}
+            </div>
+
           </div>
 
 

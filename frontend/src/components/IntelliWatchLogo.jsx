@@ -1,6 +1,6 @@
 /**
- * IntelliWatch brand logo — uses the official PNG asset.
- * Transparent background. Served from /intelliwatch-eye-logo-source.png
+ * IntelliWatch brand logo — exact eye PNG asset, transparent background.
+ * Used on Login page and Dashboard navbar.
  * Usage: <IntelliWatchLogo size={32} />
  */
 export default function IntelliWatchLogo({ size = 32, className = '' }) {
@@ -9,11 +9,16 @@ export default function IntelliWatchLogo({ size = 32, className = '' }) {
   return (
     <img
       src="/intelliwatch-eye-logo-source.png"
-      alt="IntelliWatch logo"
+      alt="IntelliWatch"
       width={w}
       height={h}
       className={className}
-      style={{ display: 'inline-block', objectFit: 'contain', background: 'transparent', verticalAlign: 'middle' }}
+      style={{
+        display: 'inline-block',
+        objectFit: 'contain',
+        background: 'transparent',
+        verticalAlign: 'middle',
+      }}
       draggable={false}
     />
   )

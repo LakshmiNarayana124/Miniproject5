@@ -644,3 +644,189 @@
   .signin-method-pill { border-right: none; border-bottom: 1px solid #252837; padding: 10px 14px; justify-content: flex-start; }
   .signin-method-pill:last-child { border-bottom: none; }
 }
+
+/* INTELLIWATCH-FLOATING-PROJECT-BACKGROUND */
+body:has(.signin-panel-3col) {
+    background:
+        radial-gradient(ellipse at 15% 20%, rgba(14, 165, 233, 0.12), transparent 42%),
+        radial-gradient(ellipse at 85% 75%, rgba(99, 102, 241, 0.11), transparent 44%),
+        linear-gradient(135deg, #f7fbff 0%, #eef5fb 52%, #f8faff 100%);
+}
+
+body:has(.signin-panel-3col)::before {
+    content: "";
+    position: fixed;
+    inset: -12%;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.62;
+    background-image:
+        radial-gradient(circle, rgba(14, 165, 233, 0.42) 1.4px, transparent 2px),
+        radial-gradient(circle, rgba(99, 102, 241, 0.30) 1.5px, transparent 2.5px),
+        linear-gradient(115deg, transparent 48%, rgba(56, 189, 248, 0.09) 49%, transparent 50%);
+    background-size: 115px 115px, 173px 173px, 100% 100%;
+    background-position: 0 0, 55px 35px, center;
+    animation: intelliwatch-data-drift 38s linear infinite;
+}
+
+body:has(.signin-panel-3col)::after {
+    content: "◉  IoT SENSOR     ⌁  LIVE TELEMETRY       ⚙  PREDICTIVE MAINTENANCE\\A\\A       ∿  VIBRATION ANALYTICS          ◈  AI NETWORK\\A\\A  🌡  TEMPERATURE     ∿  CURRENT MONITORING       ◉  MACHINE HEALTH";
+    white-space: pre;
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 5vh 3vw;
+    box-sizing: border-box;
+    overflow: hidden;
+    color: rgba(14, 116, 144, 0.19);
+    font-family: "Segoe UI", Arial, sans-serif;
+    font-size: clamp(10px, 1.05vw, 15px);
+    font-weight: 600;
+    letter-spacing: 1.4px;
+    line-height: 7.5;
+    text-shadow: 0 0 18px rgba(56, 189, 248, 0.10);
+    animation: intelliwatch-symbol-float 24s ease-in-out infinite alternate;
+}
+
+body:has(.signin-panel-3col) #root {
+    position: relative;
+    z-index: 1;
+}
+
+@keyframes intelliwatch-data-drift {
+    0%   { transform: translate3d(0, 0, 0) rotate(0deg); }
+    50%  { transform: translate3d(1.5%, -1%, 0) rotate(1deg); }
+    100% { transform: translate3d(-1%, 1.5%, 0) rotate(0deg); }
+}
+
+@keyframes intelliwatch-symbol-float {
+    0%   { transform: translate3d(0, 0, 0); }
+    100% { transform: translate3d(0, -14px, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body:has(.signin-panel-3col)::before,
+    body:has(.signin-panel-3col)::after {
+        animation: none !important;
+    }
+}
+
+@media (max-width: 700px) {
+    body:has(.signin-panel-3col)::before {
+        opacity: 0.35;
+        background-size: 85px 85px, 130px 130px, 100% 100%;
+    }
+
+    body:has(.signin-panel-3col)::after {
+        font-size: 10px;
+        letter-spacing: 0.6px;
+        opacity: 0.65;
+        padding: 3vh 2vw;
+    }
+}
+/* END INTELLIWATCH-FLOATING-PROJECT-BACKGROUND */
+
+/* ── 3-Column Sign-In Panel ─────────────────────────────────────────────── */
+.signin-panel-3col {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr;
+  gap: 0;
+  margin: 16px 0 14px;
+  background: #0d0f14;
+  border: 1.5px solid #252837;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.signin-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 14px 14px;
+}
+.signin-col--password { border-right: none; }
+.signin-col--google   { border-right: none; }
+.signin-col--phone    {}
+
+.signin-col-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #a0a8c0;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  margin: 0 0 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.signin-col-btn {
+  width: 100%;
+  padding: 9px 10px;
+  font-size: 12px;
+  margin-top: auto;
+}
+
+.signin-col-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  background: #0d0f14;
+  border-left: 1px solid #252837;
+  border-right: 1px solid #252837;
+}
+.signin-col-divider span {
+  font-size: 10px;
+  color: #4a5070;
+  writing-mode: vertical-rl;
+  letter-spacing: 1px;
+}
+
+/* Blaze billing badge in Phone column */
+.signin-blaze-badge {
+  background: #f59e0b12;
+  border: 1px solid #f59e0b50;
+  border-radius: 7px;
+  padding: 6px 8px;
+  font-size: 10px;
+  color: #fbbf24;
+  line-height: 1.5;
+}
+.signin-blaze-badge strong { color: #fcd34d; }
+
+/* Google button white style inside panel */
+.signin-col--google .signin-google-btn {
+  background: #fff;
+  color: #3c4043;
+  font-size: 11px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.3);
+}
+.signin-col--google .signin-google-btn:hover:not(:disabled) {
+  background: #f7f7f7;
+  opacity: 1;
+  box-shadow: 0 2px 6px rgba(0,0,0,.35);
+}
+
+/* Mobile: stack columns */
+@media (max-width: 540px) {
+  .signin-panel-3col {
+    grid-template-columns: 1fr;
+  }
+  .signin-col-divider {
+    width: 100%;
+    height: 24px;
+    border-left: none;
+    border-right: none;
+    border-top: 1px solid #252837;
+    border-bottom: 1px solid #252837;
+    writing-mode: horizontal-tb;
+  }
+  .signin-col-divider span {
+    writing-mode: horizontal-tb;
+  }
+}

@@ -36,6 +36,9 @@
   font-size: 20px;
   line-height: 1;
   filter: drop-shadow(0 0 6px rgba(170, 59, 255, 0.55));
+  background: transparent;
+  display: flex;
+  align-items: center;
 }
 
 .logo-text {
