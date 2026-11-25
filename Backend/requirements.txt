@@ -1,4 +1,3 @@
-
 # ============================================================
 # IntelliWatch — Backend Dependencies
 # ============================================================
@@ -14,10 +13,11 @@ PyJWT==2.10.1
 argon2-cffi==23.1.0
 
 # Machine Learning / Data Science
-scikit-learn==1.6.1
-pandas==2.2.3
+# Pinned to versions with prebuilt wheels for Python 3.11 on Linux (Render)
+scikit-learn==1.4.2
+pandas==2.2.2
 numpy==1.26.4
-xgboost==2.1.3
+xgboost==2.0.3
 
 # IoT
 paho-mqtt==2.1.0
@@ -36,6 +36,6 @@ python-multipart==0.0.20
 hypothesis==6.131.10
 
 # ONNX inference (equipment detection)
-onnxruntime==1.19.0
-Pillow==11.1.0
+onnxruntime==1.18.1
+Pillow==10.4.0
 psycopg2-binary==2.9.9

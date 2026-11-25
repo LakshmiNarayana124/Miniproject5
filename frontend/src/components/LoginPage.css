@@ -730,103 +730,98 @@ body:has(.signin-panel-3col) #root {
 }
 /* END INTELLIWATCH-FLOATING-PROJECT-BACKGROUND */
 
-/* ── 3-Column Sign-In Panel ─────────────────────────────────────────────── */
-.signin-panel-3col {
+/* ── Sign-in method selector (3 buttons, single row) ──────────────────── */
+.signin-method-selector {
   display: grid;
-  grid-template-columns: 1fr auto 1fr auto 1fr;
-  gap: 0;
-  margin: 16px 0 14px;
-  background: #0d0f14;
-  border: 1.5px solid #252837;
-  border-radius: 14px;
-  overflow: hidden;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin: 14px 0 12px;
 }
 
-.signin-col {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 16px 14px 14px;
-}
-.signin-col--password { border-right: none; }
-.signin-col--google   { border-right: none; }
-.signin-col--phone    {}
-
-.signin-col-label {
-  font-size: 11px;
-  font-weight: 700;
-  color: #a0a8c0;
-  letter-spacing: .4px;
-  text-transform: uppercase;
-  margin: 0 0 4px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.signin-col-btn {
-  width: 100%;
-  padding: 9px 10px;
-  font-size: 12px;
-  margin-top: auto;
-}
-
-.signin-col-divider {
+.signin-method-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  background: #0d0f14;
-  border-left: 1px solid #252837;
-  border-right: 1px solid #252837;
+  gap: 5px;
+  padding: 9px 6px;
+  border-radius: 10px;
+  border: 1.5px solid #252837;
+  background: transparent;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  color: #4a5070;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
 }
-.signin-col-divider span {
+.signin-method-btn:hover {
+  border-color: #ffffff25;
+  color: #a0a8c0;
+  background: #ffffff06;
+}
+.signin-method-btn--active {
+  border-color: #aa3bff70;
+  background: #aa3bff14;
+  color: #d8b4fe;
+  box-shadow: 0 0 0 2px #aa3bff18;
+}
+
+/* ── Active method panel (single column, full width) ───────────────────── */
+.signin-single-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.signin-panel-hint {
+  font-size: 12px;
+  color: #a0a8c0;
+  margin: 0;
+  text-align: center;
+}
+
+.signin-panel-domain-note {
   font-size: 10px;
   color: #4a5070;
-  writing-mode: vertical-rl;
-  letter-spacing: 1px;
-}
-
-/* Blaze billing badge in Phone column */
-.signin-blaze-badge {
-  background: #f59e0b12;
-  border: 1px solid #f59e0b50;
-  border-radius: 7px;
-  padding: 6px 8px;
-  font-size: 10px;
-  color: #fbbf24;
   line-height: 1.5;
+  background: #252837;
+  border-radius: 7px;
+  padding: 7px 10px;
+  margin: 0;
 }
-.signin-blaze-badge strong { color: #fcd34d; }
+.signin-panel-domain-note code {
+  color: #a0a8c0;
+  background: #0d0f14;
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-size: 10px;
+}
 
-/* Google button white style inside panel */
-.signin-col--google .signin-google-btn {
+/* Google button white style */
+.signin-google-btn {
   background: #fff;
   color: #3c4043;
-  font-size: 11px;
   box-shadow: 0 1px 3px rgba(0,0,0,.3);
 }
-.signin-col--google .signin-google-btn:hover:not(:disabled) {
+.signin-google-btn:hover:not(:disabled) {
   background: #f7f7f7;
   opacity: 1;
   box-shadow: 0 2px 6px rgba(0,0,0,.35);
 }
 
-/* Mobile: stack columns */
-@media (max-width: 540px) {
-  .signin-panel-3col {
-    grid-template-columns: 1fr;
-  }
-  .signin-col-divider {
-    width: 100%;
-    height: 24px;
-    border-left: none;
-    border-right: none;
-    border-top: 1px solid #252837;
-    border-bottom: 1px solid #252837;
-    writing-mode: horizontal-tb;
-  }
-  .signin-col-divider span {
-    writing-mode: horizontal-tb;
-  }
+/* Blaze billing badge */
+.signin-blaze-badge {
+  background: #f59e0b12;
+  border: 1px solid #f59e0b50;
+  border-radius: 7px;
+  padding: 7px 10px;
+  font-size: 10px;
+  color: #fbbf24;
+  line-height: 1.5;
+}
+
+@media (max-width: 520px) {
+  .signin-method-selector { grid-template-columns: 1fr; }
+  .signin-method-btn { justify-content: flex-start; padding: 10px 14px; }
 }
