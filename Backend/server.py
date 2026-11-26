@@ -87,7 +87,8 @@ _extra_origins = [
     if origin.strip()
 ]
 
-_allowed_origins = [
+# Always include the known stable production origin regardless of env var
+_STATIC_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:4173",
@@ -96,11 +97,21 @@ _allowed_origins = [
     "https://127.0.0.1:5173",
     "https://localhost:4173",
     "https://127.0.0.1:4173",
-] + _extra_origins
+    # Stable Vercel production URLs
+    "https://miniproject5.vercel.app",
+    "https://miniproject5-n0t7h1in-g.vercel.app",
+]
+
+_allowed_origins = list(set(_STATIC_ORIGINS + _extra_origins))
+
+# Allow all Vercel preview deployments for this team (n0t7h1in-g)
+# by using allow_origin_regex in addition to the fixed list
+_ORIGIN_REGEX = r"https://miniproject5(-[a-z0-9]+)*-n0t7h1in-g\.vercel\.app"
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins,
+    allow_origin_regex=_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

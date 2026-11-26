@@ -2084,7 +2084,7 @@ async def firebase_login(request: FirebaseLoginRequest, http_request: Request):
         username_base = f"fb_{uid[:12]}"
 
     # Ensure role is valid
-    allowed_roles = {"OPERATOR", "MAINTENANCE_ENGINEER"}
+    allowed_roles = {"OPERATOR", "MAINTENANCE_ENGINEER", "ADMIN"}
     requested_role = request.requested_role.upper()
     if requested_role not in allowed_roles:
         requested_role = "OPERATOR"
